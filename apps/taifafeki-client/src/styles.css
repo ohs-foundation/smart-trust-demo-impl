@@ -1,0 +1,92 @@
+@import "tailwindcss";
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/jetbrains-mono";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans Variable", Inter, system-ui, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --text-3xs: 0.65625rem;
+  --text-3xs--line-height: 1.3;
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1.5;
+  --text-ui: 0.8125rem;
+  --text-ui--line-height: 1.35;
+
+  --radius-control: 0.625rem;
+
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f5f9;
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-line: #e2e8f0;
+  --color-frame: #0b1220;
+
+  --color-brand-taifa: #b45309;
+  --color-taifa-soft: #fffbeb;
+  --color-crimson: #b91c1c;
+
+  --color-ok: #047857;
+  --color-ok-soft: #ecfdf5;
+  --color-ok-line: #a7f3d0;
+  --color-ok-ink: #065f46;
+  --color-warn: #92400e;
+  --color-warn-soft: #fffbeb;
+  --color-warn-line: #fcd34d;
+  --color-info: #0369a1;
+  --color-info-soft: #f0f9ff;
+  --color-info-line: #bae6fd;
+  --color-info-ink: #075985;
+  --color-bad: #b91c1c;
+  --color-bad-soft: #fff1f2;
+  --color-bad-line: #fda4af;
+  --color-bad-ink: #9f1239;
+  --color-assume: #6d28d9;
+  --color-assume-soft: #f5f3ff;
+  --color-newborn: #65a30d;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+  --color-sky-400: #38bdf8;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-amber-900: #78350f;
+}
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-ink);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-ink);
+  --color-primary: var(--color-brand-taifa);
+  --color-primary-foreground: var(--color-surface);
+  --color-secondary: var(--color-surface-2);
+  --color-secondary-foreground: var(--color-slate-700);
+  --color-muted-foreground: var(--color-slate-500);
+  --color-accent: var(--color-surface-2);
+  --color-accent-foreground: var(--color-ink);
+  --color-destructive: var(--color-crimson);
+  --color-border: var(--color-line);
+  --color-input: var(--color-slate-300);
+  --color-ring: var(--color-brand-taifa);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background font-sans text-sm text-foreground antialiased;
+  }
+}
