@@ -41,6 +41,7 @@ class TrustDemo : CliktCommand(name = "trust-demo") {
 private class Stack(env: StackEnv) {
   val hapiUrl = "http://127.0.0.1:${env.require("HAPI_HOST_PORT")}/fhir"
   val medplumUrl = "http://medplum.kesaro.${env.require("STACK_HOST")}:${env.require("PROXY_PORT")}"
+  val watchPort = env.require("WATCH_PORT").toInt()
   val onesa = FhirServer(hapiUrl, { null }, CIO.create())
   val kesaro =
     MedplumAdmin(
@@ -67,7 +68,13 @@ class ResetCommand : StackCommand("reset") {
     val env = StackEnv.load(stackEnv)
     val stack = Stack(env)
     val secrets = checkNotNull(stackEnv.toAbsolutePath().parent).resolve("taifafeki/secrets")
-    Reset(stack.onesa, stack.kesaro, env.require("TRUSTDEMO_USER_PASSWORD"), secrets)
+    Reset(
+        stack.onesa,
+        stack.kesaro,
+        env.require("TRUSTDEMO_USER_PASSWORD"),
+        secrets,
+        stack.watchPort,
+      )
       .run(LocalDate.now())
     echo(
       "Reset HAPI at ${stack.hapiUrl} and Medplum at ${stack.medplumUrl}; clinic certificate in $secrets"
@@ -81,6 +88,16 @@ class StatusCommand : StackCommand("status") {
   override fun run() = runBlocking {
     val stack = Stack(StackEnv.load(stackEnv))
     echo(status(StepEngine(stack.onesa, stack.kesaro).state()))
+  }
+}
+
+class WatchCommand : StackCommand("watch") {
+  override fun help(context: Context) = "Follow the story live from HAPI's webhook and a poll."
+
+  override fun run() {
+    val stack = Stack(StackEnv.load(stackEnv))
+    echo("Watching on port ${stack.watchPort}; Ctrl-C stops.")
+    Watch(stack.watchPort, StepEngine(stack.onesa, stack.kesaro)).serve()
   }
 }
 
@@ -148,6 +165,8 @@ fun main(args: Array<String>) =
     .subcommands(
       ResetCommand(),
       StatusCommand(),
+      WatchCommand(),
+      QrCommand(),
       InspectCommand(),
       TimeCommand().subcommands(MoveCommand(), ExpireConsentsCommand()),
     )

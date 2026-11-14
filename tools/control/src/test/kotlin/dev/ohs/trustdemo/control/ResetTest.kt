@@ -17,6 +17,7 @@ package dev.ohs.trustdemo.control
 
 import dev.ohs.fhir.model.r4.Bundle
 import dev.ohs.fhir.model.r4.Resource
+import dev.ohs.fhir.model.r4.Subscription
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
@@ -29,6 +30,7 @@ import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 
@@ -64,6 +66,8 @@ class FakeHapi {
   }
 }
 
+private const val WATCH_PORT = 18090
+
 class ResetTest {
   private val today = LocalDate.of(2026, 11, 14)
 
@@ -72,14 +76,30 @@ class ResetTest {
     val hapi = FakeHapi()
     val medplum = FakeMedplum()
     val secrets = createTempDirectory()
-    repeat(2) { Reset(hapi.server, medplum.admin, "password", secrets).run(today) }
+    repeat(2) { Reset(hapi.server, medplum.admin, "password", secrets, WATCH_PORT).run(today) }
     assertEquals(2, hapi.expunges)
-    assertEquals(Seed.onesaBase(ig).entry.size, hapi.stored.size)
+    assertEquals(Seed.onesaBase(ig).entry.size + 1, hapi.stored.size)
     assertEquals(2, medplum.stored.values.count { it.hasIdentifier("CRH-HN-68-104377") })
     assertEquals(1, medplum.invites)
     assertEquals(
       setOf("clinic-viewer.crt", "clinic-viewer.key"),
       secrets.listDirectoryEntries().map { it.name }.toSet(),
     )
+  }
+
+  @Test
+  fun resetRegistersOneSubscriptionWithNoPayload() = runTest {
+    val hapi = FakeHapi()
+    repeat(2) {
+      Reset(hapi.server, FakeMedplum().admin, "password", createTempDirectory(), WATCH_PORT)
+        .run(today)
+    }
+    val subscription = hapi.stored.values.filterIsInstance<Subscription>().single()
+    assertEquals("AuditEvent?", subscription.criteria.value)
+    assertEquals(
+      "http://host.docker.internal:$WATCH_PORT/hook",
+      subscription.channel.endpoint?.value,
+    )
+    assertNull(subscription.channel.payload)
   }
 }

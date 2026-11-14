@@ -51,13 +51,18 @@ sourceSets.main { resources.srcDirs(igDir, files(igIndexDir).builtBy(igIndex)) }
 dependencies {
   implementation(projects.libs.trustkit)
   implementation(libs.clikt)
+  implementation(libs.hcert.core)
   implementation(libs.ktor.client.cio)
   implementation(libs.ktor.client.core)
+  implementation(libs.ktor.server.cio)
+  implementation(libs.ktor.server.core)
   api(libs.ohs.fhir.model.r4)
   implementation(libs.kotlinx.serialization.json)
+  implementation(libs.zxing.core)
   runtimeOnly(libs.slf4j.nop)
 
   testImplementation(libs.kotlin.testJunit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.ktor.client.mock)
+  testImplementation(libs.ktor.server.testHost)
 }

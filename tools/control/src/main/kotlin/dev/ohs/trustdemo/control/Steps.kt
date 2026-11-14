@@ -110,7 +110,7 @@ internal val MOVE_DAYS = ChronoUnit.DAYS.between(IG_J3, IG_J40)
 private const val SOMSAK_ON_ONESA = "Somsak's record on Onesa"
 private const val SOMSAK_ON_KESARO = "Somsak's patient record"
 
-private const val HOSPITAL_NUMBER =
+internal const val HOSPITAL_NUMBER =
   "http://smart.who.int/trust-demo/sid/xxr-kesaro-hn|CRH-HN-68-104377"
 private const val DESIGN = "http://smart.who.int/trust-demo/StructureDefinition"
 private const val REGISTRATION =
@@ -137,6 +137,13 @@ internal fun Resource.fields(): JsonObject =
   json.encodeToJsonElement(Resource.serializer(), this).jsonObject
 
 private fun List<Resource>.fields(): List<JsonObject> = map { it.fields() }
+
+internal fun Resource.cardAttachment(): JsonObject? =
+  runCatching { fields()["content"]!!.jsonArray[0].jsonObject["attachment"]!!.jsonObject }
+    .getOrNull()
+
+internal fun Resource.cardText(): String? =
+  cardAttachment()?.text("data")?.let { String(Base64.getDecoder().decode(it)) }
 
 internal fun JsonObject.text(name: String): String? = this[name]?.jsonPrimitive?.contentOrNull
 
@@ -464,13 +471,7 @@ class StepEngine(
   private fun resetDayFrom(cards: List<Resource>): LocalDate? =
     cards
       .firstNotNullOfOrNull { card ->
-        runCatching {
-            val data = card.fields()["content"]!!.jsonArray[0].jsonObject["attachment"]!!
-            CardSigner.vaccinationDate(
-              String(Base64.getDecoder().decode(data.jsonObject.text("data")!!))
-            )
-          }
-          .getOrNull()
+        runCatching { CardSigner.vaccinationDate(card.cardText()!!) }.getOrNull()
       }
       ?.let { IG_J3.plusDays(ChronoUnit.DAYS.between(IG_BIRTH, it)) }
 

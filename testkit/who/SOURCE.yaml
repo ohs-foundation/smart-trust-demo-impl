@@ -4,3 +4,9 @@ retrieved: 2026-10-23T07:58Z
 files:
   root-did.json: https://tng-cdn-dev.who.int/v2/trustlist/did.json (234 keys)
   WHO-signing-did.json: did:web document of the proof's verificationMethod
+  dvc-qr-example-XXR.json: >-
+    WorldHealthOrganization/smart-trust-tools at d94e21d,
+    vectors/smart-trust-af75be2/dvc-qr-example-XXR.json, a conformance vector
+    from WorldHealthOrganization/smart-trust at af75be2 (PR 129), section 12.6
+    of qr_code_generation.md; the two WHO HC1 test cards (hepb1, bcg) that
+    `trust-demo qr who-hepb` and `who-bcg` print.

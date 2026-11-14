@@ -15,9 +15,12 @@
  */
 package dev.ohs.trustdemo.control
 
+import dev.ohs.fhir.model.r4.Bundle
+import dev.ohs.fhir.model.r4.Enumeration
 import dev.ohs.fhir.model.r4.Immunization
 import dev.ohs.fhir.model.r4.Patient
 import dev.ohs.fhir.model.r4.Resource
+import dev.ohs.fhir.model.r4.Uri
 import dev.ohs.trustdemo.trustkit.CardSigner
 import dev.ohs.trustdemo.trustkit.ClinicCertificates
 import dev.ohs.trustdemo.trustkit.StoryClock
@@ -26,6 +29,7 @@ import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
 import java.time.LocalDate
 import java.util.Base64
+import kotlinx.serialization.json.Json
 
 private const val SOMSAK = "TrustDemoTaifafekiSomsak"
 private val J1_DOSES = listOf("TrustDemoJ1HepB", "TrustDemoJ1Bcg")
@@ -41,16 +45,43 @@ class Reset(
   private val kesaro: MedplumAdmin,
   private val ananPassword: String,
   private val secretsDir: Path,
+  private val watchPort: Int,
 ) {
   suspend fun run(today: LocalDate) {
     val ig = IgResources.all()
     onesa.expungeEverything()
     onesa.transaction(Seed.onesaBase(ig))
+    onesa.transaction(subscription())
     kesaro.wipeStory()
     kesaro.seedBase(ig)
     kesaro.ensureClinician(ananPassword)
     uploadCards(ig, StoryClock(J3_IN_IG, today))
     writeClinicCertificate()
+  }
+
+  private fun subscription(): Bundle {
+    val webhook =
+      Json.decodeFromString(
+        Resource.serializer(),
+        """{"resourceType":"Subscription","id":"TrustDemoWatch","status":"requested",
+          "reason":"trust-demo watch follows the story as the apps write records",
+          "criteria":"AuditEvent?",
+          "channel":{"type":"rest-hook","endpoint":"http://host.docker.internal:$watchPort/hook"}}""",
+      )
+    return Bundle(
+      type = Enumeration(value = Bundle.BundleType.Transaction),
+      entry =
+        listOf(
+          Bundle.Entry(
+            resource = webhook,
+            request =
+              Bundle.Entry.Request(
+                method = Enumeration(value = Bundle.HTTPVerb.Put),
+                url = Uri(value = "Subscription/TrustDemoWatch"),
+              ),
+          )
+        ),
+    )
   }
 
   private suspend fun uploadCards(ig: List<Resource>, clock: StoryClock) {

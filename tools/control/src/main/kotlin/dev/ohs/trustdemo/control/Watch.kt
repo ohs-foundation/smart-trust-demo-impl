@@ -1,0 +1,84 @@
+/*
+ * Copyright 2026 Open Health Stack Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.ohs.trustdemo.control
+
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.Application
+import io.ktor.server.cio.CIO
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.response.respond
+import io.ktor.server.routing.post
+import io.ktor.server.routing.routing
+import java.time.LocalTime
+import java.time.temporal.ChronoUnit
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+private val POLL = 30.seconds
+
+/**
+ * Follows the story: a delivery at `POST /hook` and a poll every 30 seconds, for the Medplum-side
+ * steps no HAPI Subscription sees, each re-read the step and print its line when it changes.
+ */
+class Watch(
+  private val port: Int,
+  private val states: StoryStates,
+  private val print: (String) -> Unit = ::println,
+) {
+  private val lock = Mutex()
+  private var last: String? = null
+
+  fun install(app: Application) {
+    app.routing {
+      post("/hook") {
+        runCatching { refresh() }
+          .onSuccess { call.respond(HttpStatusCode.OK) }
+          .onFailure { call.respond(HttpStatusCode.InternalServerError, it.message.orEmpty()) }
+      }
+    }
+    app.launch {
+      while (isActive) {
+        runCatching { refresh() }.onFailure { report("cannot read the story: ${it.message}") }
+        delay(POLL)
+      }
+    }
+  }
+
+  fun serve() {
+    embeddedServer(CIO, port = port) { install(this) }.start(wait = true)
+  }
+
+  private suspend fun refresh() = report(line(states.state()))
+
+  private suspend fun report(line: String) =
+    lock.withLock {
+      if (line != last) {
+        last = line
+        print("${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)}  $line")
+      }
+    }
+
+  private fun line(state: StoryState): String {
+    val step = StepEngine.currentStep(state) ?: return "All steps are done."
+    val total = expectations.getValue(step).size
+    return "${step.code} ${step.title}: ${statusLine(state, step)}, " +
+      "${state.metCount(step)} of $total written"
+  }
+}
