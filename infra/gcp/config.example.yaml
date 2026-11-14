@@ -6,7 +6,8 @@ org_id: "000000000000"
 billing_account: 000000-000000-000000
 region: europe-west3
 zone: europe-west3-a
-machine_type: e2-standard-4
+# 4 vCPU and 32 GB: the stack (JVMs, Medplum, three Postgres, the data pipes) needs memory more than CPU.
+machine_type: e2-highmem-4
 disk_gb: 100
 # The demo's names are <service>.<country>.<base_domain>, e.g. keycloak.onesa.demo.example.org
 base_domain: demo.example.org
