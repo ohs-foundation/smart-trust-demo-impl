@@ -68,7 +68,10 @@ enum class Refusal(val code: String?) {
   }
 }
 
-/** One request a clinic made of a share: what it asked for and whether the service released it. */
+/**
+ * One request a clinic made of a share: what it asked for and whether the service released it, and
+ * the network [host] it came from.
+ */
 data class Look(
   val id: String,
   val at: Instant,
@@ -76,6 +79,7 @@ data class Look(
   val document: Boolean,
   val released: Boolean,
   val refusal: Refusal?,
+  val host: String? = null,
 )
 
 /** A share the household made, with the requests made of it, newest first. */
@@ -233,6 +237,7 @@ class SharedLinks(
         released = released,
         refusal =
           if (released) null else Refusal.of(subtypes.firstNotNullOfOrNull { it["code"]?.text() }),
+        host = clinic?.get("network")?.jsonObject?.get("address")?.text(),
       )
   }
 

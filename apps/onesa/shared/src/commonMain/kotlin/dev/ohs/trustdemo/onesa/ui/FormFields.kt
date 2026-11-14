@@ -112,7 +112,10 @@ fun OnesaTextField(
   }
 }
 
-/** A labelled choice from [options], shown as a box with a caret that opens a menu. */
+/**
+ * A labelled choice from [options], shown as a box with a caret that opens a menu, or with [onOpen]
+ * a picker of its own, such as a date picker.
+ */
 @Composable
 fun OnesaSelectField(
   label: String,
@@ -121,6 +124,7 @@ fun OnesaSelectField(
   onSelect: (Int) -> Unit,
   modifier: Modifier = Modifier,
   mono: Boolean = false,
+  onOpen: (() -> Unit)? = null,
 ) {
   var expanded by remember { mutableStateOf(false) }
   Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -131,7 +135,7 @@ fun OnesaSelectField(
           .defaultMinSize(minHeight = 36.dp)
           .background(Color.White, InputShape)
           .border(1.dp, OnesaColors.Slate300, InputShape)
-          .clickable(role = Role.DropdownList) { expanded = true }
+          .clickable(role = Role.DropdownList) { if (onOpen != null) onOpen() else expanded = true }
           .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
       ) {

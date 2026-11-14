@@ -52,7 +52,7 @@ data class ShellHeader(
 /**
  * The signed-in app's frame: the role's header, whose icon tile opens the account [menu], pill
  * [tabs] when the role has more than one place to go, the tab's [content] with any [side] blocks
- * beside it on a tablet, and its [actions].
+ * beside it on a tablet, and its [actions] with their [caption].
  */
 @Composable
 fun HomeShell(
@@ -65,6 +65,7 @@ fun HomeShell(
   actions: List<Action>? = null,
   snackbarHost: @Composable () -> Unit = {},
   side: (@Composable ColumnScope.() -> Unit)? = null,
+  caption: String? = null,
   content: @Composable () -> Unit,
 ) {
   var menuOpen by remember { mutableStateOf(false) }
@@ -90,7 +91,7 @@ fun HomeShell(
         }
       }
     },
-    actions = actions?.let { { PrimaryActionBar(it) } },
+    actions = actions?.let { { PrimaryActionBar(it, caption = caption) } },
     side = side,
     scroll = false,
     snackbarHost = snackbarHost,

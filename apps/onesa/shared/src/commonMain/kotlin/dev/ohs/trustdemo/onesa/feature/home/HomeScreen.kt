@@ -93,6 +93,9 @@ import dev.ohs.trustdemo.onesa.generated.resources.shell_synced
 import dev.ohs.trustdemo.onesa.generated.resources.shell_trust_cached
 import dev.ohs.trustdemo.onesa.generated.resources.shell_trust_stale
 import dev.ohs.trustdemo.onesa.generated.resources.trust_refresh_now
+import dev.ohs.trustdemo.onesa.generated.resources.wallet_caption
+import dev.ohs.trustdemo.onesa.generated.resources.wallet_share
+import dev.ohs.trustdemo.onesa.generated.resources.wallet_shared_links
 import dev.ohs.trustdemo.onesa.ui.Action
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaTopBar
@@ -214,6 +217,7 @@ fun HomeScreen(
             )
           )
         destination == HomeDestination.TrustLists -> listOf(refreshAction())
+        destination == HomeDestination.Wallet -> walletActions(onShareRecords, onSharedLinks)
         destination == HomeDestination.Households &&
           ScreenAction.RegisterHousehold in role.actions() ->
           listOf(
@@ -226,6 +230,9 @@ fun HomeScreen(
         else -> null
       },
     snackbarHost = { SnackbarHost(snackbarHostState) },
+    caption =
+      if (destination == HomeDestination.Wallet) stringResource(Res.string.wallet_caption)
+      else null,
     side =
       when (destination) {
         HomeDestination.Referrals -> {
@@ -288,16 +295,18 @@ fun HomeScreen(
       HomeDestination.Patients -> PatientListScreen(onPatientClick = onOpenPatient)
       HomeDestination.Schedule -> ClinicScheduleScreen(onOpenPatient = onOpenPatient)
       HomeDestination.TrustLists -> TrustListScreen()
-      HomeDestination.Wallet ->
-        WalletScreen(onShare = onShareRecords, onSharedLinks = onSharedLinks)
+      HomeDestination.Wallet -> WalletScreen()
       HomeDestination.Sync -> SyncStatusContent(pending, uiState.lastSyncedAt, role)
     }
   }
 }
 
-/** The role's header for a screen opened from Home; its tile is the way back. */
+/**
+ * The role's header for a screen opened from Home; its tile is the way back, and [subtitle] says
+ * what the screen is for in place of who and where.
+ */
 @Composable
-fun RoleTopBar(role: AppRole, onBack: () -> Unit) {
+fun RoleTopBar(role: AppRole, onBack: () -> Unit, subtitle: String? = null) {
   val session by SessionRepository.session.collectAsStateWithLifecycle()
   val userName =
     session
@@ -308,7 +317,7 @@ fun RoleTopBar(role: AppRole, onBack: () -> Unit) {
   OnesaTopBar(
     title = header.title,
     icon = header.icon,
-    subtitle = header.subtitle,
+    subtitle = subtitle ?: header.subtitle,
     chips = header.chips,
     status = header.status,
     onIconClick = onBack,
@@ -415,6 +424,23 @@ private fun inbox(enabled: Boolean): List<Referral>? {
   val viewModel: ReferralInboxViewModel = koinViewModel()
   val referrals by viewModel.referrals.collectAsStateWithLifecycle()
   return referrals
+}
+
+/** S6's actions: a link for every member, and the shares already made. */
+@Composable
+private fun walletActions(onShare: () -> Unit, onSharedLinks: () -> Unit): List<Action> {
+  val viewModel: WalletViewModel = koinViewModel()
+  val members by viewModel.members.collectAsStateWithLifecycle()
+  val count = members.orEmpty().count { it.name != null }
+  return listOf(
+    Action(
+      stringResource(Res.string.wallet_share, count),
+      onClick = onShare,
+      icon = OnesaIcons.Qr,
+      enabled = count > 0,
+    ),
+    Action(stringResource(Res.string.wallet_shared_links), onClick = onSharedLinks, primary = false),
+  )
 }
 
 /** "Refresh Now" for the trust list tab: fetches the local list, with a spinner meanwhile. */

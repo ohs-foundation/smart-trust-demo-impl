@@ -20,29 +20,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,159 +38,242 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.ohs.trustdemo.onesa.data.sharing.FamilyMember
 import dev.ohs.trustdemo.onesa.data.sharing.IssuedLink
 import dev.ohs.trustdemo.onesa.generated.resources.Res
+import dev.ohs.trustdemo.onesa.generated.resources.issued_badge
 import dev.ohs.trustdemo.onesa.generated.resources.issued_close
+import dev.ohs.trustdemo.onesa.generated.resources.issued_consent_note
+import dev.ohs.trustdemo.onesa.generated.resources.issued_cycle
 import dev.ohs.trustdemo.onesa.generated.resources.issued_expires
 import dev.ohs.trustdemo.onesa.generated.resources.issued_next
 import dev.ohs.trustdemo.onesa.generated.resources.issued_not_saved
 import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_hint
+import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_text
+import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_title
 import dev.ohs.trustdemo.onesa.generated.resources.issued_previous
+import dev.ohs.trustdemo.onesa.generated.resources.issued_qr_caption
 import dev.ohs.trustdemo.onesa.generated.resources.issued_qr_of
+import dev.ohs.trustdemo.onesa.generated.resources.issued_qr_title
 import dev.ohs.trustdemo.onesa.generated.resources.issued_show_full_screen
 import dev.ohs.trustdemo.onesa.generated.resources.issued_title
+import dev.ohs.trustdemo.onesa.generated.resources.issued_traveller
+import dev.ohs.trustdemo.onesa.generated.resources.issued_validity
+import dev.ohs.trustdemo.onesa.generated.resources.issued_validity_value
 import dev.ohs.trustdemo.onesa.generated.resources.share_back
+import dev.ohs.trustdemo.onesa.ui.Action
+import dev.ohs.trustdemo.onesa.ui.AlertCard
+import dev.ohs.trustdemo.onesa.ui.Field
+import dev.ohs.trustdemo.onesa.ui.FieldGrid
+import dev.ohs.trustdemo.onesa.ui.NoteLine
+import dev.ohs.trustdemo.onesa.ui.OnesaIcons
+import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
+import dev.ohs.trustdemo.onesa.ui.OnesaTopBar
+import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
+import dev.ohs.trustdemo.onesa.ui.QrPanel
+import dev.ohs.trustdemo.onesa.ui.SectionCard
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
+import dev.ohs.trustdemo.onesa.util.displayDate
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
+import kotlin.time.Clock
 import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.daysUntil
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-/** S7: one QR per person shared, each to scan at the clinic, and one at a time in full screen. */
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * S7: each traveller's link as a QR, one at a time, cycled from the header, and in full screen to
+ * show the clinic. The passcode is never on screen: the holder says it.
+ */
 @Composable
 fun IssuedLinksScreen(consentIds: List<String>, onBack: () -> Unit) {
   val viewModel: IssuedLinksViewModel = koinViewModel { parametersOf(consentIds) }
   val links by viewModel.links.collectAsStateWithLifecycle()
-  var fullScreen by remember { mutableStateOf<Int?>(null) }
-
+  val family by viewModel.family.collectAsStateWithLifecycle()
   val unsaved by viewModel.unsaved.collectAsStateWithLifecycle()
+  var index by remember { mutableIntStateOf(0) }
+  var fullScreen by remember { mutableStateOf(false) }
+  val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
   KeepOffScreenshots()
+
   val issued = links
-  val shown = fullScreen
-  if (issued != null && shown != null) {
-    FullScreenQr(
-      links = issued,
-      index = shown,
-      onIndex = { fullScreen = it },
-      onClose = { fullScreen = null },
-    )
+  if (issued == null) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
     return
   }
-
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text(stringResource(Res.string.issued_title)) },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(
-              Icons.AutoMirrored.Filled.ArrowBack,
-              contentDescription = stringResource(Res.string.share_back),
-            )
-          }
-        },
-      )
-    }
-  ) { padding ->
-    if (issued == null) {
-      Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-      }
-      return@Scaffold
-    }
-    LazyColumn(
-      modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-      verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-      item {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          Text(
-            stringResource(Res.string.issued_passcode_hint),
-            style = MaterialTheme.typography.bodyMedium,
-          )
-          if (unsaved) {
-            Text(
-              stringResource(Res.string.issued_not_saved),
-              color = MaterialTheme.colorScheme.error,
-              style = MaterialTheme.typography.bodyMedium,
-            )
-          }
-          Button(
-            onClick = { fullScreen = 0 },
-            enabled = issued.isNotEmpty(),
-            modifier = Modifier.fillMaxWidth(),
-          ) {
-            Text(stringResource(Res.string.issued_show_full_screen))
-          }
-        }
-      }
-      items(issued, key = { it.consentId }) { link ->
-        Row(
-          horizontalArrangement = Arrangement.spacedBy(16.dp),
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          QrImage(link, Modifier.size(140.dp))
-          Column {
-            Text(link.name, style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(Res.string.issued_expires, link.expiresOn()))
-          }
-        }
-      }
-    }
+  val shown = index.coerceIn(0, (issued.size - 1).coerceAtLeast(0))
+  if (fullScreen && issued.isNotEmpty()) {
+    FullScreenQr(issued, shown, { index = it }, onClose = { fullScreen = false })
+  } else {
+    IssuedLinksContent(
+      issued,
+      family,
+      shown,
+      unsaved,
+      today,
+      onIndex = { index = it },
+      onBack = onBack,
+      onFullScreen = { fullScreen = true },
+    )
   }
 }
 
 @Composable
-private fun FullScreenQr(
+internal fun IssuedLinksContent(
+  links: List<IssuedLink>,
+  family: List<FamilyMember>,
+  index: Int,
+  unsaved: Boolean,
+  today: LocalDate,
+  onIndex: (Int) -> Unit,
+  onBack: () -> Unit,
+  onFullScreen: () -> Unit,
+) {
+  val link = links.getOrNull(index)
+  val member = family.firstOrNull { it.id == link?.personId }
+  OnesaScaffold(
+    topBar = {
+      OnesaTopBar(
+        title = link?.let { stringResource(Res.string.issued_title, it.name) } ?: "",
+        icon = OnesaIcons.Qr,
+        subtitle =
+          listOfNotNull(
+              stringResource(Res.string.issued_traveller, index + 1, links.size),
+              member?.let { relationLine(it, today) },
+            )
+            .joinToString(" • "),
+        status =
+          if (links.size > 1)
+            Status(
+              stringResource(Res.string.issued_cycle, index + 1, links.size),
+              icon = OnesaIcons.Users,
+            )
+          else null,
+        onIconClick = onBack,
+        iconLabel = stringResource(Res.string.share_back),
+        onStatusClick = { onIndex((index + 1) % links.size) },
+      )
+    },
+    actions = {
+      PrimaryActionBar(
+        listOf(
+          Action(
+            stringResource(Res.string.issued_show_full_screen),
+            onClick = onFullScreen,
+            icon = OnesaIcons.Qr,
+            enabled = link != null,
+          )
+        ),
+        caption = stringResource(Res.string.issued_passcode_hint),
+      )
+    },
+  ) {
+    if (unsaved) AlertCard(null, stringResource(Res.string.issued_not_saved), Tone.Warning)
+    link?.let {
+      QrPanel(
+        payload = it.link,
+        title = stringResource(Res.string.issued_qr_title),
+        label = it.name,
+        badge =
+          Status(stringResource(Res.string.issued_badge), Tone.Success, OnesaIcons.ShieldCheck),
+        caption = stringResource(Res.string.issued_qr_caption),
+      )
+      SectionCard(
+        title = stringResource(Res.string.issued_passcode_title),
+        icon = OnesaIcons.Lock,
+      ) {
+        Text(
+          stringResource(Res.string.issued_passcode_text),
+          style = MaterialTheme.typography.bodySmall,
+          color = OnesaColors.Slate500,
+        )
+      }
+      SectionCard {
+        val until = expiresOn(it)
+        FieldGrid(
+          listOf(
+            Field(
+              stringResource(Res.string.issued_validity),
+              stringResource(
+                Res.string.issued_validity_value,
+                today.daysUntil(until),
+                displayDate(until),
+              ),
+            )
+          )
+        )
+      }
+      NoteLine(stringResource(Res.string.issued_consent_note), icon = OnesaIcons.ShieldCheck)
+    }
+  }
+}
+
+/** One traveller's QR filling the screen, for the clinic to scan, with the way to the next. */
+@Composable
+internal fun FullScreenQr(
   links: List<IssuedLink>,
   index: Int,
   onIndex: (Int) -> Unit,
   onClose: () -> Unit,
 ) {
   val link = links[index]
-  Surface(modifier = Modifier.fillMaxSize(), color = Color.White) {
-    Column(
-      modifier = Modifier.fillMaxSize().padding(16.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-      Text(
-        stringResource(Res.string.issued_qr_of, index + 1, links.size),
-        style = MaterialTheme.typography.labelLarge,
-        color = Color.Black,
+  Column(
+    Modifier.fillMaxSize().background(Color.White).padding(16.dp),
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.spacedBy(12.dp),
+  ) {
+    Text(
+      stringResource(Res.string.issued_qr_of, index + 1, links.size),
+      style = MaterialTheme.typography.labelLarge,
+      color = OnesaColors.Muted,
+    )
+    Text(
+      link.name,
+      style = MaterialTheme.typography.titleLarge,
+      color = OnesaColors.Ink,
+      textAlign = TextAlign.Center,
+    )
+    Text(
+      stringResource(Res.string.issued_expires, displayDate(expiresOn(link))),
+      style = MaterialTheme.typography.bodyMedium,
+      color = OnesaColors.Muted,
+    )
+    Image(
+      painter = rememberQrCodePainter(link.link),
+      contentDescription = link.name,
+      modifier =
+        Modifier.weight(1f)
+          .aspectRatio(1f, matchHeightConstraintsFirst = true)
+          .background(Color.White)
+          .padding(8.dp),
+    )
+    PrimaryActionBar(
+      listOf(
+        Action(
+          stringResource(Res.string.issued_previous),
+          { onIndex(index - 1) },
+          false,
+          enabled = index > 0,
+        ),
+        Action(
+          stringResource(Res.string.issued_next),
+          { onIndex(index + 1) },
+          false,
+          enabled = index < links.lastIndex,
+        ),
+        Action(stringResource(Res.string.issued_close), onClose),
       )
-      Text(
-        link.name,
-        style = MaterialTheme.typography.headlineSmall,
-        color = Color.Black,
-        textAlign = TextAlign.Center,
-      )
-      Text(stringResource(Res.string.issued_expires, link.expiresOn()), color = Color.Black)
-      QrImage(link, Modifier.weight(1f).aspectRatio(1f, matchHeightConstraintsFirst = true))
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(onClick = { onIndex(index - 1) }, enabled = index > 0) {
-          Text(stringResource(Res.string.issued_previous))
-        }
-        OutlinedButton(onClick = { onIndex(index + 1) }, enabled = index < links.lastIndex) {
-          Text(stringResource(Res.string.issued_next))
-        }
-        Button(onClick = onClose) { Text(stringResource(Res.string.issued_close)) }
-      }
-    }
+    )
   }
 }
 
-@Composable
-private fun QrImage(link: IssuedLink, modifier: Modifier) {
-  Image(
-    painter = rememberQrCodePainter(link.link),
-    contentDescription = link.name,
-    modifier = modifier.background(Color.White).padding(8.dp),
-  )
-}
-
-private fun IssuedLink.expiresOn(): String =
-  Instant.fromEpochSeconds(exp - 1).toLocalDateTime(TimeZone.UTC).date.toString() + " (UTC)"
+/** The last day the link works, in UTC as its expiry is. */
+private fun expiresOn(link: IssuedLink): LocalDate =
+  Instant.fromEpochSeconds(link.exp - 1).toLocalDateTime(TimeZone.UTC).date

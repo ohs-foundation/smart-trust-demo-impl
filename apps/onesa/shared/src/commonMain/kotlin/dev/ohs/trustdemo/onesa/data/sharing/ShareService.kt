@@ -86,6 +86,8 @@ class ShareService(
   private val json = FhirJson.instance
   private val unsaved = mutableMapOf<String, IssuedLink>()
 
+  private val records = FamilyRecords(repository)
+
   fun observeHousehold(selfId: String?): Flow<List<Person>> =
     repository.revision.map { household(selfId) }
 
@@ -134,6 +136,12 @@ class ShareService(
   private fun JsonObject.reference(): String? = this["reference"]?.jsonPrimitive?.contentOrNull
 
   suspend fun purgeExpired() = links.purgeExpired(now())
+
+  /** [people] with each one's relation, head and birth date, from the family's records. */
+  suspend fun family(people: List<Person>): List<FamilyMember> = records.members(people)
+
+  /** [patientId]'s doses, oldest first. */
+  suspend fun doses(patientId: String): List<FamilyDose> = records.doses(patientId)
 
   /** The links of [consentIds], and whether any of them is held in memory only. */
   suspend fun issued(consentIds: List<String>): Pair<List<IssuedLink>, Boolean> {

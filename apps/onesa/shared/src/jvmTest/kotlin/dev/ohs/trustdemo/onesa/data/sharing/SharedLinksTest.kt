@@ -97,6 +97,7 @@ class SharedLinksTest {
     val first = shares.getValue("c1")
     assertEquals(listOf("a2", "a1"), first.looks.map { it.id })
     assertEquals(listOf("Kesaro clinic", "Kesaro clinic"), first.looks.map { it.clinic })
+    assertEquals(setOf("clinic-viewer.kesaro.example"), first.looks.map { it.host }.toSet())
     assertEquals(listOf(false, true), first.looks.map { it.released })
     assertEquals(listOf(Refusal.WrongPasscode, null), first.looks.map { it.refusal })
     assertEquals(listOf("a3"), shares.getValue("c2").looks.map { it.id })
@@ -200,7 +201,8 @@ class SharedLinksTest {
       "meta":{"profile":["http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaVhlAccess"]},
       "type":{"system":"http://dicom.nema.org/resources/ontology/DCM","code":"110112"},
       "subtype":[$subtype],"action":"E","recorded":"$recorded","outcome":"$outcome",
-      "agent":[{"who":{"display":"Kesaro clinic"},"name":"Kesaro clinic","requestor":true},
+      "agent":[{"who":{"display":"Kesaro clinic"},"name":"Kesaro clinic","requestor":true,
+                "network":{"address":"clinic-viewer.kesaro.example","type":"1"}},
                {"who":{"display":"Onesa VHL service"},"requestor":false}],
       "source":{"observer":{"display":"Onesa VHL service"}},
       "entity":[$entities]}"""

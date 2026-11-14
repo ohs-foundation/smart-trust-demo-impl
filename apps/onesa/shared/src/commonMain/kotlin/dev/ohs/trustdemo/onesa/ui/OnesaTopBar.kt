@@ -54,7 +54,8 @@ import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 /**
  * The screen header every Onesa mockup opens with: a brand-tinted icon tile, the place or task as
  * [title], who and where as [subtitle], [chips] under them and one [status] at the end. A tappable
- * tile ([onIconClick]) opens what [iconLabel] names, such as the account menu.
+ * tile ([onIconClick]) opens what [iconLabel] names, such as the account menu; a tappable status
+ * ([onStatusClick]) moves on, such as to the next traveller.
  */
 @Composable
 fun OnesaTopBar(
@@ -66,6 +67,7 @@ fun OnesaTopBar(
   status: Status? = null,
   onIconClick: (() -> Unit)? = null,
   iconLabel: String? = null,
+  onStatusClick: (() -> Unit)? = null,
 ) {
   Column(
     modifier
@@ -96,7 +98,17 @@ fun OnesaTopBar(
           }
         }
       }
-      status?.let { StatusChip(it, Modifier.widthIn(max = 160.dp)) }
+      status?.let {
+        StatusChip(
+          it,
+          Modifier.widthIn(max = 160.dp)
+            .then(
+              if (onStatusClick != null)
+                Modifier.clickable(role = Role.Button, onClick = onStatusClick)
+              else Modifier
+            ),
+        )
+      }
     }
     HorizontalDivider(color = OnesaColors.Line)
   }

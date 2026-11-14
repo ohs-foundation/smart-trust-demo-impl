@@ -20,6 +20,7 @@ import androidx.lifecycle.viewModelScope
 import dev.ohs.trustdemo.onesa.auth.SessionStore
 import dev.ohs.trustdemo.onesa.data.sharing.ConsentTerm
 import dev.ohs.trustdemo.onesa.data.sharing.ConsentTerms
+import dev.ohs.trustdemo.onesa.data.sharing.FamilyMember
 import dev.ohs.trustdemo.onesa.data.sharing.Person
 import dev.ohs.trustdemo.onesa.data.sharing.ShareEntry
 import dev.ohs.trustdemo.onesa.data.sharing.ShareOutcome
@@ -47,6 +48,7 @@ private fun utcToday(): LocalDate = Clock.System.todayIn(TimeZone.UTC)
 /** Everything the share and consent screen shows and what the holder has entered so far. */
 internal data class ShareUiState(
   val members: List<Person> = emptyList(),
+  val family: List<FamilyMember> = emptyList(),
   val selected: Set<String> = emptySet(),
   val terms: List<ConsentTerm> = emptyList(),
   val today: LocalDate,
@@ -85,6 +87,7 @@ internal class ShareViewModel(private val service: ShareService, store: SessionS
       _state.update {
         it.copy(
           members = members,
+          family = service.family(members),
           selected = members.filter { m -> m.name != null }.map(Person::id).toSet(),
         )
       }
