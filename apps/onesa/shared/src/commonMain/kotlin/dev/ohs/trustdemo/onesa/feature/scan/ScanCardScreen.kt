@@ -15,36 +15,13 @@
  */
 package dev.ohs.trustdemo.onesa.feature.scan
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.hcert.DvcFhirMapper
 import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
@@ -62,56 +39,62 @@ import dev.ohs.trustdemo.onesa.generated.resources.scan_field_child
 import dev.ohs.trustdemo.onesa.generated.resources.scan_field_given
 import dev.ohs.trustdemo.onesa.generated.resources.scan_field_issuer
 import dev.ohs.trustdemo.onesa.generated.resources.scan_field_lot
-import dev.ohs.trustdemo.onesa.generated.resources.scan_field_vaccine
 import dev.ohs.trustdemo.onesa.generated.resources.scan_none_yet
 import dev.ohs.trustdemo.onesa.generated.resources.scan_not_verified
 import dev.ohs.trustdemo.onesa.generated.resources.scan_not_verified_note
 import dev.ohs.trustdemo.onesa.generated.resources.scan_paste_label
 import dev.ohs.trustdemo.onesa.generated.resources.scan_title
 import dev.ohs.trustdemo.onesa.generated.resources.scan_use_text
+import dev.ohs.trustdemo.onesa.ui.Action
+import dev.ohs.trustdemo.onesa.ui.AlertCard
+import dev.ohs.trustdemo.onesa.ui.NoteLine
+import dev.ohs.trustdemo.onesa.ui.OnesaButton
+import dev.ohs.trustdemo.onesa.ui.OnesaIcons
+import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
+import dev.ohs.trustdemo.onesa.ui.OnesaTextField
+import dev.ohs.trustdemo.onesa.ui.OnesaTopBar
+import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
+import dev.ohs.trustdemo.onesa.ui.RecordRow
+import dev.ohs.trustdemo.onesa.ui.SectionCard
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** S2: reads each card the family holds, unverified, before the registration form. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanCardScreen(onBack: () -> Unit, onContinue: () -> Unit) {
   val viewModel = koinViewModel<ScanCardViewModel>()
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   var pasted by remember { mutableStateOf("") }
 
-  Scaffold(
+  OnesaScaffold(
     topBar = {
-      TopAppBar(
-        title = { Text(stringResource(Res.string.scan_title)) },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(
-              Icons.AutoMirrored.Filled.ArrowBack,
-              contentDescription = stringResource(Res.string.scan_back),
-              tint = MaterialTheme.colorScheme.onPrimary,
-            )
-          }
-        },
-        colors =
-          TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-          ),
+      OnesaTopBar(
+        title = stringResource(Res.string.scan_title),
+        icon = OnesaIcons.Scan,
+        onIconClick = onBack,
+        iconLabel = stringResource(Res.string.scan_back),
       )
-    }
-  ) { padding ->
-    Column(
-      Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-      if (cameraScanningAvailable) {
-        QrScannerView(Modifier.fillMaxWidth().height(280.dp), onResult = viewModel::onScan)
-      } else {
-        QrScannerView(Modifier.fillMaxWidth(), onResult = viewModel::onScan)
-      }
-      state.error?.let {
-        Text(
+    },
+    actions = {
+      PrimaryActionBar(
+        listOf(
+          Action(
+            stringResource(Res.string.scan_continue),
+            onClick = onContinue,
+            enabled = state.cards.isNotEmpty(),
+          )
+        )
+      )
+    },
+  ) {
+    CardCameraPanel(onResult = viewModel::onScan)
+    state.error?.let {
+      AlertCard(
+        title = null,
+        text =
           stringResource(
             when (it) {
               ScanError.NotACard -> Res.string.scan_error_not_a_card
@@ -120,41 +103,46 @@ fun ScanCardScreen(onBack: () -> Unit, onContinue: () -> Unit) {
               ScanError.Camera -> Res.string.scan_error_camera
             }
           ),
-          color = MaterialTheme.colorScheme.error,
-        )
-      }
-      OutlinedTextField(
+        tone = Tone.Danger,
+      )
+    }
+    SectionCard {
+      OnesaTextField(
+        label = stringResource(Res.string.scan_paste_label),
         value = pasted,
         onValueChange = { pasted = it },
-        label = { Text(stringResource(Res.string.scan_paste_label)) },
+        placeholder = "HC1:…",
+        mono = true,
         minLines = 2,
-        maxLines = 4,
-        modifier = Modifier.fillMaxWidth(),
       )
-      OutlinedButton(
-        onClick = {
-          viewModel.onText(pasted)
-          pasted = ""
-        },
-        enabled = pasted.isNotBlank(),
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Text(stringResource(Res.string.scan_use_text))
-      }
-
-      Text(stringResource(Res.string.scan_cards_read), style = MaterialTheme.typography.titleMedium)
+      OnesaButton(
+        Action(
+          stringResource(Res.string.scan_use_text),
+          onClick = {
+            viewModel.onText(pasted)
+            pasted = ""
+          },
+          primary = false,
+          enabled = pasted.isNotBlank(),
+        )
+      )
+    }
+    SectionCard(
+      title = stringResource(Res.string.scan_cards_read),
+      icon = OnesaIcons.Qr,
+      summary = Status(state.cards.size.toString(), Tone.Info),
+    ) {
       if (state.cards.isEmpty()) {
-        Text(stringResource(Res.string.scan_none_yet))
+        Text(
+          stringResource(Res.string.scan_none_yet),
+          style = MaterialTheme.typography.bodyMedium,
+          color = OnesaColors.Muted,
+        )
       }
       state.cards.forEach { CardSummary(it) }
-
-      Button(
-        onClick = onContinue,
-        enabled = state.cards.isNotEmpty(),
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Text(stringResource(Res.string.scan_continue))
-      }
+    }
+    if (state.cards.isNotEmpty()) {
+      NoteLine(stringResource(Res.string.scan_not_verified_note))
     }
   }
 }
@@ -162,37 +150,19 @@ fun ScanCardScreen(onBack: () -> Unit, onContinue: () -> Unit) {
 @Composable
 private fun CardSummary(card: ScannedCard) {
   val dvc = card.dvc
-  Card(Modifier.fillMaxWidth()) {
-    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-      Text(
-        stringResource(Res.string.scan_not_verified),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.error,
-      )
-      Field(
-        stringResource(Res.string.scan_field_child),
-        DvcFhirMapper.humanName(dvc.n).text?.value ?: dvc.n,
-      )
-      Field(stringResource(Res.string.scan_field_born), dvc.dob)
-      Field(
-        stringResource(Res.string.scan_field_vaccine),
-        NewbornRegistration.PRODUCTS[dvc.vx.vp] ?: dvc.vx.vp,
-      )
-      Field(stringResource(Res.string.scan_field_given), dvc.vx.dv)
-      Field(stringResource(Res.string.scan_field_lot), dvc.vx.bo)
-      dvc.vx.issuerId?.let { Field(stringResource(Res.string.scan_field_issuer), it) }
-      Text(
-        stringResource(Res.string.scan_not_verified_note),
-        style = MaterialTheme.typography.bodySmall,
-      )
-    }
-  }
-}
-
-@Composable
-private fun Field(label: String, value: String) {
-  Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-    Text(label, style = MaterialTheme.typography.labelMedium)
-    Text(value, style = MaterialTheme.typography.bodyMedium)
-  }
+  RecordRow(
+    label = NewbornRegistration.PRODUCTS[dvc.vx.vp] ?: dvc.vx.vp,
+    icon = OnesaIcons.Syringe,
+    code = dvc.vx.vp,
+    detail =
+      listOfNotNull(
+          "${stringResource(Res.string.scan_field_child)} ${DvcFhirMapper.humanName(dvc.n).text?.value ?: dvc.n}",
+          "${stringResource(Res.string.scan_field_born)} ${dvc.dob}",
+          "${stringResource(Res.string.scan_field_given)} ${dvc.vx.dv}",
+          "${stringResource(Res.string.scan_field_lot)} ${dvc.vx.bo}",
+          dvc.vx.issuerId?.let { "${stringResource(Res.string.scan_field_issuer)} $it" },
+        )
+        .joinToString(" • "),
+    status = Status(stringResource(Res.string.scan_not_verified), Tone.Warning),
+  )
 }

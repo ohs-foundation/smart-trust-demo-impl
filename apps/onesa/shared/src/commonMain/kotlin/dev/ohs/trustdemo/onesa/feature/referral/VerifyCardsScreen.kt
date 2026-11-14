@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -35,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -56,9 +54,8 @@ import dev.ohs.trustdemo.onesa.data.verification.EpiDose
 import dev.ohs.trustdemo.onesa.data.verification.ScanOutcome
 import dev.ohs.trustdemo.onesa.data.verification.UnmatchedDose
 import dev.ohs.trustdemo.onesa.data.verification.display
+import dev.ohs.trustdemo.onesa.feature.scan.CardCameraPanel
 import dev.ohs.trustdemo.onesa.feature.scan.QrScan
-import dev.ohs.trustdemo.onesa.feature.scan.QrScannerView
-import dev.ohs.trustdemo.onesa.feature.scan.cameraScanningAvailable
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.list_stale
 import dev.ohs.trustdemo.onesa.generated.resources.match_changed
@@ -91,6 +88,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_replaced
 import dev.ohs.trustdemo.onesa.generated.resources.verify_results
 import dev.ohs.trustdemo.onesa.generated.resources.verify_title
 import dev.ohs.trustdemo.onesa.generated.resources.verify_use_text
+import dev.ohs.trustdemo.onesa.ui.OnesaTextField
 import dev.ohs.trustdemo.onesa.util.displayTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -142,21 +140,17 @@ fun VerifyCardsScreen(referralId: String, onBack: () -> Unit, onOpenSchedule: ()
           QrScan.Cancelled -> Unit
         }
       }
-      if (cameraScanningAvailable) {
-        QrScannerView(Modifier.fillMaxWidth().height(280.dp), onResult = onScan)
-      } else {
-        QrScannerView(Modifier.fillMaxWidth(), onResult = onScan)
-      }
+      CardCameraPanel(onResult = onScan)
       if (cameraFailed) {
         Text(stringResource(Res.string.scan_error_camera), color = MaterialTheme.colorScheme.error)
       }
-      OutlinedTextField(
+      OnesaTextField(
+        label = stringResource(Res.string.scan_paste_label),
         value = pasted,
         onValueChange = { pasted = it },
-        label = { Text(stringResource(Res.string.scan_paste_label)) },
+        placeholder = "HC1:…",
+        mono = true,
         minLines = 2,
-        maxLines = 4,
-        modifier = Modifier.fillMaxWidth(),
       )
       OutlinedButton(
         onClick = {
