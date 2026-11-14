@@ -26,10 +26,10 @@
 # authorization, token, userinfo and end-session endpoints at runtime from
 # {OAUTH_ISSUER}/.well-known/openid-configuration.
 # Keycloak note: the realm is part of the issuer.
-OAUTH_ISSUER=https://keycloak.example.org/realms/ohs-player
+OAUTH_ISSUER=https://keycloak.example.org/realms/onesa
 
 # Public client id registered at the provider, with PKCE required.
-OAUTH_CLIENT_ID=ohs-player-reference-app
+OAUTH_CLIENT_ID=onesa-health-app
 
 # Space-separated scopes. offline_access is what yields a refresh token; drop
 # it and every session ends when the access token expires.

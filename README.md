@@ -109,7 +109,7 @@ Settings come from environment variables, which win over `local.properties`; see
 `local.properties.sample` for the keys. Point them at your stack, then build:
 
 ```
-export OAUTH_ISSUER=http://keycloak.onesa.<lan-ip>.sslip.io:8480/realms/ohs-player
+export OAUTH_ISSUER=http://keycloak.onesa.<lan-ip>.sslip.io:8480/realms/onesa
 export FHIR_BASE_URL=http://gateway.onesa.<lan-ip>.sslip.io:8480/fhir/
 export VHL_BASE_URL=https://vhl.onesa.<lan-ip>.sslip.io:8443
 export TRUST_LIST_URL=http://trust.gdhcn.<lan-ip>.sslip.io:8480/local-test-list.json

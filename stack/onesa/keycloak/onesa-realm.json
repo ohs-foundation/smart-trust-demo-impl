@@ -1,7 +1,7 @@
 {
-  "id": "ohs-player",
-  "realm": "ohs-player",
-  "displayName": "OHS Player · Onesa",
+  "id": "onesa",
+  "realm": "onesa",
+  "displayName": "Ministry of Health, Onesa",
   "loginTheme": "onesa",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
@@ -54,7 +54,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -63,7 +63,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -72,7 +72,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -81,7 +81,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -90,7 +90,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -99,7 +99,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -108,7 +108,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -117,7 +117,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -126,7 +126,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -135,7 +135,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -144,7 +144,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -153,7 +153,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -162,7 +162,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -171,7 +171,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -180,7 +180,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -189,7 +189,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -198,7 +198,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -207,7 +207,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -216,7 +216,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -225,7 +225,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -234,7 +234,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -243,7 +243,7 @@
         "description": "${role_offline-access}",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -252,7 +252,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -261,7 +261,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -270,7 +270,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -279,7 +279,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -288,7 +288,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -303,7 +303,7 @@
           }
         },
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -312,7 +312,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -321,7 +321,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -330,7 +330,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -339,7 +339,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -348,7 +348,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -357,7 +357,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -366,7 +366,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -375,7 +375,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -384,7 +384,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -393,7 +393,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -402,7 +402,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -411,7 +411,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -420,7 +420,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -429,7 +429,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -438,7 +438,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -447,7 +447,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -456,7 +456,7 @@
         "description": "${role_uma_authorization}",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -465,7 +465,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -474,7 +474,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -483,7 +483,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -492,7 +492,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -501,7 +501,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -510,7 +510,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -519,7 +519,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -528,7 +528,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -537,7 +537,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -546,7 +546,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -555,7 +555,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -564,7 +564,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -573,7 +573,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -582,7 +582,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -591,7 +591,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -600,7 +600,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -609,7 +609,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -618,7 +618,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -627,7 +627,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -636,7 +636,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -645,7 +645,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -654,7 +654,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -663,7 +663,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -672,7 +672,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -681,7 +681,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -690,7 +690,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -699,7 +699,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -708,7 +708,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -717,7 +717,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -726,7 +726,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -735,7 +735,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -752,7 +752,7 @@
           }
         },
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -761,7 +761,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -770,7 +770,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -779,7 +779,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -788,7 +788,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -797,7 +797,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -806,7 +806,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -815,7 +815,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -824,7 +824,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -833,7 +833,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -842,7 +842,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -851,7 +851,7 @@
         "description": "Ability to add locations",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -860,7 +860,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -869,7 +869,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -878,7 +878,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -887,7 +887,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -896,7 +896,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -905,7 +905,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -914,7 +914,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -923,7 +923,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -932,7 +932,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -941,7 +941,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -950,12 +950,12 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
         "id": "08071035-4ee8-4d34-bb1b-bfb8587c5245",
-        "name": "default-roles-ohs-player",
+        "name": "default-roles-onesa",
         "description": "${role_default-roles}",
         "composite": true,
         "composites": {
@@ -971,7 +971,7 @@
           }
         },
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -980,7 +980,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -989,7 +989,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -998,7 +998,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1007,7 +1007,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1016,7 +1016,7 @@
         "description": "",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1025,7 +1025,7 @@
         "description": "GET /api/users/*",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1034,7 +1034,7 @@
         "description": "users.view plus create, update and password reset",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1043,7 +1043,7 @@
         "description": "users.edit plus delete",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1052,7 +1052,7 @@
         "description": "GET /api/groups/*",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1061,7 +1061,7 @@
         "description": "groups.view plus create, update and add member",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1070,7 +1070,7 @@
         "description": "groups.edit plus delete group and remove member",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1079,7 +1079,7 @@
         "description": "POST /api/bulk-import/*",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1088,7 +1088,7 @@
         "description": "GET /api/roles",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1097,7 +1097,7 @@
         "description": "Look up another user's practitioner record",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1106,7 +1106,7 @@
         "description": "GET /api/location-hierarchy/{rootId}",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1115,7 +1115,7 @@
         "description": "Administrator",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1124,7 +1124,7 @@
         "description": "Care team manager",
         "composite": false,
         "clientRole": false,
-        "containerId": "ohs-player",
+        "containerId": "onesa",
         "attributes": {}
       },
       {
@@ -1866,7 +1866,7 @@
       "security-admin-console": [],
       "admin-cli": [],
       "account-console": [],
-      "ohs-player-reference-app": [],
+      "onesa-health-app": [],
       "broker": [
         {
           "id": "5e555a70-f80e-45e8-a4c6-813ed4ec2033",
@@ -2048,7 +2048,7 @@
         "PUT_RELATEDPERSON",
         "PUT_QUESTIONNAIRERESPONSE",
         "GET_QUESTIONNAIRERESPONSE",
-        "default-roles-ohs-player",
+        "default-roles-onesa",
         "GET_CAREPLAN",
         "GET_GROUP",
         "GET_ORGANIZATION",
@@ -2172,7 +2172,7 @@
         "admin",
         "bulk-import.manage",
         "care-team-manager",
-        "default-roles-ohs-player",
+        "default-roles-onesa",
         "groups.manage",
         "location-hierarchy.view",
         "offline_access",
@@ -2491,11 +2491,11 @@
   ],
   "defaultRole": {
     "id": "08071035-4ee8-4d34-bb1b-bfb8587c5245",
-    "name": "default-roles-ohs-player",
+    "name": "default-roles-onesa",
     "description": "${role_default-roles}",
     "composite": true,
     "clientRole": false,
-    "containerId": "ohs-player"
+    "containerId": "onesa"
   },
   "requiredCredentials": [
     "password"
@@ -2542,16 +2542,16 @@
   "users": [
     {
       "id": "b7c8d9e0-f1a2-4b3c-8d4e-5f6a7b8c9d0e",
-      "username": "service-account-fhir-gateway-admin",
+      "username": "service-account-onesa-fhir-gateway",
       "emailVerified": false,
       "createdTimestamp": 1700582591403,
       "enabled": true,
       "totp": false,
-      "serviceAccountClientId": "fhir-gateway-admin",
+      "serviceAccountClientId": "onesa-fhir-gateway",
       "disableableCredentialTypes": [],
       "requiredActions": [],
       "realmRoles": [
-        "default-roles-ohs-player"
+        "default-roles-onesa"
       ],
       "clientRoles": {
         "realm-management": [
@@ -2580,7 +2580,7 @@
         }
       ],
       "realmRoles": [
-        "default-roles-ohs-player"
+        "default-roles-onesa"
       ],
       "groups": [
         "/Trust demo CHW"
@@ -2607,7 +2607,7 @@
         }
       ],
       "realmRoles": [
-        "default-roles-ohs-player"
+        "default-roles-onesa"
       ],
       "groups": [
         "/Trust demo clinician"
@@ -2633,7 +2633,7 @@
         }
       ],
       "realmRoles": [
-        "default-roles-ohs-player"
+        "default-roles-onesa"
       ],
       "groups": [
         "/Trust demo family"
@@ -2659,7 +2659,7 @@
         }
       ],
       "realmRoles": [
-        "default-roles-ohs-player",
+        "default-roles-onesa",
         "ORG_SCOPE_EXEMPT"
       ],
       "groups": [
@@ -2692,13 +2692,13 @@
       "clientId": "account",
       "name": "${client_account}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/ohs-player/account/",
+      "baseUrl": "/realms/onesa/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/realms/ohs-player/account/*"
+        "/realms/onesa/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -2739,13 +2739,13 @@
       "clientId": "account-console",
       "name": "${client_account-console}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/ohs-player/account/",
+      "baseUrl": "/realms/onesa/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/realms/ohs-player/account/*"
+        "/realms/onesa/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -2924,13 +2924,13 @@
       "clientId": "security-admin-console",
       "name": "${client_security-admin-console}",
       "rootUrl": "${authAdminUrl}",
-      "baseUrl": "/admin/ohs-player/console/",
+      "baseUrl": "/admin/onesa/console/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/admin/ohs-player/console/*"
+        "/admin/onesa/console/*"
       ],
       "webOrigins": [
         "+"
@@ -2990,8 +2990,8 @@
     },
     {
       "id": "cbe40899-bc41-4c23-9bdf-0f6556c5811b",
-      "clientId": "ohs-player-client",
-      "name": "OHS Player Client",
+      "clientId": "onesa-web-portal",
+      "name": "Onesa web portal",
       "description": "",
       "rootUrl": "https://${OHS_PLAYER_APP_HOST}/",
       "adminUrl": "",
@@ -3129,8 +3129,8 @@
       ]
     },
     {
-      "clientId": "ohs-player-reference-app",
-      "name": "OHS Player Reference App",
+      "clientId": "onesa-health-app",
+      "name": "Onesa health app",
       "description": "Kotlin Multiplatform reference client. Public client using Authorization Code with PKCE. No client secret.",
       "rootUrl": "",
       "adminUrl": "",
@@ -3207,7 +3207,7 @@
     },
     {
       "id": "c3d4e5f6-a7b8-49c0-d1e2-f3a4b5c6d7e8",
-      "clientId": "fhir-gateway-admin",
+      "clientId": "onesa-fhir-gateway",
       "name": "FHIR Gateway Admin",
       "description": "Confidential service-account client for the FHIR gateway IAM provider (client_credentials). Holds manage-realm/view-realm as well as manage-users/view-users: Keycloak gates realm-role create and delete on manage-realm.",
       "surrogateAuthRequired": false,

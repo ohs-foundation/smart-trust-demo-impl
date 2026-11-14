@@ -93,7 +93,7 @@ class SeedTest {
     user["attributes"]?.jsonObject?.get("fhirUser")?.jsonArray?.single()?.jsonPrimitive?.content
 
   private companion object {
-    const val REALM = "../../stack/onesa/keycloak/ohs-player-realm.json"
+    const val REALM = "../../stack/onesa/keycloak/onesa-realm.json"
     const val KEYCLOAK_USER_ID = "http://ohs.dev/identifiers/keycloak-user-id"
   }
 }

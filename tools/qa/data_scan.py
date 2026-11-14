@@ -19,7 +19,7 @@ IPS_ONLY = {"Composition", "Condition", "MedicationStatement", "MedicationReques
 # Medplum refuses a search on Binary; its content is not a FHIR record the clients read.
 UNSEARCHABLE = "Binary"
 # The other Medplum projects hold the platform's own StructureDefinitions, CodeSystems and SearchParameters, which name real hosts.
-OWN_PROJECT = "Taifafeki"
+OWN_PROJECT = "Taifafeki Ministry of Public Health"
 
 
 def load_env():

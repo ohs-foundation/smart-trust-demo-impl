@@ -31,7 +31,7 @@ services:
     image: quay.io/keycloak/keycloak:26.5.0
     container_name: ohs-keycloak
     volumes:
-      - ../stack/onesa/keycloak/ohs-player-realm.json:/opt/keycloak/data/import/ohs-player-realm.json:ro
+      - ../stack/onesa/keycloak/onesa-realm.json:/opt/keycloak/data/import/onesa-realm.json:ro
       - ../stack/onesa/keycloak/themes/onesa:/opt/keycloak/themes/onesa:ro
     environment:
       - KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME:-admin}
@@ -117,9 +117,9 @@ services:
     environment:
       - PROXY_TO=http://hapi-fhir:8080/fhir
       # Must match the `iss` Keycloak mints, character for character.
-      - TOKEN_ISSUER=https://${KEYCLOAK_HOST}/realms/${KEYCLOAK_REALM:-ohs-player}
+      - TOKEN_ISSUER=https://${KEYCLOAK_HOST}/realms/${KEYCLOAK_REALM:-onesa}
       - IAM_PROVIDER=keycloak
-      - IAM_PROVIDER_CLIENT_ID=${GATEWAY_CLIENT_ID:-fhir-gateway-admin}
+      - IAM_PROVIDER_CLIENT_ID=${GATEWAY_CLIENT_ID:-onesa-fhir-gateway}
       - IAM_PROVIDER_CLIENT_SECRET=${FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET}
       - ACCESS_CHECKER=org_scoped_access
       - AUDIT_EVENT_ACTIONS_CONFIG=CUD
@@ -158,10 +158,10 @@ services:
     environment:
       HAPI_URL: http://hapi-fhir:8080/fhir
       GATEWAY_URL: http://fhir-gateway:8080/fhir
-      JWKS_URL: http://keycloak:${KEYCLOAK_PORT:-8081}/realms/${KEYCLOAK_REALM:-ohs-player}/protocol/openid-connect/certs
-      TOKEN_ISSUER: https://${KEYCLOAK_HOST}/realms/${KEYCLOAK_REALM:-ohs-player}
+      JWKS_URL: http://keycloak:${KEYCLOAK_PORT:-8081}/realms/${KEYCLOAK_REALM:-onesa}/protocol/openid-connect/certs
+      TOKEN_ISSUER: https://${KEYCLOAK_HOST}/realms/${KEYCLOAK_REALM:-onesa}
       VHL_PUBLIC_URL: https://${VHL_HOST:?set VHL_HOST in .env to the public VHL hostname}
-      VHL_ALLOWED_CLIENTS: ${APP_CLIENT_ID:-ohs-player-reference-app},${CLI_CLIENT_ID:-trust-demo-cli}
+      VHL_ALLOWED_CLIENTS: ${APP_CLIENT_ID:-onesa-health-app},${CLI_CLIENT_ID:-trust-demo-cli}
       LINK_KEY_FILE: /run/keys/XXK_LINK.key.pem
       LINK_CERT_FILE: /run/keys/XXK_LINK.crt.pem
       VHL_DB_PATH: /data/vhl
@@ -202,18 +202,18 @@ services:
       - "127.0.0.1:${TRUST_PORT:-8086}:80"
     networks: [fhir_net]
 
-  ohs-player-web:
+  web-portal:
     build:
       context: .
       dockerfile: Dockerfile.web
       args:
         WEB_REF: ${WEB_REF:-main}
         VITE_FHIR_BASE_URL: https://${WEB_HOST:?set WEB_HOST in .env to the public Portal hostname}/fhir
-        VITE_OIDC_ISSUER: https://${KEYCLOAK_HOST}/realms/${KEYCLOAK_REALM:-ohs-player}
-        VITE_CLIENT_ID: ${WEB_CLIENT_ID:-ohs-player-client}
+        VITE_OIDC_ISSUER: https://${KEYCLOAK_HOST}/realms/${KEYCLOAK_REALM:-onesa}
+        VITE_CLIENT_ID: ${WEB_CLIENT_ID:-onesa-web-portal}
         VITE_FHIR_VERSION: ${VITE_FHIR_VERSION:-R4}
-    image: ohs-player-web:local
-    container_name: ohs-player-web
+    image: trust-demo-web-portal:local
+    container_name: web-portal
     restart: unless-stopped
     ports:
       - "127.0.0.1:${OHS_PLAYER_WEB_PORT:-8084}:80"

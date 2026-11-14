@@ -24,12 +24,12 @@ class OAuthConfigTest {
   fun discoveryUrl_appendsWellKnown_andTrimsTrailingSlash() {
     val keycloak =
       OAuthConfig(
-        issuer = "https://keycloak.example.org/realms/ohs-player/",
-        clientId = "ohs-player-reference-app",
+        issuer = "https://keycloak.example.org/realms/onesa/",
+        clientId = "onesa-health-app",
         scopes = "openid profile",
       )
     assertEquals(
-      "https://keycloak.example.org/realms/ohs-player/.well-known/openid-configuration",
+      "https://keycloak.example.org/realms/onesa/.well-known/openid-configuration",
       keycloak.discoveryUrl,
     )
 

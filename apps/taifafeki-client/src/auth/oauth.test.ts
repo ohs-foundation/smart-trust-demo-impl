@@ -47,7 +47,7 @@ describe("login", () => {
       "pw",
       fakeMedplum(
         {
-          "/auth/login": { login: "l1", memberships: [membership("m0", "Other"), membership("m1", "Taifafeki")] },
+          "/auth/login": { login: "l1", memberships: [membership("m0", "Other"), membership("m1", "Taifafeki Ministry of Public Health")] },
           "/auth/profile": { code: "def" },
         },
         calls,

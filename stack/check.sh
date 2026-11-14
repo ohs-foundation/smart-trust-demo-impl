@@ -25,13 +25,13 @@ status() { curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$@"; }
 
 check "HAPI metadata on loopback" 200 "$(status "http://127.0.0.1:${HAPI_HOST_PORT}/fhir/metadata")"
 check "Keycloak realm discovery" 200 \
-  "$(status "http://keycloak.onesa.${base}/realms/ohs-player/.well-known/openid-configuration")"
+  "$(status "http://keycloak.onesa.${base}/realms/onesa/.well-known/openid-configuration")"
 check "gateway refuses a request without a token" 401 "$(status "http://gateway.onesa.${base}/fhir/Patient")"
 
 token=$(curl -s --max-time 10 \
   -d grant_type=password -d client_id=trust-demo-cli -d "client_secret=${TRUSTDEMO_CLI_CLIENT_SECRET}" \
   -d username=vilay -d "password=${TRUSTDEMO_USER_PASSWORD}" \
-  "http://keycloak.onesa.${base}/realms/ohs-player/protocol/openid-connect/token" | jq -r '.access_token // empty')
+  "http://keycloak.onesa.${base}/realms/onesa/protocol/openid-connect/token" | jq -r '.access_token // empty')
 check "Keycloak issues vilay a token" yes "$([ -n "$token" ] && echo yes || echo no)"
 patients=$(status -H "Authorization: Bearer $token" "http://gateway.onesa.${base}/fhir/Patient")
 check "gateway serves vilay's Patient search" 200 "$patients"

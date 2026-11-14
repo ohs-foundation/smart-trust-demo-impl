@@ -127,7 +127,7 @@ class MedplumTenancyTest {
     val second = medplum.admin.ensureClientApplication("http://client.test:8480")
     assertEquals(first, second)
     val app = medplum.records("ClientApplication").single()
-    assertEquals("Taifafeki facility client", app["name"]?.jsonPrimitive?.contentOrNull)
+    assertEquals("taifafeki-facility-client", app["name"]?.jsonPrimitive?.contentOrNull)
     assertEquals("http://client.test:8480", app["redirectUri"]?.jsonPrimitive?.contentOrNull)
   }
 }

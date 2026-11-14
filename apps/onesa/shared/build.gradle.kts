@@ -63,8 +63,8 @@ fun nonBlankEnv(name: String): Provider<String> =
  * manifest placeholders below, so the LoginRedirectActivity intent-filter cannot
  * drift from the config the app actually authenticates with.
  */
-val resolvedIssuer = authProp("OAUTH_ISSUER", "https://keycloak.example.org/realms/ohs-player")
-val resolvedClientId = authProp("OAUTH_CLIENT_ID", "ohs-player-reference-app")
+val resolvedIssuer = authProp("OAUTH_ISSUER", "https://keycloak.example.org/realms/onesa")
+val resolvedClientId = authProp("OAUTH_CLIENT_ID", "onesa-health-app")
 val resolvedRedirectScheme = authProp("OAUTH_REDIRECT_SCHEME", "dev.ohs.trustdemo.onesa")
 val resolvedRedirectHost = authProp("OAUTH_REDIRECT_HOST", "auth")
 val resolvedDesktopPort = authProp("OAUTH_DESKTOP_REDIRECT_PORT", "8765")

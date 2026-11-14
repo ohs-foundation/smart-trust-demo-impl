@@ -49,8 +49,8 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
-const val ISSUER = "http://keycloak.onesa.test:8480/realms/ohs-player"
-const val CLIENT = "ohs-player-reference-app"
+const val ISSUER = "http://keycloak.onesa.test:8480/realms/onesa"
+const val CLIENT = "onesa-health-app"
 const val PUBLIC_URL = "https://vhl.onesa.test:8443"
 private const val KEY_ID = "test-key"
 

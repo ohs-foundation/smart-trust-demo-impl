@@ -19,7 +19,7 @@ interface LoginReply {
   enrollQrCode?: string;
 }
 
-const PROJECT = "Taifafeki";
+const PROJECT = "Taifafeki Ministry of Public Health";
 
 export function authorizeParams(search: Record<string, unknown>): AuthorizeParams {
   return { clientId: typeof search.client_id === "string" ? search.client_id : "" };

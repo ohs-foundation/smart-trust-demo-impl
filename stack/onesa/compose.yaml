@@ -21,7 +21,7 @@ services:
     image: quay.io/keycloak/keycloak:26.5.0
     restart: unless-stopped
     volumes:
-      - ./keycloak/ohs-player-realm.json:/opt/keycloak/data/import/ohs-player-realm.json:ro
+      - ./keycloak/onesa-realm.json:/opt/keycloak/data/import/onesa-realm.json:ro
       - ./keycloak/themes/onesa:/opt/keycloak/themes/onesa:ro
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -92,9 +92,9 @@ services:
     restart: unless-stopped
     environment:
       PROXY_TO: http://hapi:8080/fhir
-      TOKEN_ISSUER: http://keycloak.onesa.${STACK_HOST}:${PROXY_PORT}/realms/ohs-player
+      TOKEN_ISSUER: http://keycloak.onesa.${STACK_HOST}:${PROXY_PORT}/realms/onesa
       IAM_PROVIDER: keycloak
-      IAM_PROVIDER_CLIENT_ID: fhir-gateway-admin
+      IAM_PROVIDER_CLIENT_ID: onesa-fhir-gateway
       IAM_PROVIDER_CLIENT_SECRET: ${FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET}
       ACCESS_CHECKER: org_scoped_access
       AUDIT_EVENT_ACTIONS_CONFIG: CUD
@@ -128,9 +128,9 @@ services:
     environment:
       HAPI_URL: http://hapi:8080/fhir
       GATEWAY_URL: http://gateway:8080/fhir
-      JWKS_URL: http://keycloak:8080/realms/ohs-player/protocol/openid-connect/certs
-      TOKEN_ISSUER: http://keycloak.onesa.${STACK_HOST}:${PROXY_PORT}/realms/ohs-player
-      VHL_ALLOWED_CLIENTS: ohs-player-reference-app,trust-demo-cli
+      JWKS_URL: http://keycloak:8080/realms/onesa/protocol/openid-connect/certs
+      TOKEN_ISSUER: http://keycloak.onesa.${STACK_HOST}:${PROXY_PORT}/realms/onesa
+      VHL_ALLOWED_CLIENTS: onesa-health-app,trust-demo-cli
       STACK_HOST: ${STACK_HOST}
       VHL_TLS_PORT: ${VHL_TLS_PORT}
       LINK_KEY_FILE: /run/keys/XXK_LINK.key.pem

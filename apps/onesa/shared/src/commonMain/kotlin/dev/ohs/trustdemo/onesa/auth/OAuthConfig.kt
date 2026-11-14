@@ -26,7 +26,7 @@ package dev.ohs.trustdemo.onesa.auth
  */
 data class OAuthConfig(
   /**
-   * OIDC issuer, e.g. a Keycloak realm `https://host/realms/ohs-player` or
+   * OIDC issuer, e.g. a Keycloak realm `https://host/realms/onesa` or
    * `https://x.zitadel.cloud`.
    */
   val issuer: String,
