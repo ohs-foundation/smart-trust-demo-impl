@@ -36,7 +36,7 @@
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": false,
   "editUsernameAllowed": false,
-  "bruteForceProtected": false,
+  "bruteForceProtected": true,
   "permanentLockout": false,
   "maxTemporaryLockouts": 0,
   "maxFailureWaitSeconds": 900,
@@ -1856,7 +1856,6 @@
       "security-admin-console": [],
       "admin-cli": [],
       "account-console": [],
-      "ohs-player-client": [],
       "ohs-player-reference-app": [],
       "broker": [
         {
@@ -2795,7 +2794,7 @@
       "consentRequired": false,
       "standardFlowEnabled": false,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
+      "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "publicClient": true,
       "frontchannelLogout": false,
@@ -2977,147 +2976,6 @@
       ]
     },
     {
-      "id": "cbe40899-bc41-4c23-9bdf-0f6556c5811b",
-      "clientId": "ohs-player-client",
-      "name": "OHS Player Client",
-      "description": "",
-      "rootUrl": "http://${OHS_PLAYER_APP_HOST}/",
-      "adminUrl": "",
-      "baseUrl": "",
-      "surrogateAuthRequired": false,
-      "enabled": true,
-      "alwaysDisplayInConsole": false,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "${OHS_PLAYER_KEYCLOAK_CLIENT_SECRET}",
-      "redirectUris": [
-        "http://${OHS_PLAYER_APP_HOST}/*",
-        "https://${OHS_PLAYER_APP_HOST}/*"
-      ],
-      "webOrigins": [
-        "http://${OHS_PLAYER_APP_HOST}",
-        "https://${OHS_PLAYER_APP_HOST}"
-      ],
-      "notBefore": 0,
-      "bearerOnly": false,
-      "consentRequired": false,
-      "standardFlowEnabled": true,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": false,
-      "publicClient": true,
-      "frontchannelLogout": true,
-      "protocol": "openid-connect",
-      "attributes": {
-        "saml.multivalued.roles": "false",
-        "saml.force.post.binding": "false",
-        "frontchannel.logout.session.required": "false",
-        "post.logout.redirect.uris": "+",
-        "oauth2.device.authorization.grant.enabled": "false",
-        "backchannel.logout.revoke.offline.tokens": "false",
-        "saml.server.signature.keyinfo.ext": "false",
-        "use.refresh.tokens": "true",
-        "oidc.ciba.grant.enabled": "false",
-        "backchannel.logout.session.required": "true",
-        "client_credentials.use_refresh_token": "false",
-        "saml.client.signature": "false",
-        "require.pushed.authorization.requests": "false",
-        "saml.allow.ecp.flow": "false",
-        "saml.assertion.signature": "false",
-        "id.token.as.detached.signature": "false",
-        "client.secret.creation.time": "1700582392",
-        "saml.encrypt": "false",
-        "saml.server.signature": "false",
-        "exclude.session.state.from.auth.response": "false",
-        "saml.artifact.binding": "false",
-        "saml_force_name_id_format": "false",
-        "tls.client.certificate.bound.access.tokens": "false",
-        "acr.loa.map": "{}",
-        "saml.authnstatement": "false",
-        "display.on.consent.screen": "false",
-        "token.response.type.bearer.lower-case": "false",
-        "saml.onetimeuse.condition": "false"
-      },
-      "authenticationFlowBindingOverrides": {},
-      "fullScopeAllowed": true,
-      "nodeReRegistrationTimeout": -1,
-      "protocolMappers": [
-        {
-          "id": "97b3b0cc-dce3-44d2-9ac6-b1f342c57239",
-          "name": "Client IP Address",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usersessionmodel-note-mapper",
-          "consentRequired": false,
-          "config": {
-            "user.session.note": "clientAddress",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "clientAddress",
-            "jsonType.label": "String",
-            "userinfo.token.claim": "true"
-          }
-        },
-        {
-          "id": "df07cd64-6a05-4284-974f-b24687ecbad9",
-          "name": "Client Host",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usersessionmodel-note-mapper",
-          "consentRequired": false,
-          "config": {
-            "user.session.note": "clientHost",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "clientHost",
-            "jsonType.label": "String",
-            "userinfo.token.claim": "true"
-          }
-        },
-        {
-          "id": "ecc2e174-a7ea-4591-a2d8-e84b4d0a5706",
-          "name": "Client ID",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usersessionmodel-note-mapper",
-          "consentRequired": false,
-          "config": {
-            "user.session.note": "clientId",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "clientId",
-            "jsonType.label": "String",
-            "userinfo.token.claim": "true"
-          }
-        },
-        {
-          "id": "ff597428-53b8-4500-9b23-ac2f3c14108a",
-          "name": "FHIR Core App Id",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "consentRequired": false,
-          "config": {
-            "user.attribute": "fhir_core_app_id",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "fhir_core_app_id",
-            "jsonType.label": "String",
-            "userinfo.token.claim": "true"
-          }
-        }
-      ],
-      "defaultClientScopes": [
-        "web-origins",
-        "acr",
-        "profile",
-        "roles",
-        "basic",
-        "email"
-      ],
-      "optionalClientScopes": [
-        "address",
-        "phone",
-        "offline_access",
-        "microprofile-jwt"
-      ]
-    },
-    {
       "clientId": "ohs-player-reference-app",
       "name": "OHS Player Reference App",
       "description": "Kotlin Multiplatform reference client. Public client using Authorization Code with PKCE. No client secret.",
@@ -3192,44 +3050,6 @@
             "multivalued": "false"
           }
         }
-      ]
-    },
-    {
-      "id": "f7a1b2c3-d4e5-6f78-9a0b-c1d2e3f4a5b6",
-      "clientId": "hapi-fhir-server-client",
-      "name": "HAPI FHIR Server",
-      "description": "Confidential bearer-only client for HAPI FHIR token validation",
-      "surrogateAuthRequired": false,
-      "enabled": true,
-      "alwaysDisplayInConsole": false,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "${HAPI_FHIR_SERVER_KEYCLOAK_CLIENT_SECRET}",
-      "bearerOnly": true,
-      "consentRequired": false,
-      "standardFlowEnabled": false,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": true,
-      "publicClient": false,
-      "frontchannelLogout": false,
-      "protocol": "openid-connect",
-      "attributes": {},
-      "authenticationFlowBindingOverrides": {},
-      "fullScopeAllowed": true,
-      "nodeReRegistrationTimeout": -1,
-      "defaultClientScopes": [
-        "web-origins",
-        "acr",
-        "profile",
-        "roles",
-        "basic",
-        "email"
-      ],
-      "optionalClientScopes": [
-        "address",
-        "phone",
-        "offline_access",
-        "microprofile-jwt"
       ]
     },
     {

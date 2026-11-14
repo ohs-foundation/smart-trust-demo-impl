@@ -16,6 +16,8 @@ server {
 server {
   listen 80;
   server_name keycloak.onesa.${STACK_HOST};
+  # The admin console and master realm stay off the LAN; administer with kcadm.sh inside the container.
+  location ~ ^/(admin|realms/master)(/|$) { return 403; }
   location / { set $u http://keycloak:8080; proxy_pass $u; }
 }
 
