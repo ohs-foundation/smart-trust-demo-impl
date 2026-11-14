@@ -570,10 +570,11 @@ class GenerateVhlTest {
       (1..6).map { async { passcodes.check(consent, "9999") } }.awaitAll()
     }
 
-    assertEquals(List(6) { PasscodeCheck.WRONG }, answers)
-    assertEquals(6, passcodes.wrongAttempts(consent))
-    assertEquals(PasscodeCheck.MATCH, passcodes.check(consent, "1111"))
-    assertEquals(6, passcodes.wrongAttempts(consent))
+    assertEquals(3, answers.count { it == PasscodeCheck.WRONG })
+    assertEquals(3, answers.count { it == PasscodeCheck.EXHAUSTED })
+    assertEquals(3, passcodes.wrongAttempts(consent))
+    assertEquals(PasscodeCheck.EXHAUSTED, passcodes.check(consent, "1111"))
+    assertEquals(3, passcodes.wrongAttempts(consent))
   }
 
   @Test

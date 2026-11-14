@@ -41,6 +41,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
@@ -234,6 +237,7 @@ class ReleaseRuleTest {
         ),
         Case("R3 wrong passcode", sent = "0483", reason = "wrong-passcode", wrongAfter = 1),
         Case("R3 no passcode", sent = null, reason = "wrong-passcode", wrongAfter = 1),
+        Case("R4 after two wrong guesses", priorWrong = 2, reason = null, wrongAfter = 2),
         Case("R4 release", reason = null, wrongAfter = 0),
       )
     cases.forEach { case ->
@@ -382,9 +386,64 @@ class ReleaseRuleTest {
     assertEquals(3, passcodes.wrongAttempts(seeded.consentId))
     assertEquals(HttpStatusCode.Forbidden, post(manifestRequest(seeded, PASSCODE)).status)
 
-    assertEquals(
-      List(3) { "wrong-passcode" } + "attempts-exhausted",
-      audits().sortedBy { it.text("recorded") }.map { it.reason() },
-    )
+    val reasons = audits().map { it.reason() }
+    assertEquals(3, reasons.count { it == "wrong-passcode" })
+    assertEquals(1, reasons.count { it == "attempts-exhausted" })
+  }
+
+  @Test
+  fun parallelWrongGuessesNeverExceedThree() = withService {
+    val seeded = seed()
+    val guess = manifestRequest(seeded, "0483")
+
+    val statuses = coroutineScope { (1..20).map { async { post(guess).status } }.awaitAll() }
+
+    assertTrue(statuses.all { it == HttpStatusCode.Forbidden })
+    val reasons = audits().map { it.reason() }
+    assertEquals(20, reasons.size)
+    assertEquals(3, passcodes.wrongAttempts(seeded.consentId))
+    assertEquals(3, reasons.count { it == "wrong-passcode" })
+    assertEquals(17, reasons.count { it == "attempts-exhausted" })
+  }
+
+  @Test
+  fun aWithdrawalBetweenManifestAndDocumentStopsTheDocument() = withService {
+    val seeded = seed()
+    assertEquals(HttpStatusCode.OK, post(manifestRequest(seeded, PASSCODE)).status)
+    assertEquals(HttpStatusCode.OK, get(documentRequest(seeded)).status)
+    val consent = hapi.stored.getValue("Consent/${seeded.consentId}")
+    hapi.stored["Consent/${seeded.consentId}"] =
+      JsonObject(consent + ("status" to JsonPrimitive("inactive")))
+    hapi.stored.keys.filter { it.startsWith("AuditEvent/") }.forEach { hapi.stored.remove(it) }
+
+    assertEquals(HttpStatusCode.Forbidden, get(documentRequest(seeded)).status)
+
+    val audit = audits().single()
+    assertEquals("4", audit.text("outcome"))
+    assertEquals("withdrawn", audit.reason())
+  }
+
+  @Test
+  fun aDocumentExpiringBetweenManifestAndDocumentStopsTheDocument() = withService {
+    val seeded = seed(end = now.plusSeconds(120))
+    assertEquals(HttpStatusCode.OK, post(manifestRequest(seeded, PASSCODE)).status)
+    hapi.stored.keys.filter { it.startsWith("AuditEvent/") }.forEach { hapi.stored.remove(it) }
+    now = now.plusSeconds(180)
+
+    assertEquals(HttpStatusCode.Forbidden, get(documentRequest(seeded)).status)
+
+    assertEquals("expired", audits().single().reason())
+  }
+
+  @Test
+  fun aDeniedFetchOfAnUnknownDocumentIsNotAudited() = withService {
+    val seeded = seed()
+    val unknown = signRequest("GET", "/vhl/Binary/no-such-binary", null, clinic, now.epochSecond)
+
+    assertEquals(HttpStatusCode.Forbidden, get(unknown).status)
+    assertTrue(audits().isEmpty())
+
+    assertEquals(HttpStatusCode.Forbidden, get(documentRequest(seeded)).status)
+    assertEquals(1, audits().size)
   }
 }

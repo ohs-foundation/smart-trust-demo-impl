@@ -22,6 +22,7 @@ import java.sql.DriverManager
 import java.sql.Timestamp
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -32,13 +33,21 @@ enum class PasscodeCheck {
   MATCH,
   WRONG,
   UNKNOWN,
+
+  /** The link already has [MAX_WRONG_ATTEMPTS] wrong attempts; the passcode was not compared. */
+  EXHAUSTED,
 }
+
+const val MAX_WRONG_ATTEMPTS = 3
 
 /** The passcode of each share, keyed by the share's Consent id. Passcodes are strings. */
 interface PasscodeStore {
   suspend fun keep(consentId: String, passcode: String)
 
-  /** Compares in constant time; a [PasscodeCheck.WRONG] answer counts as a wrong attempt. */
+  /**
+   * Compares in constant time. The attempt is reserved before comparing, so parallel guesses can
+   * never exceed [MAX_WRONG_ATTEMPTS]; [PasscodeCheck.WRONG] keeps the reservation.
+   */
   suspend fun check(consentId: String, passcode: String): PasscodeCheck
 
   suspend fun wrongAttempts(consentId: String): Int
@@ -122,18 +131,14 @@ class H2PasscodeStore(private val jdbcUrl: String) : PasscodeStore {
       hash(passcode, ByteArray(SALT_BYTES), MEMORY_KIB, ITERATIONS, PARALLELISM)
       return PasscodeCheck.UNKNOWN
     }
+    if (adjustAttempts(consentId, 1, "AND wrong_attempts < $MAX_WRONG_ATTEMPTS") == 0) {
+      return PasscodeCheck.EXHAUSTED
+    }
     val candidate =
       hash(passcode, stored.salt, stored.memoryKib, stored.iterations, stored.parallelism)
-    if (MessageDigest.isEqual(candidate, stored.hash)) return PasscodeCheck.MATCH
-    sql { connection ->
-      connection
-        .prepareStatement(
-          "UPDATE passcode SET wrong_attempts = wrong_attempts + 1 WHERE consent_id = ?"
-        )
-        .use {
-          it.setString(1, consentId)
-          it.executeUpdate()
-        }
+    if (MessageDigest.isEqual(candidate, stored.hash)) {
+      withContext(NonCancellable) { adjustAttempts(consentId, -1, "AND wrong_attempts > 0") }
+      return PasscodeCheck.MATCH
     }
     return PasscodeCheck.WRONG
   }
@@ -153,6 +158,18 @@ class H2PasscodeStore(private val jdbcUrl: String) : PasscodeStore {
       }
     }
   }
+
+  private suspend fun adjustAttempts(consentId: String, by: Int, guard: String): Int =
+    sql { connection ->
+      connection
+        .prepareStatement(
+          "UPDATE passcode SET wrong_attempts = wrong_attempts + ($by) WHERE consent_id = ? $guard"
+        )
+        .use {
+          it.setString(1, consentId)
+          it.executeUpdate()
+        }
+    }
 
   private class Stored(
     val hash: ByteArray,

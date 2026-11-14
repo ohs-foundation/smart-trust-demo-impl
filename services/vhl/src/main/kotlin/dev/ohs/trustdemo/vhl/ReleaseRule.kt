@@ -30,7 +30,6 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
-private const val MAX_WRONG_ATTEMPTS = 3
 private const val ACCESS_PROFILE =
   "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaVhlAccess"
 private const val IG_REFUSALS =
@@ -108,13 +107,21 @@ class ReleaseRule(
 
   private suspend fun document(request: ReleaseRequest.Document): ReleaseOutcome {
     val now = clock.instant()
+    val known = releases.latest(request.binaryId, null)
+    val binary = find("Binary/${request.binaryId}") ?: return ReleaseOutcome.Denied
     val release =
       releases.latest(request.binaryId, request.requester.kid)?.takeIf {
         Duration.between(it.at, now) < releaseLifetime
       }
-    val binary = release?.let { find("Binary/${request.binaryId}") }
-    if (release == null || binary == null) {
-      val known = releases.latest(request.binaryId, null)
+    val consent = release?.let { find("Consent/${it.consentId}") }
+    val refusal =
+      when {
+        release == null || consent == null -> null
+        consent.text("status") == "inactive" -> Refusal.WITHDRAWN
+        endOf(consent).isBefore(now) -> Refusal.EXPIRED
+        else -> null
+      }
+    if (release == null || consent == null || refusal != null) {
       audit(
         Interaction.DOCUMENT,
         request.requester,
@@ -122,7 +129,7 @@ class ReleaseRule(
         known?.consentId,
         known?.bundleId,
         extra = "Binary/${request.binaryId}",
-        refusal = null,
+        refusal = refusal,
         outcomeText = "No current release for this certificate; document not served",
       )
       return ReleaseOutcome.Denied
@@ -146,9 +153,13 @@ class ReleaseRule(
       passcodes.wrongAttempts(consentId) >= MAX_WRONG_ATTEMPTS -> Refusal.ATTEMPTS_EXHAUSTED
       consent.text("status") == "inactive" -> Refusal.WITHDRAWN
       endOf(consent).isBefore(clock.instant()) -> Refusal.EXPIRED
-      passcodes.check(consentId, passcode.orEmpty()) != PasscodeCheck.MATCH ->
-        Refusal.WRONG_PASSCODE
-      else -> null
+      else ->
+        when (passcodes.check(consentId, passcode.orEmpty())) {
+          PasscodeCheck.MATCH -> null
+          PasscodeCheck.EXHAUSTED -> Refusal.ATTEMPTS_EXHAUSTED
+          PasscodeCheck.WRONG,
+          PasscodeCheck.UNKNOWN -> Refusal.WRONG_PASSCODE
+        }
     }
 
   private fun endOf(consent: JsonObject): Instant =
