@@ -68,7 +68,7 @@ class ReleaseRule(
     val bundleId = bundleOf(consent)
     val refusal = refusal(consentId, consent, request.passcode)
     if (refusal != null) {
-      audit(Interaction.MANIFEST, request.requester, patientId, refusal = refusal)
+      audit(Interaction.MANIFEST, request.requester, patientId, consentId, refusal = refusal)
       return ReleaseOutcome.Refused(refusal)
     }
     val documents =
@@ -293,7 +293,7 @@ class ReleaseRule(
             )
           }
           listOfNotNull(
-              consentId?.takeIf { released }?.let { "Consent/$it" },
+              consentId?.let { "Consent/$it" },
               bundleId?.takeIf { released }?.let { "Bundle/$it" },
               extra,
             )

@@ -305,7 +305,11 @@ class ReleaseRuleTest {
             if (case.reason == "attempts-exhausted") REFUSAL_SYSTEM else IG_REFUSAL_SYSTEM
           assertEquals(system to case.reason, response.refusal(), case.name)
           assertEquals("4", audit.text("outcome"), case.name)
-          assertEquals(listOf("Patient/somsak"), audit.entities(), case.name)
+          assertEquals(
+            listOf("Patient/somsak", "Consent/${seeded.consentId}"),
+            audit.entities(),
+            case.name,
+          )
         }
       }
     }
