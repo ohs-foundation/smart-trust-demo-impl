@@ -1,0 +1,18 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "vhl-refusal-reason",
+  "url": "http://ohs.dev/fhir/trust-demo/CodeSystem/vhl-refusal-reason",
+  "name": "VhlRefusalReason",
+  "title": "Why a shared link released nothing, beyond the IG's reasons",
+  "status": "draft",
+  "content": "complete",
+  "caseSensitive": true,
+  "description": "Refusal reasons the VHL service records that http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason does not define.",
+  "concept": [
+    {
+      "code": "attempts-exhausted",
+      "display": "Attempts exhausted",
+      "definition": "Three wrong passcodes were already given for the link, so no further attempt is checked."
+    }
+  ]
+}

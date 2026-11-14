@@ -32,6 +32,9 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
+/** Points a share's manifest List at the Consent that governs its release. */
+internal const val LIST_CONSENT_EXTENSION =
+  "http://ohs.dev/fhir/trust-demo/StructureDefinition/list-consent"
 private const val IPS_BASE = "http://smart.who.int/trust-demo"
 private const val LOINC = "http://loinc.org"
 private const val PHW_CONSENT =
@@ -90,7 +93,7 @@ class Records(private val publicUrl: String, private val now: Instant) {
         add(entry(share.ips))
         add(entry(binary(share.binaryId, jwe)))
         add(entry(documentReference(share.documentReferenceId, patientId, share.binaryId)))
-        add(entry(manifest(share.listId, patientId, share.documentReferenceId)))
+        add(entry(manifest(share.listId, patientId, share.documentReferenceId, share.consent.id())))
       }
     }
   }
@@ -297,22 +300,34 @@ class Records(private val publicUrl: String, private val now: Instant) {
     }
   }
 
-  private fun manifest(id: String, patientId: String, documentReferenceId: String) =
-    buildJsonObject {
-      put("resourceType", "List")
-      put("id", id)
-      put("status", "current")
-      put("mode", "working")
-      put("title", "Immunization summary")
-      putJsonObject("code") {
-        putJsonArray("coding") { add(buildJsonObject { put("code", "folder") }) }
-      }
-      put("subject", reference("Patient/$patientId"))
-      put("date", now.toString())
-      putJsonArray("entry") {
-        add(buildJsonObject { put("item", reference("DocumentReference/$documentReferenceId")) })
-      }
+  private fun manifest(
+    id: String,
+    patientId: String,
+    documentReferenceId: String,
+    consentId: String,
+  ) = buildJsonObject {
+    put("resourceType", "List")
+    put("id", id)
+    putJsonArray("extension") {
+      add(
+        buildJsonObject {
+          put("url", LIST_CONSENT_EXTENSION)
+          put("valueReference", reference("Consent/$consentId"))
+        }
+      )
     }
+    put("status", "current")
+    put("mode", "working")
+    put("title", "Immunization summary")
+    putJsonObject("code") {
+      putJsonArray("coding") { add(buildJsonObject { put("code", "folder") }) }
+    }
+    put("subject", reference("Patient/$patientId"))
+    put("date", now.toString())
+    putJsonArray("entry") {
+      add(buildJsonObject { put("item", reference("DocumentReference/$documentReferenceId")) })
+    }
+  }
 
   private fun displayName(patient: JsonObject): String {
     val name = patient["name"]?.jsonArray?.firstOrNull()?.jsonObject

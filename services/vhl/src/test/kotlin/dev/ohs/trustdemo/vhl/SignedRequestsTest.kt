@@ -31,15 +31,12 @@ import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import java.io.File
 import java.security.KeyPairGenerator
-import java.security.MessageDigest
 import java.security.PrivateKey
-import java.security.Signature
 import java.security.cert.X509Certificate
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
-import java.util.Base64
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,13 +47,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import who.smart.trust.core.Hcert
-import who.smart.trust.vhl.SignatureRequest
 
-private const val AUTHORITY = "vhl.onesa.test:8443"
 private const val MANIFEST_PATH = "/vhl/List/_search"
 private const val ANCHOR_ENTRY = "trustlist:DEMO-VHL:XXR:CSCA"
-private const val FORM = "application/x-www-form-urlencoded"
 private const val FORM_BODY =
   "_id=list-1&code=folder&status=current&patient.identifier=urn%3Aietf%3Arfc%3A3986%7CPatient%2Fp1" +
     "&recipient=Kesaro+clinic&passcode=482913"
@@ -327,11 +320,6 @@ class SignedRequestsTest {
     assertTrue(releases.isEmpty(), "a refused request must not reach the release decision")
   }
 
-  private class Signed(val path: String, val body: ByteArray?, val headers: Map<String, String>) {
-    fun copy(body: ByteArray? = this.body, headers: Map<String, String> = this.headers) =
-      Signed(path, body, headers)
-  }
-
   private fun sign(
     method: String,
     path: String,
@@ -339,39 +327,5 @@ class SignedRequestsTest {
     identity: Pair<PrivateKey, X509Certificate> = clinic,
     created: Long = now.epochSecond,
     authority: String = AUTHORITY,
-  ): Signed {
-    val (key, certificate) = identity
-    val contentType = if (body == null) null else FORM
-    val rebuilt =
-      Hcert.vhl.buildSignatureBase(
-        SignatureRequest(
-          method = method,
-          authority = authority,
-          path = path,
-          contentType = contentType,
-          body = body,
-          keyid = kid(certificate),
-          alg = "ecdsa-p256-sha256",
-          created = created,
-        )
-      )
-    val signature =
-      Signature.getInstance("SHA256withECDSAinP1363Format").run {
-        initSign(key)
-        update(rebuilt.base)
-        sign()
-      }
-    val headers = buildMap {
-      contentType?.let { put("Content-Type", it) }
-      rebuilt.contentDigest?.let { put("Content-Digest", it) }
-      put("Signature-Input", rebuilt.signatureInput)
-      put("Signature", "sig1=:${Base64.getEncoder().encodeToString(signature)}:")
-      put("Client-Cert", ":${Base64.getEncoder().encodeToString(certificate.encoded)}:")
-    }
-    return Signed(path, body, headers)
-  }
-
-  private fun kid(certificate: X509Certificate): String =
-    Base64.getEncoder()
-      .encodeToString(MessageDigest.getInstance("SHA-256").digest(certificate.encoded).copyOf(8))
+  ): Signed = signRequest(method, path, body, identity, created, authority)
 }

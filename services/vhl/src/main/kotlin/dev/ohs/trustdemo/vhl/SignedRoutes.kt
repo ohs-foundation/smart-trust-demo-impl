@@ -15,6 +15,7 @@
  */
 package dev.ohs.trustdemo.vhl
 
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.parseQueryString
 import io.ktor.server.application.ApplicationCall
@@ -22,6 +23,8 @@ import io.ktor.server.request.header
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.receiveChannel
 import io.ktor.server.request.uri
+import io.ktor.server.response.respondBytes
+import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -92,8 +95,17 @@ private suspend fun ApplicationCall.verified(
   }
 
 private suspend fun ApplicationCall.decide(deps: VhlDeps, request: ReleaseRequest) {
-  when (deps.release.decide(request)) {
-    ReleaseOutcome.Denied ->
-      respondOutcome(HttpStatusCode.Forbidden, "forbidden", Exception("release denied"))
+  try {
+    when (val outcome = deps.release.decide(request)) {
+      ReleaseOutcome.Denied ->
+        respondOutcome(HttpStatusCode.Forbidden, "forbidden", Exception("release denied"))
+      is ReleaseOutcome.Manifest -> respondText(outcome.bundle.toString(), FHIR_JSON)
+      is ReleaseOutcome.Document ->
+        respondBytes(outcome.body, ContentType.parse(outcome.contentType))
+    }
+  } catch (e: CancellationException) {
+    throw e
+  } catch (e: Exception) {
+    respondFailure(HttpStatusCode.InternalServerError, e)
   }
 }

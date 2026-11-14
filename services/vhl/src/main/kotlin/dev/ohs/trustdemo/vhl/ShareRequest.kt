@@ -117,7 +117,7 @@ class ShareRequest(
 
     private fun JsonObject.string(name: String) = this[name]?.jsonPrimitive?.content
 
-    private fun instantOf(text: String, endOfDay: Boolean): Instant =
+    internal fun instantOf(text: String, endOfDay: Boolean): Instant =
       if (DATE.matches(text)) {
         LocalDate.parse(text)
           .plusDays(if (endOfDay) 1 else 0)

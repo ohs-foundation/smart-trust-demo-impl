@@ -22,6 +22,7 @@ import io.ktor.server.cio.CIO as ServerCio
 import io.ktor.server.engine.embeddedServer
 import java.io.File
 import java.net.URI
+import java.time.Clock
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.launch
 
@@ -44,6 +45,9 @@ fun main() {
       signer = File(required("TRUST_LIST_SIGNER_PATH")).readText(),
       trustDomains = checkNotNull(TRUST_DOMAINS_RESOURCE.readResource()),
     )
+  val database = "jdbc:h2:file:${required("VHL_DB_PATH")};DB_CLOSE_DELAY=-1"
+  val hapi = FhirBackend(required("HAPI_URL"), CIO.create())
+  val passcodes = H2PasscodeStore(database)
   val deps =
     VhlDeps(
       publicUrl = "https://vhl.onesa.${required("STACK_HOST")}:${required("VHL_TLS_PORT")}",
@@ -54,7 +58,7 @@ fun main() {
           .cached(10, 1, TimeUnit.HOURS)
           .rateLimited(10, 1, TimeUnit.MINUTES)
           .build(),
-      hapi = FhirBackend(required("HAPI_URL"), CIO.create()),
+      hapi = hapi,
       gateway = FhirBackend(required("GATEWAY_URL"), CIO.create(), relaysCaller = true),
       signer =
         LinkSigner.fromPem(
@@ -62,8 +66,9 @@ fun main() {
           File(required("LINK_CERT_FILE")).readText(),
           LINK_ISSUER_COUNTRY,
         ),
-      passcodes = H2PasscodeStore("jdbc:h2:file:${required("VHL_DB_PATH")};DB_CLOSE_DELAY=-1"),
+      passcodes = passcodes,
       clinicAnchor = trustList,
+      release = ReleaseRule(hapi, passcodes, H2ReleaseStore(database), Clock.systemUTC()),
     )
   embeddedServer(ServerCio, port = PORT) {
       vhlModule(deps)

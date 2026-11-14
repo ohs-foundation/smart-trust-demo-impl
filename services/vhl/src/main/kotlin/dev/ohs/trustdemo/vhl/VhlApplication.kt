@@ -42,7 +42,7 @@ import kotlinx.serialization.json.putJsonArray
 import org.slf4j.LoggerFactory
 
 private const val AUTH = "keycloak"
-private val FHIR_JSON = ContentType.parse("application/fhir+json")
+internal val FHIR_JSON = ContentType.parse("application/fhir+json")
 private val PATIENT_REFERENCE = Regex("""Patient/([A-Za-z0-9\-.]{1,64})""")
 
 /** The caller's Patient id from the token's `fhirUser` claim, or null when it names none. */

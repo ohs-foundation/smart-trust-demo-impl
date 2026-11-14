@@ -2,7 +2,7 @@
 // server will sign it: the manifest request comes from hcert-core's WitVhl.buildManifestRequest for
 // a link the service issued, signed with the clinic key. HCERT_CORE_JS points at the built
 // smart-trust-kotlin-hcert-core.mjs; run with NODE_EXTRA_CA_CERTS=stack/tls/ca.crt.
-//   node send.mjs <HC1:... link> <passcode|-> [--tamper] [--created-offset <seconds>] [--document <url>]
+//   node send.mjs <HC1:... link> <passcode|-> [--tamper] [--created-offset <seconds>] [--document <url>] [--follow]
 import { createHash, createPrivateKey, sign, X509Certificate } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -40,28 +40,48 @@ if (flags.includes("--document")) {
   body = Buffer.from(manifest.body);
 }
 
-const request = {
-  method,
-  authority: url.host,
-  path: url.pathname + url.search,
-  contentType,
-  body: body && new Uint8Array(body),
-  keyid,
-  alg: "ecdsa-p256-sha256",
-  created: Math.floor(Date.now() / 1000) + createdOffset,
-};
-const base = WitVhl.buildSignatureBase(request);
-const signature = sign("sha256", Buffer.from(base.base), { key, dsaEncoding: "ieee-p1363" });
+async function send(method, url, contentType, body, tamper = false) {
+  const request = {
+    method,
+    authority: url.host,
+    path: url.pathname + url.search,
+    contentType,
+    body: body && new Uint8Array(body),
+    keyid,
+    alg: "ecdsa-p256-sha256",
+    created: Math.floor(Date.now() / 1000) + createdOffset,
+  };
+  const base = WitVhl.buildSignatureBase(request);
+  const signature = sign("sha256", Buffer.from(base.base), { key, dsaEncoding: "ieee-p1363" });
 
-const headers = {
-  "Signature-Input": base.signatureInput,
-  Signature: WitVhl.signatureHeader(new Uint8Array(signature), request.alg),
-  "Client-Cert": `:${der.toString("base64")}:`,
-};
-if (contentType) headers["Content-Type"] = contentType;
-if (base.contentDigest) headers["Content-Digest"] = base.contentDigest;
+  const headers = {
+    "Signature-Input": base.signatureInput,
+    Signature: WitVhl.signatureHeader(new Uint8Array(signature), request.alg),
+    "Client-Cert": `:${der.toString("base64")}:`,
+  };
+  if (contentType) headers["Content-Type"] = contentType;
+  if (base.contentDigest) headers["Content-Digest"] = base.contentDigest;
 
-const sent = flags.includes("--tamper") && body ? Buffer.from(body.toString().replace(/passcode=\d/, "passcode=9")) : body;
-const response = await fetch(url, { method, headers, body: sent });
-console.log(`${method} ${url.pathname} -> ${response.status}`);
-console.log(await response.text());
+  const sent = tamper && body ? Buffer.from(body.toString().replace(/passcode=\d/, "passcode=9")) : body;
+  const response = await fetch(url, { method, headers, body: sent });
+  console.log(`${method} ${url.pathname} -> ${response.status}`);
+  return response;
+}
+
+const response = await send(method, url, contentType, body, flags.includes("--tamper"));
+if (!flags.includes("--follow")) {
+  console.log(await response.text());
+} else if (response.status === 200) {
+  const documents = WitVhl.parseManifest(await response.text());
+  console.log(`manifest documents: ${documents.length}`);
+  const document = await send("GET", new URL(documents[0].url), undefined, undefined);
+  if (document.status === 200) {
+    const decrypted = WitVhl.decrypt(await document.text(), payload.key);
+    const bundle = JSON.parse(Buffer.from(decrypted.content).toString("utf8"));
+    console.log(`decrypted ${bundle.resourceType} with ${bundle.entry.length} entries`);
+  } else {
+    console.log(await document.text());
+  }
+} else {
+  console.log(await response.text());
+}

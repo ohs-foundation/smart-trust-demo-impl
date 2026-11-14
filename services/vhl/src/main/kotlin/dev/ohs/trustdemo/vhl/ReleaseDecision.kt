@@ -15,6 +15,8 @@
  */
 package dev.ohs.trustdemo.vhl
 
+import kotlinx.serialization.json.JsonObject
+
 /** A clinic whose signed request passed verification: its certificate's CN and hcert kid. */
 data class Requester(val name: String, val kid: String)
 
@@ -34,9 +36,15 @@ sealed interface ReleaseRequest {
   data class Document(override val requester: Requester, val binaryId: String) : ReleaseRequest
 }
 
-/** The answer to a [ReleaseRequest]; granted outcomes join this type with the release rule. */
+/** The answer to a [ReleaseRequest]; every refusal looks the same to the requester. */
 sealed interface ReleaseOutcome {
   data object Denied : ReleaseOutcome
+
+  /** The ITI-YY5 searchset Bundle of the released documents. */
+  class Manifest(val bundle: JsonObject) : ReleaseOutcome
+
+  /** The ITI-68 document: the encrypted bytes and the content type the DocumentReference states. */
+  class Document(val contentType: String, val body: ByteArray) : ReleaseOutcome
 }
 
 /** Decides whether a verified clinic may have what it asked for. */
