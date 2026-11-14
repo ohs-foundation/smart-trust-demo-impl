@@ -2,7 +2,7 @@
 set -euo pipefail
 
 IG_REPO=https://github.com/litlfred/smart-trust-demo.git
-IG_COMMIT=6512c3b
+IG_COMMIT=6512c3b17a510b6e7c8c0fd33fd58a6822930c39
 
 for tool in git node npm python3; do
   command -v "$tool" >/dev/null || { echo "ig/build.sh: $tool is required" >&2; exit 1; }
@@ -13,8 +13,9 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 trap 'exit 1' INT TERM
 
-git clone --quiet "$IG_REPO" "$work/ig"
-git -C "$work/ig" checkout --quiet "$IG_COMMIT"
+git init --quiet "$work/ig"
+git -C "$work/ig" fetch --quiet --depth 1 "$IG_REPO" "$IG_COMMIT"
+git -C "$work/ig" checkout --quiet FETCH_HEAD
 
 # fhir_cache.py and SUSHI both use ~/.fhir; keep it away from the real one.
 export HOME="$work/home"
