@@ -59,6 +59,7 @@ private const val PROJECT_NAME = "Taifafeki"
 private const val POLICY_NAME = "Taifafeki clinician"
 private const val ANAN_EMAIL = "anan@kesaro.example"
 private const val PAGE = "1000"
+private const val MAX_WIPE_ROUNDS = 50
 private val STORY_TYPES =
   listOf("Patient", "Immunization", "DocumentReference", "Provenance", "AuditEvent")
 private val READ_ONLY =
@@ -91,6 +92,11 @@ class MedplumAdmin(
   private var token: String? = null
   private var projectId: String? = null
 
+  /** Authenticates and resolves the project, so a stack that is not ready fails before a wipe. */
+  suspend fun preflight() {
+    project()
+  }
+
   /**
    * Expunges the story types in the project, as left by earlier runs. Binary cannot be searched, so
    * its records go with the resources that point at them.
@@ -98,9 +104,13 @@ class MedplumAdmin(
   suspend fun wipeStory() {
     val project = project()
     STORY_TYPES.forEach { type ->
+      var rounds = 0
       while (true) {
         val found = search(type, "_project" to project, "_count" to PAGE)
         if (found.isEmpty()) break
+        check(++rounds <= MAX_WIPE_ROUNDS) {
+          "$type records remain after $MAX_WIPE_ROUNDS wipe rounds"
+        }
         found.forEach { expunge("$type/${it.id()}") }
         found.flatMap { it.binaryReferences() }.forEach { expunge(it) }
       }
@@ -294,7 +304,9 @@ class MedplumAdmin(
 
   private suspend fun project(): String =
     projectId
-      ?: (search("Project", "name" to PROJECT_NAME).firstOrNull()?.id()
+      ?: (search("Project", "name" to PROJECT_NAME)
+          .firstOrNull { it["name"]?.jsonPrimitive?.contentOrNull == PROJECT_NAME }
+          ?.id()
           ?: create(
             "Project",
             buildJsonObject {
@@ -379,32 +391,36 @@ class MedplumAdmin(
   ): String {
     val bearer = token ?: authenticate().also { token = it }
     val response: HttpResponse =
-      client.request(url) {
-        this.method = method
-        header(HttpHeaders.Accept, fhirContentType.toString())
-        bearerAuth(bearer)
-        params.forEach { (name, value) -> parameter(name, value) }
-        body?.let { setBody(TextContent(it, fhirContentType)) }
+      reaching(baseUrl) {
+        client.request(url) {
+          this.method = method
+          header(HttpHeaders.Accept, fhirContentType.toString())
+          bearerAuth(bearer)
+          params.forEach { (name, value) -> parameter(name, value) }
+          body?.let { setBody(TextContent(it, fhirContentType)) }
+        }
       }
-    val text = response.bodyAsText()
-    check(response.status.isSuccess()) { "$method $url: ${response.status} $text" }
-    return text
+    if (!response.status.isSuccess()) refused(method, url, response.status)
+    return response.bodyAsText()
   }
 
   private suspend fun authenticate(): String {
     val response =
-      client.submitForm(
-        "$baseUrl/oauth2/token",
-        parameters {
-          append("grant_type", "client_credentials")
-          append("client_id", clientId)
-          append("client_secret", clientSecret)
-        },
-      )
-    val text = response.bodyAsText()
-    check(response.status.isSuccess()) { "token request: ${response.status} $text" }
+      reaching(baseUrl) {
+        client.submitForm(
+          "$baseUrl/oauth2/token",
+          parameters {
+            append("grant_type", "client_credentials")
+            append("client_id", clientId)
+            append("client_secret", clientSecret)
+          },
+        )
+      }
+    if (!response.status.isSuccess()) {
+      refused(HttpMethod.Post, "$baseUrl/oauth2/token", response.status)
+    }
     return fhirJson
-      .parseToJsonElement(text)
+      .parseToJsonElement(response.bodyAsText())
       .jsonObject
       .getValue("access_token")
       .jsonPrimitive

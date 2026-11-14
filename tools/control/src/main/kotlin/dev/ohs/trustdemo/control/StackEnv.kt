@@ -15,13 +15,15 @@
  */
 package dev.ohs.trustdemo.control
 
+import com.github.ajalt.clikt.core.CliktError
 import java.nio.file.Files
 import java.nio.file.Path
 
 /** The `KEY=value` settings of the stack's `.env` file. */
-class StackEnv(private val values: Map<String, String>) {
+class StackEnv(private val values: Map<String, String>, private val source: Path? = null) {
   fun require(name: String): String =
-    checkNotNull(values[name]) { "$name is not set in the stack env" }
+    values[name]
+      ?: throw CliktError("$source is missing $name — run stack/init-env.sh, or pass --stack-env")
 
   companion object {
     fun load(path: Path): StackEnv =
@@ -29,7 +31,8 @@ class StackEnv(private val values: Map<String, String>) {
         Files.readAllLines(path)
           .map { it.trim() }
           .filter { it.isNotEmpty() && !it.startsWith("#") && '=' in it }
-          .associate { it.substringBefore('=') to it.substringAfter('=').trim('"', '\'') }
+          .associate { it.substringBefore('=') to it.substringAfter('=').trim('"', '\'') },
+        path,
       )
   }
 }

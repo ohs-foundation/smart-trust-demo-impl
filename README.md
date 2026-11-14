@@ -43,6 +43,8 @@ make stack-down
 make stack-reset   # removes volumes and stack/.env; needed after a realm change
 ```
 
+Medplum's super-admin settings in `stack/.env` apply only when its database is first created, so a stack created before them needs `make stack-reset` once.
+
 | Service | Address |
 | --- | --- |
 | Onesa Keycloak | `keycloak.onesa.<lan-ip>.sslip.io:8480` |

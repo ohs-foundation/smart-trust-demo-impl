@@ -25,6 +25,7 @@ import io.ktor.server.routing.routing
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -50,12 +51,19 @@ class Watch(
       post("/hook") {
         runCatching { refresh() }
           .onSuccess { call.respond(HttpStatusCode.OK) }
-          .onFailure { call.respond(HttpStatusCode.InternalServerError, it.message.orEmpty()) }
+          .onFailure {
+            if (it is CancellationException) throw it
+            call.respond(HttpStatusCode.InternalServerError, it.message.orEmpty())
+          }
       }
     }
     app.launch {
       while (isActive) {
-        runCatching { refresh() }.onFailure { report("cannot read the story: ${it.message}") }
+        runCatching { refresh() }
+          .onFailure {
+            if (it is CancellationException) throw it
+            report("cannot read the story: ${it.message}")
+          }
         delay(POLL)
       }
     }

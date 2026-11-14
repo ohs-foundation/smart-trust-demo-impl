@@ -26,6 +26,7 @@ import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.request
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -86,8 +87,15 @@ class FhirServer(
         "$baseUrl/\$expunge",
         body = TextContent(EXPUNGE_EVERYTHING, fhirContentType),
       )
-    check(response.status.isSuccess()) {
-      "expunge failed: ${response.status} ${response.bodyAsText()}"
+    if (!response.status.isSuccess()) {
+      refused(HttpMethod.Post, "$baseUrl/\$expunge", response.status)
+    }
+  }
+
+  suspend fun ping() {
+    val response = call(HttpMethod.Get, "$baseUrl/metadata")
+    if (!response.status.isSuccess()) {
+      refused(HttpMethod.Get, "$baseUrl/metadata", response.status)
     }
   }
 
@@ -98,12 +106,14 @@ class FhirServer(
     body: TextContent? = null,
   ): HttpResponse {
     val bearer = token()
-    return client.request(url) {
-      this.method = method
-      header(HttpHeaders.Accept, fhirContentType.toString())
-      bearer?.let { bearerAuth(it) }
-      params.forEach { (name, value) -> parameter(name, value) }
-      body?.let { setBody(it) }
+    return reaching(baseUrl) {
+      client.request(url) {
+        this.method = method
+        header(HttpHeaders.Accept, fhirContentType.toString())
+        bearer?.let { bearerAuth(it) }
+        params.forEach { (name, value) -> parameter(name, value) }
+        body?.let { setBody(it) }
+      }
     }
   }
 
@@ -112,7 +122,9 @@ class FhirServer(
 
   private suspend inline fun <reified T : Resource> decode(response: HttpResponse): T {
     val text = response.bodyAsText()
-    check(response.status.isSuccess()) { "${response.status}: $text" }
+    if (!response.status.isSuccess()) {
+      refused(response.request.method, response.request.url.toString(), response.status)
+    }
     return fhirJson.decodeFromString(Resource.serializer(), text) as T
   }
 }

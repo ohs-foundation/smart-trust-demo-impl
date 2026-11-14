@@ -40,14 +40,15 @@ class FakeHapi {
 
   private val engine = MockEngine { request ->
     val path = request.url.encodedPath.removePrefix("/fhir")
-    val body = (request.body as TextContent).text
     when {
+      request.method == HttpMethod.Get && path == "/metadata" -> respond("{}", headers = fhirJson)
       request.method == HttpMethod.Post && path == "/\$expunge" -> {
         expunges++
         stored.clear()
         respond("{}", headers = fhirJson)
       }
       request.method == HttpMethod.Post && path == "" -> {
+        val body = (request.body as TextContent).text
         val bundle = Json.decodeFromString(Resource.serializer(), body) as Bundle
         bundle.entry.forEach { entry ->
           val resource = checkNotNull(entry.resource)

@@ -15,6 +15,7 @@
  */
 package dev.ohs.trustdemo.control
 
+import com.github.ajalt.clikt.core.CliktError
 import dev.ohs.fhir.model.r4.Bundle
 import dev.ohs.fhir.model.r4.Enumeration
 import dev.ohs.fhir.model.r4.Immunization
@@ -29,6 +30,7 @@ import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
 import java.time.LocalDate
 import java.util.Base64
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 
 private const val SOMSAK = "TrustDemoTaifafekiSomsak"
@@ -49,14 +51,25 @@ class Reset(
 ) {
   suspend fun run(today: LocalDate) {
     val ig = IgResources.all()
+    kesaro.preflight()
+    onesa.ping()
     onesa.expungeEverything()
-    onesa.transaction(Seed.onesaBase(ig))
-    onesa.transaction(subscription())
-    kesaro.wipeStory()
-    kesaro.seedBase(ig)
-    kesaro.ensureClinician(ananPassword)
-    uploadCards(ig, StoryClock(J3_IN_IG, today))
-    writeClinicCertificate()
+    try {
+      onesa.transaction(Seed.onesaBase(ig))
+      onesa.transaction(subscription())
+      kesaro.wipeStory()
+      kesaro.seedBase(ig)
+      kesaro.ensureClinician(ananPassword)
+      uploadCards(ig, StoryClock(J3_IN_IG, today))
+      writeClinicCertificate()
+    } catch (failure: CancellationException) {
+      throw failure
+    } catch (failure: Exception) {
+      throw CliktError(
+        "HAPI was reset but Medplum was not — run reset again (${failure.message})",
+        failure,
+      )
+    }
   }
 
   private fun subscription(): Bundle {

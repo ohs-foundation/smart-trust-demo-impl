@@ -57,7 +57,9 @@ class QrCommand : CliktCommand(name = "qr") {
   private val card by argument(help = "Which test card").choice(*CARDS.toTypedArray())
   private val text by option("--text", help = "Print the card's text, for pasting").flag()
   private val stackEnv by
-    option("--stack-env", help = "The stack's .env file").path().default(Path("stack/.env"))
+    option("--stack-env", help = "The stack's .env file")
+      .path(mustExist = true)
+      .default(Path("stack/.env"))
 
   override fun help(context: Context) = "Print a test QR in the terminal."
 
