@@ -31,7 +31,7 @@ private fun map(fixture: String, unicode: Boolean = true) =
 class JourneyMapTest {
   @Test
   fun everyJourneyAppearsInItsAppsBoxWithItsCount() {
-    val boxes = map("before-J2").split("▼")
+    val boxes = map("before-J2").split("╭").drop(1)
     assertEquals(5, boxes.size)
     Step.entries.forEach { step ->
       val total = expectations.getValue(step).size
@@ -69,6 +69,19 @@ class JourneyMapTest {
   }
 
   @Test
+  fun theVhlLinkBendsBackIntoTheViewerBox() {
+    val lines = map("before-J2").lines()
+    val label = lines.indexOfFirst { "VHL QR + passcode" in it }
+    val top = lines.indexOfFirst { "VHL viewer" in it }
+    assertEquals(label + 1, top)
+    assertTrue(lines[top].endsWith("╮│"), lines[top])
+    assertTrue(lines[top + 1].endsWith("│◀╯"), lines[top + 1])
+    assertEquals(lines[label].indexOf('│'), lines[top].lastIndexOf('│'))
+    assertTrue("┬" in lines[label - 1], lines[label - 1])
+    assertFalse("▼" in lines.drop(label))
+  }
+
+  @Test
   fun plainFallbackUsesAsciiAndWords() {
     val text = map("before-J2", unicode = false)
     assertTrue(text.all { it.code < 128 || it == '·' }, text)
@@ -77,6 +90,7 @@ class JourneyMapTest {
     assertContains(text, "to do")
     assertContains(text, "> CHW phone")
     assertContains(text, "+--")
+    assertContains(text.lines().single { "J4.1" in it }, "|<-+")
     assertFalse("\u001B" in text)
   }
 }

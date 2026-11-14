@@ -31,8 +31,19 @@ private val HANDOVER =
     App.EMR to "paper cards (DVC QR)",
     App.CHW_PHONE to "sync + referral",
     App.CLINIC_TABLET to "",
-    App.FAMILY_WALLET to "VHL QR + passcode",
   )
+private const val VHL_LINK = "VHL QR + passcode"
+
+/** [line] with its visible character at [column] replaced, skipping ANSI colour sequences. */
+private fun withCharAt(line: String, column: Int, char: Char): String {
+  var seen = 0
+  var i = 0
+  while (i < line.length) {
+    if (line[i] == '\u001B') i = line.indexOf('m', i) + 1
+    else if (seen++ == column) return line.substring(0, i) + char + line.substring(i + 1) else i++
+  }
+  return line
+}
 
 /** True when the terminal's output encoding can carry the map's boxes, arrows and emoji. */
 fun supportsUnicode(): Boolean =
@@ -96,10 +107,31 @@ fun journeyMap(
         )
       )
       App.entries.forEach { app ->
-        val indent = " ".repeat(INDENT[app] ?: 0)
-        terminal.render(panel(app)).lines().forEach { appendLine(indent + it) }
+        val indent = INDENT[app] ?: 0
+        val lines = terminal.render(panel(app)).lines()
+        val linkRow = lines.size - 2
+        when (app) {
+          App.FAMILY_WALLET -> {
+            lines.dropLast(1).forEach { appendLine(" ".repeat(indent) + it) }
+            val bottom = withCharAt(lines.last(), boxWidth - indent, if (unicode) '┬' else '+')
+            appendLine(" ".repeat(indent) + bottom)
+            appendLine(render("${" ".repeat(boxWidth)}$bar $VHL_LINK"))
+          }
+          App.VHL_VIEWER ->
+            lines.forEachIndexed { row, it ->
+              appendLine(
+                it +
+                  when {
+                    row < linkRow -> bar
+                    row == linkRow -> if (unicode) "◀╯" else "<-+"
+                    else -> ""
+                  }
+              )
+            }
+          else -> lines.forEach { appendLine(" ".repeat(indent) + it) }
+        }
         HANDOVER[app]?.let { what ->
-          val stem = " ".repeat((INDENT[app] ?: 0) + boxWidth / 2)
+          val stem = " ".repeat(indent + boxWidth / 2)
           appendLine(render("$stem$bar $what".trimEnd()))
           appendLine(render("$stem$down"))
         }
