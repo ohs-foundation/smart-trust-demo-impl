@@ -40,6 +40,7 @@ trust-list host, behind one proxy. Phones and emulators on the same network reac
 make stack-up      # writes stack/.env on first run, then builds and starts everything
 make stack-check   # every service answers, trust lists served
 make stack-down
+make stack-reset   # removes volumes and stack/.env; needed after a realm change
 ```
 
 | Service | Address |
