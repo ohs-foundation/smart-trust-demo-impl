@@ -1,0 +1,174 @@
+# Server stack behind host nginx, one vhost per name rendered into nginx/host/ by `./dev.sh render`.
+# Extension services sit behind the `pipes` profile (`./dev.sh up --pipes`).
+# Every published port binds to loopback, leaving nginx the only public listener. The realm, theme,
+# HAPI config and gateway Dockerfile are the demo's own files under ../stack/onesa.
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: ohs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      HAPI_FHIR_DB_PASSWORD: ${HAPI_FHIR_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    networks: [fhir_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  keycloak:
+    restart: unless-stopped
+    image: quay.io/keycloak/keycloak:26.5.0
+    container_name: ohs-keycloak
+    volumes:
+      - ../stack/onesa/keycloak/ohs-player-realm.json:/opt/keycloak/data/import/ohs-player-realm.json:ro
+      - ../stack/onesa/keycloak/themes/onesa:/opt/keycloak/themes/onesa:ro
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME:-admin}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_DB=postgres
+      - KC_DB_URL_HOST=postgres
+      - KC_DB_URL_DATABASE=keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}
+      - KC_PROXY_HEADERS=xforwarded
+      # The public issuer, with no port because nginx serves it on 443.
+      - KC_HOSTNAME=https://${KEYCLOAK_HOST:?set KEYCLOAK_HOST in .env to the public Keycloak hostname}
+    command:
+      - "start"
+      - "--features=persistent-user-sessions"
+      - "--http-enabled=true"
+      - "--hostname-strict=false"
+      - "--http-port=${KEYCLOAK_PORT:-8081}"
+      - "--spi-events-listener-jboss-logging-success-level=info"
+      - "--spi-events-listener-jboss-logging-error-level=warn"
+      - "--health-enabled=true"
+      - "--import-realm"
+    ports:
+      - "127.0.0.1:${KEYCLOAK_PORT:-8081}:${KEYCLOAK_PORT:-8081}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [fhir_net]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && cat <&3 | grep -q UP"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  hapi-fhir:
+    restart: unless-stopped
+    image: hapiproject/hapi:v8.8.0-1
+    container_name: ohs-hapi-fhir
+    ports:
+      - "${HAPI_FHIR_PORT:-8082}:8080"
+    volumes:
+      - ../stack/onesa/hapi-fhir/application.yaml:/data/hapi-fhir/config/application.yaml:ro
+      - ../stack/onesa/hapi-fhir/health/Healthcheck.class:/healthcheck/Healthcheck.class:ro
+    environment:
+      - "SPRING_CONFIG_LOCATION=/data/hapi-fhir/config/"
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - HAPI_FHIR_DB_PASSWORD=${HAPI_FHIR_DB_PASSWORD}
+      - JAVA_TOOL_OPTIONS=-Xmx1g
+    # Subscription notifications reach the trust-demo watch listener on this machine.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks: [fhir_net]
+    healthcheck:
+      test: ["CMD", "java", "-cp", "/healthcheck", "Healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
+  fhir-gateway:
+    build:
+      context: ../stack/onesa
+      dockerfile: gateway.Dockerfile
+      additional_contexts:
+        gateway: https://github.com/ohs-foundation/fhir-gateway.git#b650129c451840bdf3a382ff11f9deee3fffe532
+        plugin: ${GATEWAY_PLUGIN_DIR:?set GATEWAY_PLUGIN_DIR in .env to the backend fork checkout}
+    image: trust-demo-fhir-gateway:local
+    container_name: ohs-fhir-gateway
+    restart: unless-stopped
+    environment:
+      - PROXY_TO=http://hapi-fhir:8080/fhir
+      # Must match the `iss` Keycloak mints, character for character.
+      - TOKEN_ISSUER=https://${KEYCLOAK_HOST}/realms/ohs-player
+      - IAM_PROVIDER=keycloak
+      - IAM_PROVIDER_CLIENT_ID=fhir-gateway-admin
+      - IAM_PROVIDER_CLIENT_SECRET=${FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET}
+      - ACCESS_CHECKER=org_scoped_access
+      - AUDIT_EVENT_ACTIONS_CONFIG=CUD
+      - SUBSCRIPTION_ALLOWED_ENDPOINTS=${SUBSCRIPTION_ALLOWED_ENDPOINTS}
+      - ALLOWED_QUERIES_FILE=resources/hapi_page_url_allowed_queries.json
+      - SYNC_FILTER_IGNORE_RESOURCES_FILE=resources/hapi_sync_filter_ignored_queries.json
+      - BACKEND_TYPE=HAPI
+      - RUN_MODE=PROD
+      - JAVA_TOOL_OPTIONS=-Xmx512m
+    # Resolves the public Keycloak name to the docker host, so OIDC discovery goes out to nginx and
+    # back rather than to this machine's own external address, which does not route from a container.
+    extra_hosts:
+      - "${KEYCLOAK_HOST}:host-gateway"
+    ports:
+      - "127.0.0.1:${FHIR_GATEWAY_PORT:-8083}:8080"
+    depends_on:
+      hapi-fhir:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks: [fhir_net]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  ohs-player-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        WEB_REF: ${WEB_REF:-main}
+        VITE_FHIR_BASE_URL: https://${WEB_HOST:?set WEB_HOST in .env to the public Portal hostname}/fhir
+        VITE_OIDC_ISSUER: https://${KEYCLOAK_HOST}/realms/ohs-player
+        VITE_CLIENT_ID: ohs-player-client
+        VITE_FHIR_VERSION: ${VITE_FHIR_VERSION:-R4}
+    image: ohs-player-web:local
+    container_name: ohs-player-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${OHS_PLAYER_WEB_PORT:-8084}:80"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      fhir-gateway:
+        condition: service_started
+    networks: [fhir_net]
+
+networks:
+  fhir_net:
+    external: false
+
+volumes:
+  postgres_data:
+  postgres_analytics_data:
+  superset_home:
