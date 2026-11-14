@@ -282,7 +282,7 @@ object NewbornRegistration {
 
   fun transaction(request: RegistrationRequest): JsonObject {
     val answers = request.response.toJson().answers()
-    val authored = request.now.toString()
+    val authored = Instant.fromEpochSeconds(request.now.epochSeconds).toString()
     val today = authored.substringBefore('T')
     val org = "Organization/${request.organizationId}"
     val practitioner = "Practitioner/${request.practitionerId}"

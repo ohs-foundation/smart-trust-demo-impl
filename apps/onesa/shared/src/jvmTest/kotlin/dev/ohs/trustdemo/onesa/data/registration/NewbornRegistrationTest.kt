@@ -31,7 +31,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -243,6 +246,35 @@ class NewbornRegistrationTest {
       }
     )
   }
+
+  @Test
+  fun theTransactionStampsWholeSeconds() {
+    val stamped =
+      NewbornRegistration.transaction(
+        RegistrationRequest(
+          response = response,
+          household = household,
+          mother = parents[1],
+          father = parents[0],
+          cards = cards,
+          practitionerId = "TrustDemoVilay",
+          organizationId = organization,
+          now = Instant.parse("2026-11-14T13:28:59.510967Z"),
+          newId = { ids.next() },
+        )
+      )
+
+    val times = stamped.strings().filter { it.startsWith("2026-11-14T") }
+    assertTrue(times.isNotEmpty())
+    assertEquals(setOf("2026-11-14T13:28:59Z"), times.toSet())
+  }
+
+  private fun JsonElement.strings(): List<String> =
+    when (this) {
+      is JsonObject -> values.flatMap { it.strings() }
+      is JsonArray -> flatMap { it.strings() }
+      is JsonPrimitive -> if (isString) listOf(content) else emptyList()
+    }
 
   private fun JsonObject.resource(): JsonObject = getValue("resource").jsonObject
 
