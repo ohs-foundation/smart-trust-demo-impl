@@ -149,7 +149,7 @@ watch, move time, reset). Piped, or without colour or Unicode, the map falls bac
 
 ## Walk the story
 
-Start with `make stack-up && trust-demo reset`, and keep `trust-demo watch` open in a second terminal.
+Start with `make stack-up && trust-demo reset` (or on a server, [docs/deploy.md](docs/deploy.md)), and keep `trust-demo watch` open in a second terminal.
 
 | Step | Do | Test QR | CLI shows |
 | --- | --- | --- | --- |
@@ -203,10 +203,27 @@ The same CLI, apps and check run against a server brought up from `infra/` (`BAS
 - CLI, on the server: `trust-demo --stack-env infra/.env reset` (and `status`, `watch`, `time move J4.0`, ...). An env file with `STACK_HOST` is local; one with `BASE_DOMAIN` is live. `reset` writes the facility client's secrets to `stack/taifafeki/secrets/`, which `infra/docker-compose.taifafeki.yaml` mounts.
 - Onesa APK: build with the live URLs, e.g. `OAUTH_ISSUER=https://keycloak.onesa.demo.example.org/realms/onesa FHIR_BASE_URL=https://gateway.onesa.demo.example.org/fhir/ VHL_BASE_URL=https://vhl.onesa.demo.example.org TRUST_LIST_URL=https://trust.gdhcn.demo.example.org/local-test-list.json ./gradlew :apps:onesa:android:assembleRelease`. Release trusts the system CAs and allows no cleartext; a debug build gets the demo CA only for a VHL host under the stack's wildcard-DNS names.
 - The facility client needs no demo CA (`NODE_EXTRA_CA_CERTS` is optional) and takes every host from its environment.
+- Bring-up from nothing: [docs/deploy.md](docs/deploy.md).
 - Check: `stack/check.sh infra/.env` tests the live URLs over HTTPS without the demo CA, after `trust-demo --stack-env infra/.env reset`.
 
 ## Deploying
 
-Deployment goes through a fork of `ohs-foundation/ohs-player-reference-infrastructure`, documented there.
+`infra/` is the server stack, derived from [`ohs-player-reference-infrastructure`](https://github.com/ohs-foundation/ohs-player-reference-infrastructure/tree/5c87af6) at `5c87af6`, with `infra/gcp/` provisioning a Google Cloud VM. The end-to-end runbook, from `tofu apply` to the phones, is [docs/deploy.md](docs/deploy.md); the pieces are in [infra/README.md](infra/README.md) and [infra/gcp/README.md](infra/gcp/README.md).
+
+## Links
+
+| | |
+| --- | --- |
+| [WHO SMART Trust Demonstrator IG](https://litlfred.github.io/smart-trust-demo/) | the IG this builds: [business processes](https://litlfred.github.io/smart-trust-demo/business-processes.html), [personas](https://litlfred.github.io/smart-trust-demo/personas.html), [scenarios](https://litlfred.github.io/smart-trust-demo/scenarios.html), [functional requirements](https://litlfred.github.io/smart-trust-demo/functional-requirements.html) |
+| [IG source](https://github.com/litlfred/smart-trust-demo/tree/6512c3b17a510b6e7c8c0fd33fd58a6822930c39) | the pinned commit `6512c3b` behind `ig/resources/` |
+| [WHO SMART Trust](https://smart.who.int/trust) | the trust framework |
+| [GDHCN](https://www.who.int/initiatives/global-digital-health-certification-network) | the Global Digital Health Certification Network |
+| [smart-trust-tools](https://litlfred.github.io/smart-trust-tools/) ([source at `d94e21d`](https://github.com/litlfred/smart-trust-tools/tree/d94e21d)) | `hcert-core` and the trust tooling |
+| [IHE VHL profile](https://profiles.ihe.net/ITI/VHL/) | Verifiable Health Links, which `services/vhl/` implements |
+| [HCERT spec](https://github.com/ehn-dcc-development/hcert-spec) | the health certificate format of the cards |
+| [OHS player reference](https://github.com/ohs-foundation/ohs-player-reference-backend), [FHIR gateway](https://github.com/ohs-foundation/fhir-gateway), [infrastructure](https://github.com/ohs-foundation/ohs-player-reference-infrastructure) | the Open Health Stack parts this extends |
+| [Medplum](https://www.medplum.com/) | Taifafeki's server |
+| [OpenTofu](https://opentofu.org/docs/) | provisions `infra/gcp` |
+| [Artifact Registry](https://cloud.google.com/artifact-registry/docs/docker/authentication), [IAP TCP forwarding](https://cloud.google.com/iap/docs/using-tcp-forwarding) | the image registry and the SSH path |
 
 Licensed under Apache-2.0.

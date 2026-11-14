@@ -44,6 +44,10 @@ ALLOWED = {
     "raw.githubusercontent.com": "WHO's DEV root signer did:web id, copied from smart-trust-tools",
     "github.com": "links to upstream repositories in docs and SOURCE.yaml, never called",
     "litlfred.github.io": "documentation link to the IG's published site",
+    "www.who.int": "documentation link to WHO's GDHCN page in the README, never called",
+    "www.medplum.com": "documentation link to Medplum in the README, never called",
+    "opentofu.org": "documentation link to OpenTofu in the README, never called",
+    "cloud.google.com": "documentation links to Artifact Registry and IAP in the README, never called",
     "my-instance.zitadel.cloud": "placeholder instance name in a provider-swap test",
     "x.zitadel.cloud": "placeholder instance name in a provider-swap comment",
 }
