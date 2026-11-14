@@ -54,6 +54,7 @@ dependencies {
   implementation(libs.ktor.client.core)
   api(libs.ohs.fhir.model.r4)
   implementation(libs.kotlinx.serialization.json)
+  runtimeOnly(libs.slf4j.nop)
 
   testImplementation(libs.kotlin.testJunit)
   testImplementation(libs.kotlinx.coroutines.test)
