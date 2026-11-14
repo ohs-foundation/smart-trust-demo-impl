@@ -34,6 +34,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 
 private const val PAGE = "1000"
+private const val EXPLICIT_CONSENT =
+  "http://smart.who.int/trust-phw/StructureDefinition/PHWExplicitConsent"
 private val YEAR_DOSES =
   listOf("TrustDemoOnesaPenta1", "TrustDemoOnesaBopv1", "TrustDemoOnesaPcv1", "TrustDemoOnesaMr1")
 
@@ -102,6 +104,13 @@ class TimeMove(
     val step = StepEngine.currentStep(state)
     if (step != null && step < Step.YEAR) {
       throw MoveRefused("J3 is not complete: the story is at ${step.code} · ${step.title}")
+    }
+    val shares = onesa.searchAll("Consent", mapOf("_profile" to EXPLICIT_CONSENT, "_count" to PAGE))
+    if (shares.isNotEmpty()) {
+      throw MoveRefused(
+        "${shares.size} shared consents exist; shares belong after the move: " +
+          "withdraw the shares or reset first"
+      )
     }
     val changes =
       servers.flatMap { server ->

@@ -282,6 +282,26 @@
           "end": "2026-11-27T09:00:00+07:00"
         }
       }
+    },
+    {
+      "resourceType": "List",
+      "id": "Share",
+      "status": "current",
+      "mode": "working",
+      "date": "2026-11-14T07:30:00Z"
+    },
+    {
+      "resourceType": "DocumentReference",
+      "id": "ShareBundle",
+      "status": "current",
+      "date": "2026-11-14T07:30:00Z",
+      "content": [
+        {
+          "attachment": {
+            "contentType": "application/fhir+json"
+          }
+        }
+      ]
     }
   ],
   "medplum": [

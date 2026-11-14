@@ -27,6 +27,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -52,6 +53,9 @@ private suspend fun FakeMedplum.seed(records: List<JsonObject>) {
 }
 
 private data class World(val hapi: FakeStoryHapi, val medplum: FakeMedplum, val move: TimeMove)
+
+private const val EXPLICIT_CONSENT =
+  "http://smart.who.int/trust-phw/StructureDefinition/PHWExplicitConsent"
 
 private val now = Clock.fixed(Instant.parse("2026-11-13T02:59:00Z"), ZoneOffset.ofHours(7))
 
@@ -102,14 +106,39 @@ class TimeMoveTest {
       plan.changes.any { it.path == "item[0].item[0].answer[0].item[0].answer[0].valueDate" }
     )
     move.apply(plan)
+    assertEquals("2025-12-14T07:30:00Z", hapi.stored.getValue("List/Share").text("date"))
+    assertEquals(
+      "2025-12-14T07:30:00Z",
+      hapi.stored.getValue("DocumentReference/ShareBundle").text("date"),
+    )
     assertEquals("2025-11-16", hapi.stored.getValue("Patient/Somsak").text("birthDate"))
     assertEquals("2025-11-16", medplum.stored.getValue("Patient/TaifafekiSomsak").text("birthDate"))
     assertEquals(
-      "2026-11-14T07:00:00Z",
+      "2025-12-14T07:00:00Z",
       medplum.stored.getValue("DocumentReference/Card").text("date"),
     )
     val half = world(fixtureState("steps/half-moved.json")).move.plan(withYearDoses = false)
     assertEquals(setOf(Server.HAPI), half.changes.map { it.server }.toSet())
+  }
+
+  @Test
+  fun moveIsRefusedWhileSharesExist() = runTest {
+    val share = buildJsonObject {
+      put("resourceType", "Consent")
+      put("id", "Share")
+      put("status", "active")
+      put("scope", buildJsonObject { put("text", "patient-privacy") })
+      put("category", JsonArray(listOf(buildJsonObject { put("text", "59284-0") })))
+      put(
+        "meta",
+        buildJsonObject { put("profile", JsonArray(listOf(JsonPrimitive(EXPLICIT_CONSENT)))) },
+      )
+    }
+    val refused =
+      assertFailsWith<MoveRefused> {
+        world(fixtureState("steps/before-YEAR.json"), listOf(share)).move.plan(false)
+      }
+    assertTrue("withdraw the shares or reset first" in refused.message!!)
   }
 
   @Test

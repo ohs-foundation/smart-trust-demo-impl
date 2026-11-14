@@ -42,6 +42,8 @@ object StoryDates {
       "Composition" to listOf("date"),
       "Bundle" to listOf("timestamp"),
       "AuditEvent" to listOf("recorded"),
+      "List" to listOf("date"),
+      "DocumentReference" to listOf("date"),
     )
 
   /**

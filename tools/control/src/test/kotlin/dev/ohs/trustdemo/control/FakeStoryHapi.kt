@@ -83,6 +83,10 @@ class FakeStoryHapi(records: List<JsonObject> = emptyList()) {
   private fun JsonObject.matches(name: String, value: String): Boolean =
     when (name) {
       "_id" -> text("id") == value
+      "_profile" ->
+        this["meta"]?.jsonObject?.get("profile")?.jsonArray.orEmpty().any {
+          it is JsonPrimitive && it.content == value
+        }
       "family" -> names().any { it.text("family") == value }
       "given" ->
         names().any { name ->
