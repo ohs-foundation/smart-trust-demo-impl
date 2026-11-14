@@ -43,8 +43,9 @@ make stack-down
 make stack-reset   # removes volumes and stack/.env; needed after a realm change
 ```
 
-The gateway builds the sibling fork `ohs-player-reference-backend-fork` (branch `trust-demo-household`), so clone it next to this repository.
-Set `PLUGIN_SRC` in `stack/.env` to the upstream git URL to build upstream instead.
+The gateway builds the sibling clone `ohs-player-reference-backend-fork` on branch `trust-demo-household`, so clone it next to this repository. The branch is not published yet; the owner decides where it lives.
+An existing `stack/.env` from before needs `PLUGIN_SRC` updated by hand, or run `make stack-reset`.
+Upstream lacks the household checker and the Subscription policy: family users are denied everything and Subscriptions are unrestricted for the admin. Point `PLUGIN_SRC` at upstream only to compare behaviour.
 
 Medplum's super-admin settings in `stack/.env` apply only when its database is first created, so a stack created before them needs `make stack-reset` once.
 
