@@ -28,13 +28,16 @@ private const val DESIGN = "http://smart.who.int/trust-demo/StructureDefinition"
 fun createEntry(type: String, id: String, resource: JsonObject): JsonObject =
   putEntry("$type/$id", JsonObject(resource + ("id" to JsonPrimitive(id))))
 
-fun putEntry(url: String, resource: JsonObject): JsonObject = buildJsonObject {
-  put("resource", resource)
-  putJsonObject("request") {
-    put("method", "PUT")
-    put("url", url)
+/** A PUT; with [ifMatch] the server refuses it when the record is no longer at that version. */
+fun putEntry(url: String, resource: JsonObject, ifMatch: String? = null): JsonObject =
+  buildJsonObject {
+    put("resource", resource)
+    putJsonObject("request") {
+      put("method", "PUT")
+      put("url", url)
+      ifMatch?.let { put("ifMatch", it) }
+    }
   }
-}
 
 fun deleteEntry(url: String): JsonObject = buildJsonObject {
   putJsonObject("request") {

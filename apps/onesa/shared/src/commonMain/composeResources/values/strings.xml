@@ -149,5 +149,11 @@
     <string name="verify_decline">Not this child</string>
     <string name="verify_other_child">This card is for another child</string>
     <string name="verify_birth_dates">Card born %1$s, child born %2$s</string>
+    <string name="match_title">Which schedule dose is this?</string>
+    <string name="match_hint">The national map has no schedule dose for this product. Your choice is added to it.</string>
+    <string name="match_confirm">This dose counts as %1$s</string>
+    <string name="match_none">None of these</string>
+    <string name="match_changed">The national map or the dose changed meanwhile. Nothing was saved. Check the choices and pick again.</string>
+    <string name="match_done">Matched to %1$s. The national map now has this product.</string>
     <string name="verify_imported_elsewhere">Already imported for another child</string>
 </resources>

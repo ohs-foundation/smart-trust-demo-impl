@@ -42,6 +42,7 @@ import dev.ohs.trustdemo.onesa.data.sync.DataStoreInitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.InitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.SyncManager
 import dev.ohs.trustdemo.onesa.data.sync.createSyncTimestampDataStore
+import dev.ohs.trustdemo.onesa.data.verification.DoseMatchService
 import dev.ohs.trustdemo.onesa.data.verification.ReferralInbox
 import dev.ohs.trustdemo.onesa.data.verification.VerificationService
 import dev.ohs.trustdemo.onesa.feature.group.list.GroupListViewModel
@@ -62,6 +63,14 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpTimeout
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
+
+private fun registrationSession(): RegistrationSession? =
+  SessionRepository.session.value?.let { session ->
+    val practitioner = session.context?.practitionerId
+    val organization = session.context?.organizationId
+    if (practitioner == null || organization == null) null
+    else RegistrationSession(session.accessToken, practitioner, organization)
+  }
 
 /**
  * Binds the production [FhirRepository], backed by [FhirEngineRepository]. Requires a
@@ -106,15 +115,16 @@ internal val serviceModule = module {
     VerificationService(
       repository = get(),
       hcert = get(),
-      session = {
-        SessionRepository.session.value?.let { session ->
-          val context = session.context
-          val practitioner = context?.practitionerId
-          val organization = context?.organizationId
-          if (practitioner == null || organization == null) null
-          else RegistrationSession(session.accessToken, practitioner, organization)
-        }
-      },
+      session = ::registrationSession,
+      httpClient = OidcAuthApi.defaultHttpClient(),
+      baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
+      refresh = { get<SyncManager>().syncNow() },
+    )
+  }
+  single {
+    DoseMatchService(
+      repository = get(),
+      session = ::registrationSession,
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
       refresh = { get<SyncManager>().syncNow() },
@@ -189,5 +199,5 @@ internal val viewModelModule = module {
   viewModel { TrustListViewModel(get()) }
   viewModel { ScanCardViewModel(get(), get()) }
   viewModel { ReferralInboxViewModel(get()) }
-  viewModel { (referralId: String) -> VerifyCardsViewModel(referralId, get(), get()) }
+  viewModel { (referralId: String) -> VerifyCardsViewModel(referralId, get(), get(), get()) }
 }

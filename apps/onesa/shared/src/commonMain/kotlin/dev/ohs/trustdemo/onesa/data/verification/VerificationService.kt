@@ -42,7 +42,6 @@ import kotlin.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -222,24 +221,7 @@ class VerificationService(
   private fun JsonObject.reference(name: String): String? =
     this[name]?.jsonObject?.get("reference")?.jsonPrimitive?.contentOrNull
 
-  private suspend fun epiCodes(): Map<String, String> =
-    repository
-      .all("ConceptMap")
-      .map { it.toJson() }
-      .filter { it["url"]?.jsonPrimitive?.contentOrNull == ScanTransactions.EPI_MAP }
-      .flatMap { it["group"]?.jsonArray.orEmpty() }
-      .filter {
-        it.jsonObject["source"]?.jsonPrimitive?.contentOrNull == ScanTransactions.PRODUCT_SYSTEM &&
-          it.jsonObject["target"]?.jsonPrimitive?.contentOrNull == ScanTransactions.EPI_SYSTEM
-      }
-      .flatMap { it.jsonObject["element"]?.jsonArray.orEmpty() }
-      .mapNotNull { element ->
-        val target = element.jsonObject["target"]?.jsonArray?.firstOrNull()?.jsonObject?.get("code")
-        element.jsonObject["code"]?.jsonPrimitive?.contentOrNull?.let { product ->
-          target?.jsonPrimitive?.contentOrNull?.let { product to it }
-        }
-      }
-      .toMap()
+  private suspend fun epiCodes(): Map<String, String> = NationalMap(repository).epiCodes()
 
   private suspend fun post(current: RegistrationSession, transaction: JsonObject) {
     val reply =

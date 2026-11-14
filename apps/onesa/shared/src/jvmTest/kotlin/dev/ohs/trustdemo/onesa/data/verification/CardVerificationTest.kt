@@ -54,6 +54,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
+private const val MAP_ID = "TrustDemoProductToOnesaEpi"
+
 class CardVerificationTest {
   private val nowSeconds = 1_800_000_000L
   private val patientId = "somsak-id"
@@ -83,6 +85,17 @@ class CardVerificationTest {
       httpClient = HttpClient(gateway.engine),
       baseUrl = "http://gateway/fhir",
       refresh = {},
+      clock = { Instant.fromEpochSeconds(nowSeconds) },
+    )
+
+  private var refreshes = 0
+  private val matching =
+    DoseMatchService(
+      repository = repository,
+      session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
+      httpClient = HttpClient(gateway.engine),
+      baseUrl = "http://gateway/fhir",
+      refresh = { refreshes++ },
       clock = { Instant.fromEpochSeconds(nowSeconds) },
     )
 
@@ -272,6 +285,160 @@ class CardVerificationTest {
     assertEquals(listOf("reported-bcg", "reported-hepb-later"), gateway.reportedIds().sorted())
   }
 
+  private suspend fun withNationalMap() {
+    val map =
+      FhirJson.instance
+        .parseToJsonElement(
+          """{"resourceType":"ConceptMap","id":"$MAP_ID","status":"draft","url":"${ScanTransactions.EPI_MAP}",
+          "group":[{"source":"${ScanTransactions.PRODUCT_SYSTEM}",
+          "target":"${ScanTransactions.EPI_SYSTEM}","element":[{"code":"vp-bcg-freeze-dried",
+          "target":[{"code":"XXK-EPI-BCG","equivalence":"equivalent"}]}]}]}"""
+        )
+        .jsonObject
+    gateway.conceptMaps[MAP_ID] = map
+    repository.upsert(decode(map))
+  }
+
+  private suspend fun importedDoses() {
+    withReportedDoses()
+    withNationalMap()
+    scan(hepB)
+    scan(bcg)
+    repository.upsert(decode(gateway.immunizations.getValue(ScanTransactions.immunizationId(hepB))))
+  }
+
+  private val hepBChoice = EpiSchedule.doses.single { it.code == "XXK-EPI-HEPB-BD" }
+
+  @Test
+  fun onlyAVerifiedDoseWithNoScheduleCodeNeedsTheMatchPicker() = runTest {
+    withReportedDoses()
+    withNationalMap()
+    assertEquals(emptyList(), matching.unmatched(patientId))
+
+    scan(hepB)
+    scan(bcg)
+    repository.upsert(decode(gateway.immunizations.getValue(ScanTransactions.immunizationId(hepB))))
+    repository.upsert(decode(gateway.immunizations.getValue(ScanTransactions.immunizationId(bcg))))
+
+    assertEquals(
+      listOf("vp-hepb-peds-monovalent"),
+      matching.unmatched(patientId).map { it.product },
+    )
+  }
+
+  @Test
+  fun anAdjudicationSatisfiesTheJ3bContract() = runTest {
+    importedDoses()
+    val dose = matching.unmatched(patientId).single()
+
+    assertIs<MatchOutcome.Matched>(matching.confirm(dose, hepBChoice))
+
+    assertEquals(
+      1,
+      gateway.provenances.values.count { "ConceptMap/$MAP_ID" in it.references("target") },
+    )
+    val adjudication =
+      gateway.provenances.values.single { "ConceptMap/$MAP_ID" in it.references("target") }
+    assertEquals(
+      setOf("Immunization/${dose.id}", "ConceptMap/$MAP_ID", "Patient/$patientId"),
+      adjudication.references("target").toSet(),
+    )
+    val stored =
+      mapOf(
+        "Provenance" to gateway.provenances.values.toList(),
+        "ConceptMap" to gateway.conceptMaps.values.toList(),
+      )
+    val dates = Dates(LocalDate.parse("2026-11-14"))
+    for (expectation in expectations.getValue(Step.J3B).take(2)) {
+      val found = stored.getValue(expectation.query.type).map(::decode)
+      assertTrue(expectation.satisfied(found, dates), expectation.label)
+    }
+    assertEquals(1, refreshes)
+    repository.upsert(decode(gateway.immunizations.getValue(dose.id)))
+    assertEquals(emptyList(), matching.unmatched(patientId))
+  }
+
+  @Test
+  fun theIssuerCodingIsKept() = runTest {
+    importedDoses()
+    val dose = matching.unmatched(patientId).single()
+    val before = codings(gateway.immunizations.getValue(dose.id))
+
+    matching.confirm(dose, hepBChoice)
+
+    val after = codings(gateway.immunizations.getValue(dose.id))
+    assertTrue(before.all { it in after }, "$before is kept in $after")
+    assertEquals(
+      listOf(ScanTransactions.EPI_SYSTEM to "XXK-EPI-HEPB-BD"),
+      after.filter { it.first == ScanTransactions.EPI_SYSTEM },
+    )
+    assertEquals(1, after.count { it.first == ScanTransactions.PRODUCT_SYSTEM })
+  }
+
+  @Test
+  fun aChangedConceptMapIsNotOverwritten() = runTest {
+    importedDoses()
+    val dose = matching.unmatched(patientId).single()
+    val written = gateway.conceptMaps.getValue(MAP_ID)
+    gateway.beforeTransaction = { gateway.touch("ConceptMap/$MAP_ID") }
+    val transactions = gateway.transactions.size
+
+    assertIs<MatchOutcome.Changed>(matching.confirm(dose, hepBChoice))
+
+    assertEquals(transactions, gateway.transactions.size)
+    assertEquals(written, gateway.conceptMaps.getValue(MAP_ID))
+    assertEquals(
+      0,
+      gateway.provenances.values.count { "ConceptMap/$MAP_ID" in it.references("target") },
+    )
+    assertEquals(1, codings(gateway.immunizations.getValue(dose.id)).size)
+    assertEquals(1, refreshes)
+  }
+
+  @Test
+  fun aMapEntryAddedMeanwhileIsNotOverwritten() = runTest {
+    importedDoses()
+    val dose = matching.unmatched(patientId).single()
+    gateway.conceptMaps[MAP_ID] =
+      FhirJson.instance
+        .parseToJsonElement(
+          gateway.conceptMaps
+            .getValue(MAP_ID)
+            .toString()
+            .replace(
+              "\"element\":[",
+              "\"element\":[{\"code\":\"vp-hepb-peds-monovalent\",\"target\":[{\"code\":\"XXK-EPI-HEPB-BD\"}]},",
+            )
+        )
+        .jsonObject
+    val transactions = gateway.transactions.size
+
+    assertIs<MatchOutcome.Changed>(matching.confirm(dose, hepBChoice))
+    assertEquals(transactions, gateway.transactions.size)
+  }
+
+  @Test
+  fun aLaterHepBCardImportsWithBothCodingsOnceMapped() = runTest {
+    importedDoses()
+    matching.confirm(matching.unmatched(patientId).single(), hepBChoice)
+    repository.upsert(decode(gateway.conceptMaps.getValue(MAP_ID)))
+    gateway.immunizations.remove(ScanTransactions.immunizationId(hepB))
+
+    scan(hepB)
+
+    val imported = codings(gateway.immunizations.getValue(ScanTransactions.immunizationId(hepB)))
+    assertEquals(
+      setOf(ScanTransactions.EPI_SYSTEM, ScanTransactions.PRODUCT_SYSTEM),
+      imported.map { it.first }.toSet(),
+    )
+  }
+
+  private fun codings(dose: JsonObject): List<Pair<String, String>> =
+    dose.getValue("vaccineCode").jsonObject.getValue("coding").jsonArray.map {
+      it.jsonObject.getValue("system").jsonPrimitive.content to
+        it.jsonObject.getValue("code").jsonPrimitive.content
+    }
+
   private fun reported(id: String, product: String, card: String, date: String): JsonObject =
     buildJsonObject {
       put("resourceType", "Immunization")
@@ -309,12 +476,20 @@ class CardVerificationTest {
 
 /** The gateway as the app sees it: it applies each transaction and answers reads by id. */
 private class FakeGateway {
-  class Entry(val method: String, val url: String, val resource: JsonObject?) {
+  class Entry(
+    val method: String,
+    val url: String,
+    val resource: JsonObject?,
+    val ifMatch: String? = null,
+  ) {
     val type: String
       get() = url.substringBefore('/')
   }
 
   val immunizations = linkedMapOf<String, JsonObject>()
+  val conceptMaps = linkedMapOf<String, JsonObject>()
+  var beforeTransaction: (() -> Unit)? = null
+  private val versions = mutableMapOf<String, Int>()
   val provenances = linkedMapOf<String, JsonObject>()
   val auditEvents = mutableListOf<JsonObject>()
   val transactions = mutableListOf<List<Entry>>()
@@ -326,12 +501,27 @@ private class FakeGateway {
       .keys
       .toList()
 
+  /** Another writer's change to [key]: its version moves on. */
+  fun touch(key: String) {
+    versions[key] = (versions[key] ?: 1) + 1
+  }
+
+  private fun versioned(key: String, resource: JsonObject): JsonObject =
+    JsonObject(
+      resource + ("meta" to buildJsonObject { put("versionId", (versions[key] ?: 1).toString()) })
+    )
+
   val engine = MockEngine { request ->
     val ok = headersOf(HttpHeaders.ContentType, "application/fhir+json")
     if (request.method == HttpMethod.Get) {
-      val dose = immunizations[request.url.encodedPath.substringAfterLast('/')]
-      if (dose == null) respond("", HttpStatusCode.NotFound, ok)
-      else respond(dose.toString(), HttpStatusCode.OK, ok)
+      val path = request.url.encodedPath.split('/').takeLast(2)
+      val found =
+        when (path.first()) {
+          "ConceptMap" -> conceptMaps[path.last()]
+          else -> immunizations[path.last()]
+        }
+      if (found == null) respond("", HttpStatusCode.NotFound, ok)
+      else respond(versioned(path.joinToString("/"), found).toString(), HttpStatusCode.OK, ok)
     } else {
       val bundle =
         FhirJson.instance.parseToJsonElement((request.body as TextContent).text).jsonObject
@@ -343,14 +533,21 @@ private class FakeGateway {
             call.getValue("method").jsonPrimitive.content,
             call.getValue("url").jsonPrimitive.content,
             entry["resource"]?.jsonObject,
+            call["ifMatch"]?.jsonPrimitive?.content,
           )
         }
+      beforeTransaction?.also { beforeTransaction = null }?.invoke()
+      val stale =
+        entries.any { it.ifMatch != null && it.ifMatch != "W/\"${versions[it.url] ?: 1}\"" }
+      if (stale) return@MockEngine respond("", HttpStatusCode.PreconditionFailed, ok)
       transactions += listOf(entries)
+      entries.filter { it.method == "PUT" }.forEach { touch(it.url) }
       entries.forEach { entry ->
         val id = entry.url.substringAfter('/')
         when {
           entry.method == "DELETE" -> immunizations.remove(id)
           entry.type == "Immunization" -> immunizations[id] = entry.resource!!
+          entry.type == "ConceptMap" -> conceptMaps[id] = entry.resource!!
           entry.type == "Provenance" -> provenances[id] = entry.resource!!
           entry.type == "AuditEvent" -> auditEvents += entry.resource!!
         }

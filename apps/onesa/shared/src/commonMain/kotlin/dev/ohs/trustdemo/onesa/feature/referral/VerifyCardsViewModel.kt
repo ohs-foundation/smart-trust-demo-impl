@@ -17,11 +17,15 @@ package dev.ohs.trustdemo.onesa.feature.referral
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.ohs.trustdemo.onesa.data.verification.DoseMatchService
+import dev.ohs.trustdemo.onesa.data.verification.EpiDose
+import dev.ohs.trustdemo.onesa.data.verification.MatchOutcome
 import dev.ohs.trustdemo.onesa.data.verification.PendingImport
 import dev.ohs.trustdemo.onesa.data.verification.Referral
 import dev.ohs.trustdemo.onesa.data.verification.ReferralInbox
 import dev.ohs.trustdemo.onesa.data.verification.ScanCheck
 import dev.ohs.trustdemo.onesa.data.verification.ScanOutcome
+import dev.ohs.trustdemo.onesa.data.verification.UnmatchedDose
 import dev.ohs.trustdemo.onesa.data.verification.VerificationService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +43,9 @@ data class VerifyCardsUiState(
   val pending: PendingImport? = null,
   val busy: Boolean = false,
   val couldNotSave: Boolean = false,
+  val unmatched: List<UnmatchedDose> = emptyList(),
+  val matchChanged: Boolean = false,
+  val matchedTo: List<EpiDose> = emptyList(),
 )
 
 /** Scans each card of a referral's child through [VerificationService]. */
@@ -46,14 +53,54 @@ class VerifyCardsViewModel(
   private val referralId: String,
   private val inbox: ReferralInbox,
   private val service: VerificationService,
+  private val matching: DoseMatchService,
 ) : ViewModel() {
   private val _uiState = MutableStateFlow(VerifyCardsUiState())
   val uiState: StateFlow<VerifyCardsUiState> = _uiState.asStateFlow()
 
   private var lastText: String? = null
+  private val leftUnmapped = mutableSetOf<String>()
 
   init {
-    viewModelScope.launch { _uiState.update { it.copy(referral = inbox.get(referralId)) } }
+    viewModelScope.launch {
+      _uiState.update { it.copy(referral = inbox.get(referralId)) }
+      loadUnmatched()
+    }
+  }
+
+  /**
+   * The nurse says the dose counts as [choice]: DT.02 rule 3 writes the map, the dose and her note.
+   */
+  fun match(dose: UnmatchedDose, choice: EpiDose) {
+    if (_uiState.value.busy) return
+    _uiState.update { it.copy(busy = true, couldNotSave = false, matchChanged = false) }
+    viewModelScope.launch {
+      val outcome = attempt { matching.confirm(dose, choice) }
+      _uiState.update {
+        it.copy(
+          busy = false,
+          couldNotSave = outcome == null,
+          matchChanged = outcome is MatchOutcome.Changed,
+          matchedTo =
+            if (outcome is MatchOutcome.Matched) it.matchedTo + outcome.dose else it.matchedTo,
+        )
+      }
+      loadUnmatched()
+    }
+  }
+
+  /**
+   * None of the schedule doses fits (DT.02 rule 4): nothing is written and the dose stays unmapped.
+   */
+  fun leaveUnmapped(dose: UnmatchedDose) {
+    leftUnmapped += dose.id
+    _uiState.update { it.copy(unmatched = it.unmatched.filter { other -> other.id != dose.id }) }
+  }
+
+  private suspend fun loadUnmatched() {
+    val referral = _uiState.value.referral ?: return
+    val doses = attempt { matching.unmatched(referral.patientId) } ?: return
+    _uiState.update { it.copy(unmatched = doses.filter { dose -> dose.id !in leftUnmapped }) }
   }
 
   /**
@@ -102,6 +149,7 @@ class VerifyCardsViewModel(
     lastText =
       card.takeIf { outcome is ScanOutcome.Imported || outcome is ScanOutcome.AlreadyImported }
     _uiState.update { it.copy(busy = false, pending = null, results = it.results + outcome) }
+    viewModelScope.launch { loadUnmatched() }
   }
 
   private suspend fun <T : Any> attempt(block: suspend () -> T): T? =

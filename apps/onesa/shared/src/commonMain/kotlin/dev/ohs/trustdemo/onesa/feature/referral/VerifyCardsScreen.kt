@@ -17,11 +17,13 @@ package dev.ohs.trustdemo.onesa.feature.referral
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -34,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -43,15 +46,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.ohs.trustdemo.onesa.data.verification.EpiDose
+import dev.ohs.trustdemo.onesa.data.verification.EpiSchedule
 import dev.ohs.trustdemo.onesa.data.verification.ScanOutcome
+import dev.ohs.trustdemo.onesa.data.verification.UnmatchedDose
 import dev.ohs.trustdemo.onesa.data.verification.display
 import dev.ohs.trustdemo.onesa.feature.scan.QrScan
 import dev.ohs.trustdemo.onesa.feature.scan.QrScannerView
 import dev.ohs.trustdemo.onesa.feature.scan.cameraScanningAvailable
 import dev.ohs.trustdemo.onesa.generated.resources.Res
+import dev.ohs.trustdemo.onesa.generated.resources.match_changed
+import dev.ohs.trustdemo.onesa.generated.resources.match_confirm
+import dev.ohs.trustdemo.onesa.generated.resources.match_done
+import dev.ohs.trustdemo.onesa.generated.resources.match_hint
+import dev.ohs.trustdemo.onesa.generated.resources.match_none
+import dev.ohs.trustdemo.onesa.generated.resources.match_title
 import dev.ohs.trustdemo.onesa.generated.resources.scan_back
 import dev.ohs.trustdemo.onesa.generated.resources.scan_error_camera
 import dev.ohs.trustdemo.onesa.generated.resources.scan_paste_label
@@ -191,6 +205,19 @@ fun VerifyCardsScreen(referralId: String, onBack: () -> Unit) {
         }
       }
 
+      if (state.matchChanged) {
+        Text(stringResource(Res.string.match_changed), color = MaterialTheme.colorScheme.error)
+      }
+      state.matchedTo.forEach { Text(stringResource(Res.string.match_done, it.display)) }
+      state.unmatched.forEach { dose ->
+        MatchPicker(
+          dose = dose,
+          busy = state.busy,
+          onMatch = { viewModel.match(dose, it) },
+          onNone = { viewModel.leaveUnmapped(dose) },
+        )
+      }
+
       if (state.results.isNotEmpty()) {
         Text(
           stringResource(Res.string.verify_results),
@@ -261,6 +288,48 @@ private fun Outcome(outcome: ScanOutcome) {
           )
           Text(stringResource(Res.string.verify_nothing_imported))
         }
+      }
+    }
+  }
+}
+
+@Composable
+private fun MatchPicker(
+  dose: UnmatchedDose,
+  busy: Boolean,
+  onMatch: (EpiDose) -> Unit,
+  onNone: () -> Unit,
+) {
+  var selected by remember(dose.id) { mutableStateOf<EpiDose?>(null) }
+  Card(Modifier.fillMaxWidth()) {
+    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Text(stringResource(Res.string.match_title), style = MaterialTheme.typography.labelLarge)
+      Text(dose.label)
+      Text(stringResource(Res.string.match_hint))
+      EpiSchedule.doses.forEach { choice ->
+        Row(
+          Modifier.fillMaxWidth()
+            .selectable(
+              selected = selected == choice,
+              enabled = !busy,
+              role = Role.RadioButton,
+              onClick = { selected = choice },
+            ),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          RadioButton(selected = selected == choice, onClick = null)
+          Text(choice.display, Modifier.padding(start = 8.dp))
+        }
+      }
+      Button(
+        onClick = { selected?.let(onMatch) },
+        enabled = selected != null && !busy,
+        modifier = Modifier.fillMaxWidth(),
+      ) {
+        Text(stringResource(Res.string.match_confirm, selected?.display ?: "-"))
+      }
+      OutlinedButton(onClick = onNone, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(Res.string.match_none))
       }
     }
   }
