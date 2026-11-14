@@ -1,0 +1,421 @@
+/*
+ * Copyright 2026 Open Health Stack Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.ohs.trustdemo.onesa.data.registration
+
+import dev.ohs.fhir.model.r4.Group
+import dev.ohs.fhir.model.r4.Immunization
+import dev.ohs.fhir.model.r4.Patient
+import dev.ohs.fhir.model.r4.QuestionnaireResponse
+import dev.ohs.trustdemo.hcert.CertificateFingerprint
+import dev.ohs.trustdemo.hcert.DvcFhirMapper
+import dev.ohs.trustdemo.hcert.DvcMappingOptions
+import dev.ohs.trustdemo.hcert.DvcMin
+import dev.ohs.trustdemo.onesa.generateId
+import dev.ohs.trustdemo.onesa.util.FhirJson
+import kotlin.time.Instant
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
+
+/** A card the CHW scanned: its HC1 text and what it says, read without any trust check. */
+data class ScannedCard(val hc1: String, val dvc: DvcMin)
+
+/** The linkIds of the household registration form. */
+object RegistrationItems {
+  const val HOUSEHOLD = "household"
+  const val GIVEN = "given"
+  const val FAMILY = "family"
+  const val SEX = "sex"
+  const val BIRTH_DATE = "birthDate"
+  const val BIRTH_COUNTRY = "birthCountry"
+  const val FOREIGN_CARDS = "foreignCards"
+  const val RELATIONSHIP = "relationship"
+}
+
+/** Everything the registration transaction is built from. */
+data class RegistrationRequest(
+  val response: QuestionnaireResponse,
+  val household: Group,
+  val parents: List<Patient>,
+  val cards: List<ScannedCard>,
+  val practitionerId: String,
+  val organizationId: String,
+  val now: Instant,
+  val newId: () -> String = ::generateId,
+)
+
+/**
+ * Turns the answered household registration form and the scanned cards into the one transaction
+ * that registers a newborn: the child, both parents as related persons, the household's new member
+ * and managing entity, the parents' links, the reported doses and the referral.
+ *
+ * Extraction is in code rather than the data-capture template engine: the transaction updates an
+ * existing Group and Patients, takes doses from scanned cards, and wires references between records
+ * created together, none of which a Questionnaire template expresses.
+ */
+object NewbornRegistration {
+  const val QUESTIONNAIRE_URL =
+    "http://ohs.dev/fhir/trust-demo/Questionnaire/TrustDemoHouseholdRegistration"
+
+  private const val DESIGN = "http://smart.who.int/trust-demo/StructureDefinition"
+  private const val ROLE_CODE = "http://terminology.hl7.org/CodeSystem/v3-RoleCode"
+  private const val GENDER = "http://hl7.org/fhir/administrative-gender"
+  private const val SNOMED = "http://snomed.info/sct"
+  private const val REFERRAL_REASON =
+    "Unverified foreign vaccination cards presented on a home visit (primarySource false)"
+  private const val REFERRAL_TEXT =
+    "Verify foreign paper DVCs and map the birth doses to the national schedule"
+  private const val CARD_NOTE =
+    "Read from a paper DVC the family showed, without verifying its signature: reported, not verified."
+
+  private const val PRODUCT_SYSTEM =
+    "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
+
+  /** The demonstrator's products, as the IG's TrustDemoVaccineProduct names them. */
+  val PRODUCTS =
+    mapOf(
+      "vp-hepb-peds-monovalent" to "Hepatitis B vaccine, paediatric, monovalent",
+      "vp-bcg-freeze-dried" to "BCG vaccine, freeze-dried",
+    )
+
+  private val json = FhirJson.instance
+
+  /** The answers the form opens with: the household, and the child as the first card names it. */
+  fun initialAnswers(household: Group, cards: List<ScannedCard>): Map<String, JsonObject> =
+    buildMap {
+      household.identifier
+        .firstNotNullOfOrNull { it.value?.value }
+        ?.let { put(RegistrationItems.HOUSEHOLD, buildJsonObject { put("valueString", it) }) }
+      val dvc = cards.firstOrNull()?.dvc ?: return@buildMap
+      val name = DvcFhirMapper.humanName(dvc.n)
+      name.given
+        .firstNotNullOfOrNull { it.value }
+        ?.let { put(RegistrationItems.GIVEN, buildJsonObject { put("valueString", it) }) }
+      name.family?.value?.let {
+        put(RegistrationItems.FAMILY, buildJsonObject { put("valueString", it) })
+      }
+      put(RegistrationItems.BIRTH_DATE, buildJsonObject { put("valueDate", dvc.dob) })
+      put(RegistrationItems.SEX, coding(GENDER, dvc.s.lowercase()))
+      put(RegistrationItems.FOREIGN_CARDS, buildJsonObject { put("valueBoolean", true) })
+    }
+
+  /** What S3 tells the CHW: the child, each dose as reported, and the referral's recipient. */
+  fun summary(
+    response: QuestionnaireResponse,
+    cards: List<ScannedCard>,
+    referredTo: String?,
+  ): RegistrationSummary {
+    val answers = response.toJson().answers()
+    return RegistrationSummary(
+      childName =
+        "${answers.required(RegistrationItems.GIVEN)} ${answers.required(RegistrationItems.FAMILY)}",
+      birthDate = answers.required(RegistrationItems.BIRTH_DATE),
+      doses = cards.map { "${PRODUCTS[it.dvc.vx.vp] ?: it.dvc.vx.vp}, ${it.dvc.vx.dv}" },
+      referredTo = referredTo.takeIf { cards.isNotEmpty() },
+    )
+  }
+
+  fun transaction(request: RegistrationRequest): JsonObject {
+    val answers = request.response.toJson().answers()
+    val authored = request.now.toString()
+    val today = authored.substringBefore('T')
+    val org = "Organization/${request.organizationId}"
+    val practitioner = "Practitioner/${request.practitionerId}"
+
+    val childId = request.newId()
+    val child = "Patient/$childId"
+    val parents = request.parents.map { Parent(it, request.newId()) }
+    val mother =
+      parents.firstOrNull { it.code == "MTH" } ?: error("The household has no mother on record")
+    val father =
+      parents.firstOrNull { it.code == "FTH" } ?: error("The household has no father on record")
+    val informant =
+      when (val code = answers.required(RegistrationItems.RELATIONSHIP)) {
+        "MTH" -> mother
+        "FTH" -> father
+        else -> error("Unknown relationship $code")
+      }
+    val doses = request.cards.map { it to request.newId() }
+
+    val somsak = buildJsonObject {
+      put("resourceType", "Patient")
+      putProfile("TrustDemoOnesaPatient")
+      put("active", true)
+      putJsonArray("name") {
+        add(
+          buildJsonObject {
+            put("use", "official")
+            put("family", answers.required(RegistrationItems.FAMILY))
+            putJsonArray("given") { add(JsonPrimitive(answers.required(RegistrationItems.GIVEN))) }
+          }
+        )
+      }
+      put("gender", answers.required(RegistrationItems.SEX))
+      put("birthDate", answers.required(RegistrationItems.BIRTH_DATE))
+      putJsonObject("managingOrganization") { put("reference", org) }
+      putJsonArray("contact") {
+        parents.forEach { parent ->
+          add(
+            buildJsonObject {
+              putJsonArray("relationship") { add(role(parent)) }
+              put("name", parent.name)
+            }
+          )
+        }
+      }
+    }
+
+    val relatedPersons =
+      parents.map { parent ->
+        parent to
+          buildJsonObject {
+            put("resourceType", "RelatedPerson")
+            putJsonObject("patient") { put("reference", child) }
+            putJsonArray("relationship") { add(role(parent)) }
+            putJsonArray("name") { add(parent.name) }
+            parent.gender?.let { put("gender", it) }
+          }
+      }
+
+    val updatedParents =
+      parents.map { parent ->
+        val resource = json.encodeToJsonElement(Patient.serializer(), parent.patient).jsonObject
+        val link = buildJsonObject {
+          putJsonObject("other") { put("reference", parent.relatedPerson) }
+          put("type", "seealso")
+        }
+        parent to
+          JsonObject(resource + ("link" to JsonArray(resource["link"]?.jsonArray.orEmpty() + link)))
+      }
+
+    val group = json.encodeToJsonElement(Group.serializer(), request.household).jsonObject
+    val members =
+      group["member"]?.jsonArray.orEmpty() +
+        buildJsonObject {
+          putJsonObject("entity") { put("reference", child) }
+          putJsonObject("period") { put("start", today) }
+        }
+    val updatedGroup =
+      JsonObject(
+        group +
+          mapOf(
+            "member" to JsonArray(members),
+            "quantity" to JsonPrimitive(members.size),
+            "managingEntity" to buildJsonObject { put("reference", informant.relatedPerson) },
+          )
+      )
+
+    val immunizations =
+      doses.map { (card, id) ->
+        id to
+          reported(card, child, request.now.epochSeconds).let { dose ->
+            JsonObject(
+              dose - "id" +
+                ("patient" to buildJsonObject { put("reference", child) }) +
+                ("meta" to profile("TrustDemoOnesaReportedImmunization")) +
+                (product(card.dvc.vx.vp)?.let { mapOf("vaccineCode" to it) }.orEmpty()) +
+                ("note" to buildJsonArray { add(buildJsonObject { put("text", CARD_NOTE) }) })
+            )
+          }
+      }
+
+    val referral = buildJsonObject {
+      put("resourceType", "ServiceRequest")
+      putProfile("TrustDemoOnesaReferral")
+      put("status", "active")
+      put("intent", "order")
+      put("priority", "routine")
+      putJsonObject("code") {
+        putJsonArray("coding") {
+          add(
+            buildJsonObject {
+              put("system", SNOMED)
+              put("code", "3457005")
+              put("display", "Patient referral")
+            }
+          )
+        }
+        put("text", REFERRAL_TEXT)
+      }
+      putJsonObject("subject") { put("reference", child) }
+      put("authoredOn", authored)
+      putJsonObject("requester") { put("reference", practitioner) }
+      putJsonArray("performer") { add(buildJsonObject { put("reference", org) }) }
+      putJsonArray("reasonCode") { add(buildJsonObject { put("text", REFERRAL_REASON) }) }
+      putJsonArray("supportingInfo") {
+        doses.forEach { (_, id) -> add(buildJsonObject { put("reference", "Immunization/$id") }) }
+      }
+    }
+
+    val record =
+      JsonObject(
+        request.response.toJson() - "id" +
+          ("meta" to profile("TrustDemoOnesaRegistration")) +
+          ("questionnaire" to JsonPrimitive(QUESTIONNAIRE_URL)) +
+          ("status" to JsonPrimitive("completed")) +
+          ("subject" to buildJsonObject { put("reference", child) }) +
+          ("authored" to JsonPrimitive(authored)) +
+          ("author" to buildJsonObject { put("reference", practitioner) }) +
+          ("source" to buildJsonObject { put("reference", informant.relatedPerson) })
+      )
+
+    return buildJsonObject {
+      put("resourceType", "Bundle")
+      put("type", "transaction")
+      putJsonArray("entry") {
+        add(createEntry("Patient", childId, somsak))
+        relatedPersons.forEach { (parent, resource) ->
+          add(createEntry("RelatedPerson", parent.relatedPersonId, resource))
+        }
+        updatedParents.forEach { (parent, resource) ->
+          add(putEntry("Patient/${parent.patient.id}", resource))
+        }
+        add(putEntry("Group/${request.household.id}", updatedGroup))
+        immunizations.forEach { (id, resource) -> add(createEntry("Immunization", id, resource)) }
+        if (immunizations.isNotEmpty())
+          add(createEntry("ServiceRequest", request.newId(), referral))
+        add(createEntry("QuestionnaireResponse", request.newId(), record))
+      }
+    }
+  }
+
+  private class Parent(val patient: Patient, val relatedPersonId: String) {
+    val relatedPerson = "RelatedPerson/$relatedPersonId"
+    val gender: String? =
+      json
+        .encodeToJsonElement(Patient.serializer(), patient)
+        .jsonObject["gender"]
+        ?.jsonPrimitive
+        ?.contentOrNull
+    val code: String? =
+      when (gender) {
+        "female" -> "MTH"
+        "male" -> "FTH"
+        else -> null
+      }
+    val name: JsonObject =
+      patient.name.firstOrNull()?.let {
+        buildJsonObject {
+          it.family?.value?.let { family -> put("family", family) }
+          putJsonArray("given") {
+            it.given
+              .mapNotNull { given -> given.value }
+              .forEach { given -> add(JsonPrimitive(given)) }
+          }
+        }
+      } ?: JsonObject(emptyMap())
+  }
+
+  private fun reported(card: ScannedCard, patientId: String, nowEpochSeconds: Long): JsonObject {
+    val resources =
+      DvcFhirMapper.map(
+        card.dvc,
+        DvcMappingOptions(
+          patientId = patientId,
+          certificateFingerprint = CertificateFingerprint.of(card.hc1),
+          recordedAtEpochSeconds = nowEpochSeconds,
+        ),
+      )
+    return json.encodeToJsonElement(Immunization.serializer(), resources.immunization).jsonObject
+  }
+
+  private fun product(vp: String): JsonObject? =
+    PRODUCTS[vp]?.let { display ->
+      buildJsonObject {
+        putJsonArray("coding") {
+          add(
+            buildJsonObject {
+              put("system", PRODUCT_SYSTEM)
+              put("code", vp)
+              put("display", display)
+            }
+          )
+        }
+      }
+    }
+
+  private fun role(parent: Parent): JsonObject = buildJsonObject {
+    putJsonArray("coding") {
+      add(
+        buildJsonObject {
+          put("system", ROLE_CODE)
+          put("code", parent.code)
+          put("display", if (parent.code == "MTH") "mother" else "father")
+        }
+      )
+    }
+  }
+
+  /** A new record under a client-assigned id: the gateway's audit cannot record `urn:uuid`. */
+  private fun createEntry(type: String, id: String, resource: JsonObject): JsonObject =
+    putEntry("$type/$id", JsonObject(resource + ("id" to JsonPrimitive(id))))
+
+  private fun putEntry(url: String, resource: JsonObject): JsonObject = buildJsonObject {
+    put("resource", resource)
+    putJsonObject("request") {
+      put("method", "PUT")
+      put("url", url)
+    }
+  }
+
+  private fun JsonObjectBuilder.putProfile(name: String) {
+    put("meta", profile(name))
+  }
+
+  private fun profile(name: String): JsonObject = buildJsonObject {
+    putJsonArray("profile") { add(JsonPrimitive("$DESIGN/$name")) }
+  }
+
+  private fun coding(system: String, code: String): JsonObject = buildJsonObject {
+    putJsonObject("valueCoding") {
+      put("system", system)
+      put("code", code)
+    }
+  }
+
+  private fun Map<String, String>.required(linkId: String): String =
+    this[linkId] ?: error("The registration form has no answer for $linkId")
+
+  private fun QuestionnaireResponse.toJson(): JsonObject =
+    json.encodeToJsonElement(QuestionnaireResponse.serializer(), this).jsonObject
+
+  /** The first answer to each item, as plain text: the string, date, boolean or coding's code. */
+  private fun JsonObject.answers(): Map<String, String> =
+    getValue("item")
+      .jsonArray
+      .mapNotNull { item ->
+        val answer = item.jsonObject["answer"]?.jsonArray?.firstOrNull()?.jsonObject
+        val text =
+          answer?.let {
+            (it["valueString"] ?: it["valueDate"] ?: it["valueBoolean"])
+              ?.jsonPrimitive
+              ?.contentOrNull
+              ?: it["valueCoding"]?.jsonObject?.get("code")?.jsonPrimitive?.contentOrNull
+          }
+        text?.let { item.jsonObject.getValue("linkId").jsonPrimitive.content to it }
+      }
+      .toMap()
+}

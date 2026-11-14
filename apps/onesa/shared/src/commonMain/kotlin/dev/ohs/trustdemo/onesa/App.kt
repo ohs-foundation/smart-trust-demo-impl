@@ -47,6 +47,7 @@ import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireIds
 import dev.ohs.trustdemo.onesa.feature.role.NoRoleScreen
 import dev.ohs.trustdemo.onesa.feature.role.UserContextState
 import dev.ohs.trustdemo.onesa.feature.role.UserContextViewModel
+import dev.ohs.trustdemo.onesa.feature.scan.ScanCardScreen
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncGateState
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncScreen
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
@@ -143,14 +144,7 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
                 questionnaireHostRoute(questionnaireId = QuestionnaireIds.HOUSEHOLD_REGISTRATION)
               )
             },
-            onAddMembers = { groupId ->
-              navController.navigate(
-                questionnaireHostRoute(
-                  questionnaireId = QuestionnaireIds.HOUSEHOLD_MEMBERS,
-                  groupId = groupId,
-                )
-              )
-            },
+            onAddMembers = { groupId -> navController.navigate("scanCard/$groupId") },
             onAddClinicalData = { patientId ->
               navController.navigate(
                 questionnaireHostRoute(
@@ -205,10 +199,21 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
             groupId = groupId,
             onBack = { navController.popBackStack() },
             onMemberClick = { id -> navController.navigate("patientProfile/$id") },
-            onAddMembers = {
+            onAddMembers = { navController.navigate("scanCard/$groupId") },
+          )
+        }
+
+        composable(
+          route = "scanCard/{groupId}",
+          arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
+        ) { back ->
+          val groupId = back.arguments?.read { getStringOrNull("groupId") }.orEmpty()
+          ScanCardScreen(
+            onBack = { navController.popBackStack() },
+            onContinue = {
               navController.navigate(
                 questionnaireHostRoute(
-                  questionnaireId = QuestionnaireIds.HOUSEHOLD_MEMBERS,
+                  questionnaireId = QuestionnaireIds.NEWBORN_REGISTRATION,
                   groupId = groupId,
                 )
               )

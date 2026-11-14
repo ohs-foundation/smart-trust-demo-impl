@@ -21,6 +21,7 @@ import dev.ohs.trustdemo.hcert.HcertClock
 import dev.ohs.trustdemo.hcert.HcertEngine
 import dev.ohs.trustdemo.hcert.HcertTrustException
 import dev.ohs.trustdemo.hcert.HcertTrustStore
+import dev.ohs.trustdemo.hcert.ReadResult
 import dev.ohs.trustdemo.hcert.TrustListCache
 import dev.ohs.trustdemo.hcert.TrustListSnapshot
 import dev.ohs.trustdemo.hcert.VerificationResult
@@ -76,6 +77,12 @@ class HcertService(private val local: PinnedTrustList, private val gdhcnDev: Pin
     hc1: String,
     now: Long = HcertClock.nowEpochSeconds(),
   ): VerificationResult = verify(TrustDomain.Vhl, hc1, now)
+
+  /**
+   * Decodes a card without a trust lookup or a signature check: for a visit where nothing can be
+   * verified.
+   */
+  suspend fun read(hc1: String): ReadResult = engine().readUnverified(hc1)
 
   /** Fetches the local list; the copy already held stays when the fetch or its proof fails. */
   suspend fun refreshLocalList(

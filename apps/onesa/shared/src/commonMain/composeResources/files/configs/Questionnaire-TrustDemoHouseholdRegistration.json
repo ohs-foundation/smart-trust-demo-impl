@@ -1,0 +1,95 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "TrustDemoHouseholdRegistration",
+  "url": "http://ohs.dev/fhir/trust-demo/Questionnaire/TrustDemoHouseholdRegistration",
+  "version": "0.1.0",
+  "name": "TrustDemoHouseholdRegistration",
+  "title": "Add a newborn to the household",
+  "description": "Adds a newborn to a household and notes any foreign vaccination cards. Copied from the IG's TrustDemoHouseholdRegistration, with Sex and Relationship added.",
+  "status": "draft",
+  "experimental": true,
+  "subjectType": [
+    "Patient"
+  ],
+  "item": [
+    {
+      "linkId": "household",
+      "text": "Household id",
+      "type": "string",
+      "required": true,
+      "readOnly": true
+    },
+    {
+      "linkId": "given",
+      "text": "Child's given name",
+      "type": "string",
+      "required": true
+    },
+    {
+      "linkId": "family",
+      "text": "Child's family name",
+      "type": "string",
+      "required": true
+    },
+    {
+      "linkId": "sex",
+      "text": "Sex",
+      "type": "choice",
+      "required": true,
+      "answerOption": [
+        {
+          "valueCoding": {
+            "system": "http://hl7.org/fhir/administrative-gender",
+            "code": "male",
+            "display": "Male"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://hl7.org/fhir/administrative-gender",
+            "code": "female",
+            "display": "Female"
+          }
+        }
+      ]
+    },
+    {
+      "linkId": "birthDate",
+      "text": "Date of birth",
+      "type": "date",
+      "required": true
+    },
+    {
+      "linkId": "birthCountry",
+      "text": "Country of birth",
+      "type": "string"
+    },
+    {
+      "linkId": "foreignCards",
+      "text": "Does the family hold vaccination cards from abroad?",
+      "type": "boolean"
+    },
+    {
+      "linkId": "relationship",
+      "text": "Who is giving this information?",
+      "type": "choice",
+      "required": true,
+      "answerOption": [
+        {
+          "valueCoding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+            "code": "MTH",
+            "display": "The mother"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+            "code": "FTH",
+            "display": "The father"
+          }
+        }
+      ]
+    }
+  ]
+}

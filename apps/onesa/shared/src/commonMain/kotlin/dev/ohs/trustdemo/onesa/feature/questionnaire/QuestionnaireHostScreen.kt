@@ -89,7 +89,8 @@ fun QuestionnaireHostScreen(
   val coroutineScope = rememberCoroutineScope()
 
   LaunchedEffect(uiState) {
-    if (uiState !is QuestionnaireHostUiState.Submitted) return@LaunchedEffect
+    val submitted = uiState as? QuestionnaireHostUiState.Submitted ?: return@LaunchedEffect
+    if (submitted.result.registration != null) return@LaunchedEffect
     delay(2_000.milliseconds)
     onBack()
   }
@@ -150,7 +151,9 @@ fun QuestionnaireHostScreen(
       ) {
         when (val state = uiState) {
           is QuestionnaireHostUiState.Submitted ->
-            SubmissionBanner(message = state.result.successMessage, isSuccess = true)
+            if (state.result.registration == null) {
+              SubmissionBanner(message = state.result.successMessage, isSuccess = true)
+            }
 
           is QuestionnaireHostUiState.Error -> Unit // rendered below, inline with a dismiss action
           else -> Unit
@@ -203,7 +206,8 @@ fun QuestionnaireHostScreen(
               )
             }
 
-            is QuestionnaireHostUiState.Submitted -> Unit
+            is QuestionnaireHostUiState.Submitted ->
+              state.result.registration?.let { RegistrationSummaryCard(it, onDone = onBack) }
           }
         }
       }

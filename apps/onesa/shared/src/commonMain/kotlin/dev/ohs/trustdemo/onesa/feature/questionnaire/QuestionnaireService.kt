@@ -28,6 +28,8 @@ import dev.ohs.fhir.model.r4.Questionnaire as QuestionnaireR4
 import dev.ohs.fhir.model.r4.QuestionnaireResponse
 import dev.ohs.fhir.model.r4.Reference
 import dev.ohs.fhir.model.r4.String as FhirString
+import dev.ohs.trustdemo.onesa.data.registration.RegistrationService
+import dev.ohs.trustdemo.onesa.data.registration.RegistrationSummary
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.generateId
 import dev.ohs.trustdemo.onesa.generated.resources.Res
@@ -49,6 +51,7 @@ data class QuestionnaireSubmissionResult(
   val savedResourceCount: Int,
   val bundleJson: String,
   val successMessage: String,
+  val registration: RegistrationSummary? = null,
 )
 
 /** Canonical Questionnaire.id values expected to already be persisted in the repository. */
@@ -56,6 +59,7 @@ object QuestionnaireIds {
   const val HOUSEHOLD_REGISTRATION = "household-registration"
   const val HOUSEHOLD_MEMBERS = "household-members"
   const val PATIENT_CLINICAL_DATA = "patient-clinical-data"
+  const val NEWBORN_REGISTRATION = "TrustDemoHouseholdRegistration"
 }
 
 /** Bundled Questionnaire JSON, keyed by the id it should be read under. */
@@ -64,7 +68,10 @@ private val BUNDLED_QUESTIONNAIRE_PATHS: Map<String, String> =
     QuestionnaireIds.HOUSEHOLD_REGISTRATION to
       "files/configs/Questionnaire-HouseholdRegistration.json",
     QuestionnaireIds.HOUSEHOLD_MEMBERS to "files/configs/Questionnaire-HouseholdMembers.json",
-    QuestionnaireIds.PATIENT_CLINICAL_DATA to "files/configs/Questionnaire-PatientClinicalData.json",
+    QuestionnaireIds.PATIENT_CLINICAL_DATA to
+      "files/configs/Questionnaire-PatientClinicalData.json",
+    QuestionnaireIds.NEWBORN_REGISTRATION to
+      "files/configs/Questionnaire-TrustDemoHouseholdRegistration.json",
   )
 
 /** Launch-context values a questionnaire can opt into prepopulating, by linkId. */
@@ -80,7 +87,10 @@ private val LAUNCH_CONTEXT_LINK_IDS: Map<String, (QuestionnaireLaunchContext) ->
  * Questionnaires are no longer served from bundled JSON paths - they are expected to already be
  * upserted into the repository (e.g. at app startup) and are looked up here by id.
  */
-class QuestionnaireService(private val repository: FhirRepository) {
+class QuestionnaireService(
+  private val repository: FhirRepository,
+  private val registration: RegistrationService,
+) {
 
   private val fhirJson = FhirJson.instance
 
@@ -122,10 +132,21 @@ class QuestionnaireService(private val repository: FhirRepository) {
         fhirJson.encodeToString(QuestionnaireR4.serializer(), questionnaire),
       )
 
-    val prepared =
+    val withContext =
       LAUNCH_CONTEXT_LINK_IDS.entries.fold(questionnaireObject) { current, (linkId, resolve) ->
         val value = resolve(launchContext) ?: return@fold current
-        current.withInitialStringAnswer(linkId, value).first
+        current
+          .withInitialAnswer(linkId, JsonObject(mapOf("valueString" to JsonPrimitive(value))))
+          .first
+      }
+    val registrationAnswers =
+      launchContext.groupId
+        ?.takeIf { questionnaire.id == QuestionnaireIds.NEWBORN_REGISTRATION }
+        ?.let { registration.initialAnswers(it) }
+        .orEmpty()
+    val prepared =
+      registrationAnswers.entries.fold(withContext) { current, (linkId, answer) ->
+        current.withInitialAnswer(linkId, answer).first
       }
 
     val preparedJson = fhirJson.encodeToString(JsonObject.serializer(), prepared)
@@ -152,6 +173,8 @@ class QuestionnaireService(private val repository: FhirRepository) {
       QuestionnaireIds.PATIENT_CLINICAL_DATA ->
         submitClinicalData(questionnaire, response, launchContext)
 
+      QuestionnaireIds.NEWBORN_REGISTRATION -> submitNewbornRegistration(response, launchContext)
+
       else -> error("No submission handling is defined for questionnaire '${questionnaire.id}'.")
     }
 
@@ -172,6 +195,20 @@ class QuestionnaireService(private val repository: FhirRepository) {
         } else {
           "No household resources were extracted from this submission."
         },
+    )
+  }
+
+  private suspend fun submitNewbornRegistration(
+    response: QuestionnaireResponse,
+    launchContext: QuestionnaireLaunchContext,
+  ): QuestionnaireSubmissionResult {
+    val groupId = launchContext.groupId ?: error("A household is required to register a newborn.")
+    val summary = registration.register(groupId, response)
+    return QuestionnaireSubmissionResult(
+      savedResourceCount = 1,
+      bundleJson = "",
+      successMessage = "${summary.childName} is registered.",
+      registration = summary,
     )
   }
 
@@ -312,23 +349,22 @@ class QuestionnaireService(private val repository: FhirRepository) {
 private fun Patient.toGroupMember(): Group.Member =
   Group.Member(entity = Reference(reference = FhirString(value = "Patient/$id")))
 
-private fun JsonObject.withInitialStringAnswer(
+private fun JsonObject.withInitialAnswer(
   linkId: String,
-  value: String,
+  answer: JsonObject,
 ): Pair<JsonObject, Boolean> {
   var updated = false
   val mutableNode = toMutableMap()
 
   if (this["linkId"]?.jsonPrimitive?.contentOrNull == linkId) {
-    mutableNode["initial"] =
-      JsonArray(listOf(JsonObject(mapOf("valueString" to JsonPrimitive(value)))))
+    mutableNode["initial"] = JsonArray(listOf(answer))
     updated = true
   }
 
   this["item"]
     ?.jsonArray
     ?.map { element ->
-      val (updatedItem, itemUpdated) = element.jsonObject.withInitialStringAnswer(linkId, value)
+      val (updatedItem, itemUpdated) = element.jsonObject.withInitialAnswer(linkId, answer)
       if (itemUpdated) updated = true
       updatedItem
     }

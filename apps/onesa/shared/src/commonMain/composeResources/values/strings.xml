@@ -60,8 +60,8 @@
     <!-- Group profile screen -->
     <string name="group_profile_default_name">Household</string>
     <string name="group_profile_back">Back</string>
-    <string name="group_profile_add_members">Add members</string>
-    <string name="group_profile_add_members_description">Add household members</string>
+    <string name="group_profile_add_members">Register a newborn</string>
+    <string name="group_profile_add_members_description">Register a newborn in this household</string>
 
     <!-- Patient list screen -->
     <string name="patient_list_title">Patients</string>
@@ -99,4 +99,32 @@
     <string name="allergy_unknown">Unknown substance</string>
     <string name="immunization_unknown">Unknown vaccine</string>
     <string name="immunization_given">Given %1$s</string>
+
+    <string name="scan_title">Read a vaccination card</string>
+    <string name="scan_back">Back</string>
+    <string name="scan_not_verified">Not verified</string>
+    <string name="scan_not_verified_note">This card is only read. Its signature is checked later, at the health centre.</string>
+    <string name="scan_paste_label">Card text (HC1:...)</string>
+    <string name="scan_use_text">Read this card</string>
+    <string name="scan_camera_unavailable">The camera is not available here. Paste the card text below.</string>
+    <string name="scan_camera_permission">Allow the camera to scan a card, or paste its text below.</string>
+    <string name="scan_cards_read">Cards read</string>
+    <string name="scan_none_yet">No card read yet.</string>
+    <string name="scan_field_child">Child</string>
+    <string name="scan_field_born">Born</string>
+    <string name="scan_field_vaccine">Vaccine</string>
+    <string name="scan_field_given">Given</string>
+    <string name="scan_field_lot">Lot</string>
+    <string name="scan_field_issuer">Issued by</string>
+    <string name="scan_continue">Continue to the registration form</string>
+    <string name="scan_error_not_a_card">That is not a vaccination card.</string>
+    <string name="scan_error_no_dose">That card names no vaccination.</string>
+    <string name="scan_error_already_read">That card was already read.</string>
+    <string name="scan_error_camera">The camera could not read it. Try again or paste the text.</string>
+    <string name="registration_done_title">%1$s is registered</string>
+    <string name="registration_born">Born %1$s</string>
+    <string name="registration_doses">Doses noted (reported, not verified)</string>
+    <string name="registration_no_doses">No card was read.</string>
+    <string name="registration_referred">Referred to %1$s to verify the cards.</string>
+    <string name="registration_done">Done</string>
 </resources>

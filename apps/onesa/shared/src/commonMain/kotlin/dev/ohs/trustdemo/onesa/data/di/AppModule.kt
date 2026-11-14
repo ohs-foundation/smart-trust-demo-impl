@@ -31,12 +31,16 @@ import dev.ohs.trustdemo.onesa.data.hcert.DataStoreTrustListStorage
 import dev.ohs.trustdemo.onesa.data.hcert.HcertService
 import dev.ohs.trustdemo.onesa.data.hcert.PinnedTrustList
 import dev.ohs.trustdemo.onesa.data.hcert.createTrustListDataStore
+import dev.ohs.trustdemo.onesa.data.registration.RegistrationService
+import dev.ohs.trustdemo.onesa.data.registration.RegistrationSession
+import dev.ohs.trustdemo.onesa.data.registration.ScannedCards
 import dev.ohs.trustdemo.onesa.data.repository.FhirEngineRepository
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.data.repository.GroupRepository
 import dev.ohs.trustdemo.onesa.data.repository.PatientRepository
 import dev.ohs.trustdemo.onesa.data.sync.DataStoreInitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.InitialSyncStore
+import dev.ohs.trustdemo.onesa.data.sync.SyncManager
 import dev.ohs.trustdemo.onesa.data.sync.createSyncTimestampDataStore
 import dev.ohs.trustdemo.onesa.feature.group.list.GroupListViewModel
 import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileViewModel
@@ -47,6 +51,7 @@ import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireHostViewModel
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireLaunchContext
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireService
 import dev.ohs.trustdemo.onesa.feature.role.UserContextViewModel
+import dev.ohs.trustdemo.onesa.feature.scan.ScanCardViewModel
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
 import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListViewModel
 import io.ktor.client.HttpClient
@@ -72,7 +77,28 @@ internal val repositoryModule = module {
   single { GroupRepository(get()) }
 }
 
-internal val serviceModule = module { factory { QuestionnaireService(get()) } }
+internal val serviceModule = module {
+  single { ScannedCards() }
+  single {
+    RegistrationService(
+      repository = get(),
+      scannedCards = get(),
+      session = {
+        SessionRepository.session.value?.let { session ->
+          val context = session.context
+          val practitioner = context?.practitionerId
+          val organization = context?.organizationId
+          if (practitioner == null || organization == null) null
+          else RegistrationSession(session.accessToken, practitioner, organization)
+        }
+      },
+      httpClient = OidcAuthApi.defaultHttpClient(),
+      baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
+      refresh = { get<SyncManager>().syncNow() },
+    )
+  }
+  factory { QuestionnaireService(get(), get()) }
+}
 
 /**
  * [SyncManager] isn't bound here — each platform's `initKoin` caller supplies its own
@@ -138,4 +164,5 @@ internal val viewModelModule = module {
   }
   viewModel { InitialSyncViewModel(get(), get()) }
   viewModel { TrustListViewModel(get()) }
+  viewModel { ScanCardViewModel(get(), get()) }
 }

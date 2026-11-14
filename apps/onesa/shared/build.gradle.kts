@@ -147,6 +147,7 @@ kotlin {
     androidMain.dependencies {
       implementation(libs.androidx.browser)
       implementation(libs.androidx.work.runtime)
+      implementation(libs.kscan)
     }
     jvmMain.dependencies {
       implementation(compose.desktop.currentOs)
@@ -158,6 +159,7 @@ kotlin {
       implementation(libs.koin.test)
       implementation(libs.hcert.core)
       implementation(projects.libs.trustkit)
+      implementation(projects.tools.control)
     }
   }
 }
