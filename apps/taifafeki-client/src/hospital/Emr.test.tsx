@@ -48,13 +48,13 @@ describe("anEmrRecordLandsInTheHospitalOnly", () => {
   it("registers into the hospital's compartment", async () => {
     const found = mount("hospital-org");
     await waitFor(() => expect(found.readResource).toHaveBeenCalledWith("Organization", "hospital-org"));
-    await screen.findByText("Register a newborn");
+    await screen.findByText("Newborn");
     fireEvent.change(screen.getByLabelText(/Given name/), { target: { value: "Somsak" } });
     fireEvent.change(screen.getByLabelText(/Family name/), { target: { value: "Sengmany" } });
     fireEvent.change(screen.getByLabelText(/Hospital number/), { target: { value: "CRH-HN-68-104377" } });
     await waitFor(() => expect(screen.getAllByLabelText(/Lot/)).toHaveLength(2));
     for (const lot of screen.getAllByLabelText(/Lot/)) fireEvent.change(lot, { target: { value: "XXR-4821" } });
-    fireEvent.click(screen.getByRole("button", { name: "Register" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save Doses & Open Discharge" }));
     await waitFor(() => expect(found.executeBatch).toHaveBeenCalledTimes(1));
     const calls = found.executeBatch.mock.calls as unknown as [{ entry: { resource: { meta: { accounts: unknown } } }[] }][];
     for (const entry of calls[0]?.[0].entry ?? []) expect(entry.resource.meta.accounts).toEqual([{ reference: "Organization/hospital-org" }]);

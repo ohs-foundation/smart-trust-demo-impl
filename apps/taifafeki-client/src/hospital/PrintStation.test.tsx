@@ -31,7 +31,7 @@ describe("aBlankHospitalNumberNeverSearches", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <MedplumProvider medplum={medplum}>
-          <PrintStation patientId="p1" onBack={() => undefined} />
+          <PrintStation header={() => null} patientId="p1" onBack={() => undefined} />
         </MedplumProvider>
       </QueryClientProvider>,
     );
