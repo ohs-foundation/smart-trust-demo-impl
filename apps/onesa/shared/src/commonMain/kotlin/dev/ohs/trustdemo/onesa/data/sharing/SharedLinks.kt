@@ -110,7 +110,7 @@ sealed interface WithdrawOutcome {
  */
 class SharedLinks(
   private val repository: FhirRepository,
-  private val accessToken: () -> String?,
+  private val accessToken: suspend () -> String?,
   private val httpClient: HttpClient,
   private val baseUrl: String,
   private val links: LinkStore,

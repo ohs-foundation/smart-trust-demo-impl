@@ -20,6 +20,8 @@ import io.ktor.http.Url
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Drives the Authorization-Code-with-PKCE flow against the configured OIDC provider and keeps the
@@ -34,6 +36,7 @@ internal class AuthService(
   private val repository: SessionStore,
   private val api: OidcAuthApi,
 ) {
+  private val requestRefresh = Mutex()
 
   /** Starts an interactive login. */
   suspend fun login(launcher: AuthorizationLauncherApi): LoginOutcome {
@@ -91,6 +94,12 @@ internal class AuthService(
     val refreshed = tryRefresh(session)
     return refreshed ?: repository.session.value
   }
+
+  /**
+   * The session for a call straight to a server, as [ensureFreshSession] gives it; concurrent
+   * callers share one refresh.
+   */
+  suspend fun sessionForRequest(): Session? = requestRefresh.withLock { ensureFreshSession() }
 
   /**
    * Confirms a locally-valid session is still alive server-side via the userinfo probe. Clears it

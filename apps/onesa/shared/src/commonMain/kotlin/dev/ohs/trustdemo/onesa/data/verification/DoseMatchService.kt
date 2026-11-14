@@ -76,7 +76,7 @@ sealed interface MatchOutcome {
  */
 class DoseMatchService(
   private val repository: FhirRepository,
-  private val session: () -> RegistrationSession?,
+  private val session: suspend () -> RegistrationSession?,
   private val httpClient: HttpClient,
   private val baseUrl: String,
   private val refresh: suspend () -> Unit,

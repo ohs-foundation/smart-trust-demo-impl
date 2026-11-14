@@ -77,8 +77,8 @@ import io.ktor.client.plugins.HttpTimeout
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
-private fun registrationSession(): RegistrationSession? =
-  SessionRepository.session.value?.let { session ->
+private suspend fun registrationSession(auth: AuthService): RegistrationSession? =
+  auth.sessionForRequest()?.let { session ->
     val practitioner = session.context?.practitionerId
     val organization = session.context?.organizationId
     if (practitioner == null || organization == null) null
@@ -109,15 +109,7 @@ internal val serviceModule = module {
     RegistrationService(
       repository = get(),
       scannedCards = get(),
-      session = {
-        SessionRepository.session.value?.let { session ->
-          val context = session.context
-          val practitioner = context?.practitionerId
-          val organization = context?.organizationId
-          if (practitioner == null || organization == null) null
-          else RegistrationSession(session.accessToken, practitioner, organization)
-        }
-      },
+      session = { registrationSession(get()) },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
       refresh = { get<SyncManager>().syncNow() },
@@ -128,7 +120,7 @@ internal val serviceModule = module {
     VerificationService(
       repository = get(),
       hcert = get(),
-      session = ::registrationSession,
+      session = { registrationSession(get()) },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
       refresh = { get<SyncManager>().syncNow() },
@@ -137,7 +129,7 @@ internal val serviceModule = module {
   single {
     DoseMatchService(
       repository = get(),
-      session = ::registrationSession,
+      session = { registrationSession(get()) },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
       refresh = { get<SyncManager>().syncNow() },
@@ -147,7 +139,7 @@ internal val serviceModule = module {
   single {
     VisitBooking(
       schedule = get(),
-      session = ::registrationSession,
+      session = { registrationSession(get()) },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
       refresh = { get<SyncManager>().syncNow() },
@@ -157,7 +149,7 @@ internal val serviceModule = module {
     DoseRecording(
       repository = get(),
       choices = get<DoseMatchService>()::choices,
-      session = ::registrationSession,
+      session = { registrationSession(get()) },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
       refresh = { get<SyncManager>().syncNow() },
@@ -168,7 +160,7 @@ internal val serviceModule = module {
   single {
     ShareService(
       repository = get(),
-      accessToken = { SessionRepository.session.value?.accessToken },
+      accessToken = { get<AuthService>().sessionForRequest()?.accessToken },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.VHL_BASE_URL,
       links = get(),
@@ -177,7 +169,7 @@ internal val serviceModule = module {
   single {
     SharedLinks(
       repository = get(),
-      accessToken = { SessionRepository.session.value?.accessToken },
+      accessToken = { get<AuthService>().sessionForRequest()?.accessToken },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.VHL_BASE_URL,
       links = get(),

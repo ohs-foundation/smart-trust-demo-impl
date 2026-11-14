@@ -62,7 +62,7 @@ data class RegistrationSummary(
 class RegistrationService(
   private val repository: FhirRepository,
   private val scannedCards: ScannedCards,
-  private val session: () -> RegistrationSession?,
+  private val session: suspend () -> RegistrationSession?,
   private val httpClient: HttpClient,
   private val baseUrl: String,
   private val refresh: suspend () -> Unit,

@@ -32,6 +32,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -147,6 +149,27 @@ class AuthServiceTest {
     assertEquals("new-access", result.accessToken)
     assertEquals("new-access", store.session.value?.accessToken)
     assertFalse(store.cleared)
+  }
+
+  @Test
+  fun concurrentRequestsShareOneRefresh() = runTest {
+    val store = FakeSessionStore(session(expired = true))
+    var refreshes = 0
+    val service =
+      service(
+        store,
+        apiWith(
+          onToken = {
+            refreshes++
+            respond(tokenBody, HttpStatusCode.OK, jsonHeaders)
+          }
+        ),
+      )
+
+    val tokens = List(3) { async { service.sessionForRequest()?.accessToken } }.awaitAll()
+
+    assertEquals(listOf("new-access", "new-access", "new-access"), tokens)
+    assertEquals(1, refreshes)
   }
 
   @Test
