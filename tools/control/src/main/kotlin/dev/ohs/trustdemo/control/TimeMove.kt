@@ -34,6 +34,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 
 private const val PAGE = "1000"
+
+// Taifafeki's only DocumentReferences are Somsak's cards, whose signed dates are the story clock.
+private const val CARD_TYPE = "DocumentReference"
 private const val EXPLICIT_CONSENT =
   "http://smart.who.int/trust-phw/StructureDefinition/PHWExplicitConsent"
 private val YEAR_DOSES =
@@ -114,9 +117,11 @@ class TimeMove(
     }
     val changes =
       servers.flatMap { server ->
-        StoryDates.paths.keys.flatMap { type ->
-          records(server, type).filterNot(StoryDates::isBase).flatMap { changesIn(server, it) }
-        }
+        StoryDates.paths.keys
+          .filterNot { server == Server.MEDPLUM && it == CARD_TYPE }
+          .flatMap { type ->
+            records(server, type).filterNot(StoryDates::isBase).flatMap { changesIn(server, it) }
+          }
       }
     val doses =
       if (withYearDoses && Server.HAPI in servers) yearDoses(state.shiftDays() - MOVE_DAYS)

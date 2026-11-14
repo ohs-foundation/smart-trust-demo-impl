@@ -114,7 +114,7 @@ class TimeMoveTest {
     assertEquals("2025-11-16", hapi.stored.getValue("Patient/Somsak").text("birthDate"))
     assertEquals("2025-11-16", medplum.stored.getValue("Patient/TaifafekiSomsak").text("birthDate"))
     assertEquals(
-      "2025-12-14T07:00:00Z",
+      "2026-11-14T07:00:00Z",
       medplum.stored.getValue("DocumentReference/Card").text("date"),
     )
     val half = world(fixtureState("steps/half-moved.json")).move.plan(withYearDoses = false)
