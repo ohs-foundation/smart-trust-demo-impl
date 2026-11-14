@@ -145,13 +145,20 @@ class MedplumAdmin(
 
   /**
    * Replaces [resources] in one transaction, so all change or none; each must be in the project.
+   * Medplum never returns `meta.project`, so membership is asked of the server.
    */
   suspend fun replaceAll(resources: List<JsonObject>) {
     val project = project()
-    resources.forEach {
-      val owner = it["meta"]?.jsonObject?.get("project")?.jsonPrimitive?.contentOrNull
-      check(owner == project) { "${it.reference()} is not in the $PROJECT_NAME project" }
-    }
+    resources
+      .groupBy { it.reference().substringBefore('/') }
+      .forEach { (type, group) ->
+        val ids = group.map { it.reference().substringAfter('/') }
+        val inProject =
+          search(type, "_project" to project, "_id" to ids.joinToString(","), "_count" to PAGE)
+            .mapNotNull { it["id"]?.jsonPrimitive?.contentOrNull }
+            .toSet()
+        ids.forEach { check(it in inProject) { "$type/$it is not in the $PROJECT_NAME project" } }
+      }
     val bundle = buildJsonObject {
       put("resourceType", "Bundle")
       put("type", "transaction")

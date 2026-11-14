@@ -34,7 +34,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
-/** A just-enough Medplum: project-scoped storage with search, update, expunge, token and invite. */
+/**
+ * A just-enough Medplum: project-scoped storage with search, update, expunge, token and invite.
+ * Like the real server, search never returns `meta.project`, and an update keeps the record's
+ * project.
+ */
 class FakeMedplum {
   val stored = mutableMapOf<String, JsonObject>()
   var invites = 0
@@ -89,8 +93,14 @@ class FakeMedplum {
     lenient.decodeFromJsonElement(Resource.serializer(), stored.values.single { it.igId() == igId })
 
   private fun write(type: String, id: String, body: String): String {
-    val resource =
-      JsonObject(Json.parseToJsonElement(body).jsonObject + ("id" to JsonPrimitive(id)))
+    val incoming = Json.parseToJsonElement(body).jsonObject
+    val project = stored["$type/$id"]?.project()
+    val meta = incoming["meta"]?.jsonObject.orEmpty()
+    val kept =
+      if (project == null || meta.containsKey("project")) incoming
+      else
+        JsonObject(incoming + ("meta" to JsonObject(meta + ("project" to JsonPrimitive(project)))))
+    val resource = JsonObject(kept + ("id" to JsonPrimitive(id)))
     stored["$type/$id"] = resource
     return resource.toString()
   }
@@ -106,15 +116,18 @@ class FakeMedplum {
         }
     return buildJsonObject {
         put("resourceType", "Bundle")
-        put("entry", JsonArray(matches.map { buildJsonObject { put("resource", it) } }))
+        put(
+          "entry",
+          JsonArray(matches.map { buildJsonObject { put("resource", it.withoutProject()) } }),
+        )
       }
       .toString()
   }
 
   private fun JsonObject.matches(name: String, value: String): Boolean =
     when (name) {
-      "_id" -> this["id"]?.jsonPrimitive?.contentOrNull == value
-      "_project" -> this["meta"]?.jsonObject?.get("project")?.jsonPrimitive?.contentOrNull == value
+      "_id" -> this["id"]?.jsonPrimitive?.contentOrNull in value.split(',')
+      "_project" -> project() == value
       "identifier" -> identifiers().any { it == value || it.substringAfter('|') == value }
       else -> {
         val field = this[name]
@@ -122,6 +135,14 @@ class FakeMedplum {
           value
       }
     }
+
+  private fun JsonObject.project() =
+    this["meta"]?.jsonObject?.get("project")?.jsonPrimitive?.contentOrNull
+
+  private fun JsonObject.withoutProject(): JsonObject {
+    val meta = this["meta"]?.jsonObject ?: return this
+    return JsonObject(this + ("meta" to JsonObject(meta - "project")))
+  }
 
   private companion object {
     val json = headersOf(HttpHeaders.ContentType, "application/fhir+json")
