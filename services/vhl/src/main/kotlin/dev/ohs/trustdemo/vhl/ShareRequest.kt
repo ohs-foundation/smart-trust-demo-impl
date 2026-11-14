@@ -129,7 +129,7 @@ class ShareRequest(
   }
 }
 
-private val CONSENT_REFERENCE = Regex("""Consent/([A-Za-z0-9\-.]{1,64})""")
+private val CONSENT_REFERENCE = Regex("""Consent/([A-Za-z0-9][A-Za-z0-9\-.]{0,63})""")
 
 /** The id of the Consent a withdraw Parameters names. */
 fun consentOf(text: String): String {

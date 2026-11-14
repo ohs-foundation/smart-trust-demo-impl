@@ -18,9 +18,13 @@ package dev.ohs.trustdemo.vhl
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.Timestamp
+import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+/** How long a manifest release keeps its documents open to the clinic. */
+val RELEASE_LIFETIME: Duration = Duration.ofMinutes(10)
 
 /** A manifest released to the clinic with key [kid]; its document may now be fetched. */
 class Release(
@@ -41,7 +45,10 @@ interface ReleaseStore {
 }
 
 /** Releases in the service's embedded H2 database. */
-class H2ReleaseStore(private val jdbcUrl: String) : ReleaseStore {
+class H2ReleaseStore(
+  private val jdbcUrl: String,
+  private val retention: Duration = RELEASE_LIFETIME,
+) : ReleaseStore {
   init {
     connect().use {
       it.createStatement().use { statement ->
@@ -59,12 +66,19 @@ class H2ReleaseStore(private val jdbcUrl: String) : ReleaseStore {
           """
             .trimIndent()
         )
+        statement.execute(
+          "CREATE INDEX IF NOT EXISTS vhl_release_lookup ON vhl_release (binary_id, kid, released_at)"
+        )
       }
     }
   }
 
   override suspend fun record(release: Release) {
     sql { connection ->
+      connection.prepareStatement("DELETE FROM vhl_release WHERE released_at < ?").use {
+        it.setObject(1, Timestamp.from(release.at.minus(retention)))
+        it.executeUpdate()
+      }
       connection
         .prepareStatement(
           "INSERT INTO vhl_release (list_id, binary_id, kid, patient_id, consent_id, bundle_id, released_at) VALUES (?, ?, ?, ?, ?, ?, ?)"

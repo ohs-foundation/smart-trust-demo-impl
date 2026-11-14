@@ -20,6 +20,18 @@ import kotlinx.serialization.json.JsonObject
 /** A clinic whose signed request passed verification: its certificate's CN and hcert kid. */
 data class Requester(val name: String, val kid: String)
 
+private const val IG_REFUSALS =
+  "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason"
+private const val OWN_REFUSALS = "http://ohs.dev/fhir/trust-demo/CodeSystem/vhl-refusal-reason"
+
+/** Why a release was refused; the requester is told the [code], never more. */
+enum class Refusal(val system: String, val code: String, val text: String) {
+  ATTEMPTS_EXHAUSTED(OWN_REFUSALS, "attempts-exhausted", "Too many wrong passcodes; not released"),
+  WITHDRAWN(IG_REFUSALS, "withdrawn", "Link withdrawn; not released"),
+  EXPIRED(IG_REFUSALS, "expired", "Link expired; not released"),
+  WRONG_PASSCODE(IG_REFUSALS, "wrong-passcode", "Wrong passcode; manifest not released"),
+}
+
 /** What a verified clinic asks to be released. */
 sealed interface ReleaseRequest {
   val requester: Requester
@@ -36,9 +48,12 @@ sealed interface ReleaseRequest {
   data class Document(override val requester: Requester, val binaryId: String) : ReleaseRequest
 }
 
-/** The answer to a [ReleaseRequest]; every refusal looks the same to the requester. */
+/** The answer to a [ReleaseRequest]; a refusal tells the requester only its coded reason. */
 sealed interface ReleaseOutcome {
   data object Denied : ReleaseOutcome
+
+  /** Denied for a [reason] the requester may be told. */
+  class Refused(val reason: Refusal) : ReleaseOutcome
 
   /** The ITI-YY5 searchset Bundle of the released documents. */
   class Manifest(val bundle: JsonObject) : ReleaseOutcome

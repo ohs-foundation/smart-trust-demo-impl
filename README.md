@@ -49,6 +49,7 @@ Upstream lacks the household checker and the Subscription policy: family users a
 
 The VHL endpoint is HTTPS on 8443 (`vhl.onesa.<lan-ip>.sslip.io`) with a local TEST ONLY CA in `stack/tls/`, created by `make stack-up`.
 Clients that fetch manifests (the facility client's server, Phase 6) trust `stack/tls/ca.crt`.
+The `vhl` image copies `services/vhl/build/install`, so start the stack with `make stack-up`; a bare `docker compose up --build` needs `./gradlew :services:vhl:installDist` first.
 
 Medplum's super-admin settings in `stack/.env` apply only when its database is first created, so a stack created before them needs `make stack-reset` once.
 

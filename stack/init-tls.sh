@@ -7,7 +7,7 @@ tls="$here/tls"
 host="vhl.onesa.$(grep '^STACK_HOST=' "$here/.env" | cut -d= -f2)"
 mkdir -p "$tls"
 
-if [ ! -f "$tls/ca.crt" ]; then
+if [ ! -f "$tls/ca.crt" ] || ! openssl x509 -in "$tls/ca.crt" -noout -checkend 2592000 >/dev/null; then
   openssl ecparam -name prime256v1 -genkey -noout -out "$tls/ca.key"
   openssl req -x509 -new -key "$tls/ca.key" -sha256 -days 730 -out "$tls/ca.crt" \
     -subj "/CN=Trust demo local CA (TEST ONLY)" \
@@ -15,7 +15,8 @@ if [ ! -f "$tls/ca.crt" ]; then
   rm -f "$tls/vhl.crt"
 fi
 
-if [ ! -f "$tls/vhl.crt" ] || ! openssl x509 -in "$tls/vhl.crt" -noout -ext subjectAltName | grep -q "DNS:$host\$"; then
+if [ ! -f "$tls/vhl.crt" ] || ! openssl x509 -in "$tls/vhl.crt" -noout -checkend 2592000 >/dev/null ||
+  ! openssl x509 -in "$tls/vhl.crt" -noout -ext subjectAltName | grep -q "DNS:$host\$"; then
   openssl ecparam -name prime256v1 -genkey -noout -out "$tls/vhl.key"
   openssl req -new -key "$tls/vhl.key" -subj "/CN=$host" -out "$tls/vhl.csr"
   openssl x509 -req -in "$tls/vhl.csr" -CA "$tls/ca.crt" -CAkey "$tls/ca.key" -CAcreateserial \

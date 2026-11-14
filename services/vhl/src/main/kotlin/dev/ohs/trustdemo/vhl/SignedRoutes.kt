@@ -34,7 +34,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.io.readByteArray
 
 private const val MAX_BODY_BYTES = 16L * 1024
-private val ID = Regex("""[A-Za-z0-9\-.]{1,64}""")
+private val ID = Regex("""[A-Za-z0-9][A-Za-z0-9\-.]{0,63}""")
 
 /**
  * ITI-YY5 at the path hcert-core's `buildManifestRequest` posts to, and ITI-68 at the document URLs
@@ -99,6 +99,13 @@ private suspend fun ApplicationCall.decide(deps: VhlDeps, request: ReleaseReques
     when (val outcome = deps.release.decide(request)) {
       ReleaseOutcome.Denied ->
         respondOutcome(HttpStatusCode.Forbidden, "forbidden", Exception("release denied"))
+      is ReleaseOutcome.Refused ->
+        respondOutcome(
+          HttpStatusCode.Forbidden,
+          "forbidden",
+          Exception("release denied"),
+          reason = outcome.reason,
+        )
       is ReleaseOutcome.Manifest -> respondText(outcome.bundle.toString(), FHIR_JSON)
       is ReleaseOutcome.Document ->
         respondBytes(outcome.body, ContentType.parse(outcome.contentType))

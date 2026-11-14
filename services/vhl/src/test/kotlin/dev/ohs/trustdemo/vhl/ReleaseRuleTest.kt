@@ -44,6 +44,7 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
@@ -186,6 +187,22 @@ class ReleaseRuleTest {
       .firstOrNull { it.text("system") == REFUSAL_SYSTEM || it.text("system") == IG_REFUSAL_SYSTEM }
       ?.text("code")
 
+  private suspend fun HttpResponse.refusal(): Pair<String?, String?> {
+    val coding =
+      Json.parseToJsonElement(bodyAsText())
+        .jsonObject
+        .getValue("issue")
+        .jsonArray
+        .single()
+        .jsonObject["details"]
+        ?.jsonObject
+        ?.getValue("coding")
+        ?.jsonArray
+        ?.single()
+        ?.jsonObject
+    return coding?.text("system") to coding?.text("code")
+  }
+
   private fun JsonObject.entities(): List<String> =
     getValue("entity").jsonArray.objects().map {
       it.getValue("what").jsonObject.text("reference")!!
@@ -284,6 +301,9 @@ class ReleaseRuleTest {
           )
         } else {
           assertEquals(HttpStatusCode.Forbidden, response.status, case.name)
+          val system =
+            if (case.reason == "attempts-exhausted") REFUSAL_SYSTEM else IG_REFUSAL_SYSTEM
+          assertEquals(system to case.reason, response.refusal(), case.name)
           assertEquals("4", audit.text("outcome"), case.name)
           assertEquals(listOf("Patient/somsak"), audit.entities(), case.name)
         }
@@ -340,7 +360,9 @@ class ReleaseRuleTest {
     hapi.stored.keys.filter { it.startsWith("AuditEvent/") }.forEach { hapi.stored.remove(it) }
 
     assertEquals(HttpStatusCode.Forbidden, get(documentRequest(seeded, otherClinic)).status)
-    assertEquals(HttpStatusCode.Forbidden, get(documentRequest(unreleased)).status)
+    val unreleasedResponse = get(documentRequest(unreleased))
+    assertEquals(HttpStatusCode.Forbidden, unreleasedResponse.status)
+    assertEquals(null to null, unreleasedResponse.refusal())
     assertEquals(listOf("4", "4"), audits().map { it.text("outcome") })
     hapi.stored.keys.filter { it.startsWith("AuditEvent/") }.forEach { hapi.stored.remove(it) }
 
@@ -369,6 +391,7 @@ class ReleaseRuleTest {
     assertEquals(HttpStatusCode.Forbidden, unknownRight.status)
     assertEquals(wrongResponse.bodyAsText(), unknownResponse.bodyAsText())
     assertEquals(wrongResponse.bodyAsText(), unknownRight.bodyAsText())
+    assertEquals(IG_REFUSAL_SYSTEM to "wrong-passcode", wrongResponse.refusal())
     assertEquals(
       listOf("wrong-passcode", "wrong-passcode", "wrong-passcode"),
       audits().map { it.reason() },
@@ -416,7 +439,9 @@ class ReleaseRuleTest {
       JsonObject(consent + ("status" to JsonPrimitive("inactive")))
     hapi.stored.keys.filter { it.startsWith("AuditEvent/") }.forEach { hapi.stored.remove(it) }
 
-    assertEquals(HttpStatusCode.Forbidden, get(documentRequest(seeded)).status)
+    val refused = get(documentRequest(seeded))
+    assertEquals(HttpStatusCode.Forbidden, refused.status)
+    assertEquals(IG_REFUSAL_SYSTEM to "withdrawn", refused.refusal())
 
     val audit = audits().single()
     assertEquals("4", audit.text("outcome"))
@@ -440,7 +465,9 @@ class ReleaseRuleTest {
     val seeded = seed()
     val unknown = signRequest("GET", "/vhl/Binary/no-such-binary", null, clinic, now.epochSecond)
 
-    assertEquals(HttpStatusCode.Forbidden, get(unknown).status)
+    val response = get(unknown)
+    assertEquals(HttpStatusCode.Forbidden, response.status)
+    assertEquals(null to null, response.refusal())
     assertTrue(audits().isEmpty())
 
     assertEquals(HttpStatusCode.Forbidden, get(documentRequest(seeded)).status)

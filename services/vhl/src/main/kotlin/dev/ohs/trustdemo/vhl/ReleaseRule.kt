@@ -32,19 +32,9 @@ import kotlinx.serialization.json.putJsonObject
 
 private const val ACCESS_PROFILE =
   "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaVhlAccess"
-private const val IG_REFUSALS =
-  "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason"
-private const val OWN_REFUSALS = "http://ohs.dev/fhir/trust-demo/CodeSystem/vhl-refusal-reason"
 private const val PARTICIPATION = "http://terminology.hl7.org/CodeSystem/v3-ParticipationType"
 private const val CLINIC_KID_SYSTEM = "http://ohs.dev/fhir/trust-demo/sid/clinic-kid"
 private const val SERVICE_NAME = "Onesa VHL service"
-
-private enum class Refusal(val system: String, val code: String, val text: String) {
-  ATTEMPTS_EXHAUSTED(OWN_REFUSALS, "attempts-exhausted", "Too many wrong passcodes; not released"),
-  WITHDRAWN(IG_REFUSALS, "withdrawn", "Link withdrawn; not released"),
-  EXPIRED(IG_REFUSALS, "expired", "Link expired; not released"),
-  WRONG_PASSCODE(IG_REFUSALS, "wrong-passcode", "Wrong passcode; manifest not released"),
-}
 
 private enum class Interaction(val display: String) {
   MANIFEST("IHE ITI VHL manifest retrieval (ITI-YY5)"),
@@ -61,7 +51,7 @@ class ReleaseRule(
   private val passcodes: PasscodeStore,
   private val releases: ReleaseStore,
   private val clock: Clock,
-  private val releaseLifetime: Duration = Duration.ofMinutes(10),
+  private val releaseLifetime: Duration = RELEASE_LIFETIME,
 ) : ReleaseDecision {
   override suspend fun decide(request: ReleaseRequest): ReleaseOutcome =
     when (request) {
@@ -79,7 +69,7 @@ class ReleaseRule(
     val refusal = refusal(consentId, consent, request.passcode)
     if (refusal != null) {
       audit(Interaction.MANIFEST, request.requester, patientId, refusal = refusal)
-      return ReleaseOutcome.Denied
+      return ReleaseOutcome.Refused(refusal)
     }
     val documents =
       list["entry"]
@@ -132,7 +122,7 @@ class ReleaseRule(
         refusal = refusal,
         outcomeText = "No current release for this certificate; document not served",
       )
-      return ReleaseOutcome.Denied
+      return refusal?.let(ReleaseOutcome::Refused) ?: ReleaseOutcome.Denied
     }
     audit(
       Interaction.DOCUMENT,

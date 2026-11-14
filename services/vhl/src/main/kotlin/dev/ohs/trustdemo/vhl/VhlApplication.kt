@@ -39,11 +39,12 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import org.slf4j.LoggerFactory
 
 private const val AUTH = "keycloak"
 internal val FHIR_JSON = ContentType.parse("application/fhir+json")
-private val PATIENT_REFERENCE = Regex("""Patient/([A-Za-z0-9\-.]{1,64})""")
+private val PATIENT_REFERENCE = Regex("""Patient/([A-Za-z0-9][A-Za-z0-9\-.]{0,63})""")
 
 /** The caller's Patient id from the token's `fhirUser` claim, or null when it names none. */
 private fun fhirUser(claim: Claim): String? =
@@ -130,6 +131,7 @@ internal suspend fun ApplicationCall.respondOutcome(
   code: String,
   cause: Exception,
   severity: String = "error",
+  reason: Refusal? = null,
 ) {
   val outcome: JsonObject = buildJsonObject {
     put("resourceType", "OperationOutcome")
@@ -139,6 +141,18 @@ internal suspend fun ApplicationCall.respondOutcome(
           put("severity", severity)
           put("code", code)
           put("diagnostics", cause.message.orEmpty())
+          reason?.let {
+            putJsonObject("details") {
+              putJsonArray("coding") {
+                add(
+                  buildJsonObject {
+                    put("system", it.system)
+                    put("code", it.code)
+                  }
+                )
+              }
+            }
+          }
         }
       )
     }
