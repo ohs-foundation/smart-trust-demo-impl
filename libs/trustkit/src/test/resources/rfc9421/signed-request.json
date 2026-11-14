@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "authority": "vhl.onesa.example",
+  "path": "/vhl/manifest/7d1f0c6e",
+  "body": "eyJyZWNpcGllbnQiOiJLZXNhcm8gcHJpbWFyeSBjYXJlIGNsaW5pYyIsInBhc3Njb2RlIjoiMDQ4MiJ9",
+  "headers": {
+    "Content-Type": "application/json",
+    "Content-Digest": "sha-256=:va2LlpaA9Zkr1eRo1DRGOZCMBGwBCEP394iS6bNPC+A=:",
+    "Signature-Input": "sig1=(\"@method\" \"@path\" \"@authority\" \"content-type\" \"content-digest\");created=1792540800;keyid=\"Upmro0Kf8Hg=\";alg=\"ecdsa-p256-sha256\"",
+    "Signature": "sig1=:C5ueRbuqFHFZSfja6KOUpK6WSiyBW5ttSr/kh+9QtJ5YK+sH0nrMAbwwxSY9G9WFkjYOLYkbWuek4/dZN2wp7Q==:",
+    "Client-Cert": ":MIIBgzCCASmgAwIBAgIGAaHYC9T/MAoGCCqGSM49BAMCMEgxCzAJBgNVBAYTAlhSMR0wGwYDVQQKDBRUcnVzdCBEZW1vIFRlc3QgT25seTEaMBgGA1UEAwwRWFhSIENsaW5pYyBBbmNob3IwHhcNMjYxMTEzMDMxMzM2WhcNMjcxMTE0MDMxMzM2WjAnMSUwIwYDVQQDDBxjbGluaWMtdmlld2VyLmtlc2Fyby5leGFtcGxlMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKPziEkVqeMz+L65ZWfuv4/xuX9Tyz88QgiM/DEW/1K7ppxu3AuDiD14ySTn0oF//F+vRuBoevQK+qtzEBKoFV6MgMB4wDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8EBAMCB4AwCgYIKoZIzj0EAwIDSAAwRQIgIqw6vcWnjU8neaJmZiQtH7y2NjnGZBsw9E21usHqidoCIQD507+bSIDrymgEiubffjnO1/KwoTVfFg+WmS8QSvVUAg==:"
+  }
+}

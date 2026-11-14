@@ -1,0 +1,5 @@
+{
+  "name": "rfc9421-spike",
+  "private": true,
+  "type": "module"
+}
