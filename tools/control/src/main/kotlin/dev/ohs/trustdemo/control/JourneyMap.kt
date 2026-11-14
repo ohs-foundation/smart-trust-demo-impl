@@ -1,0 +1,111 @@
+/*
+ * Copyright 2026 Open Health Stack Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.ohs.trustdemo.control
+
+import com.github.ajalt.mordant.rendering.BorderType
+import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.rendering.TextStyles
+import com.github.ajalt.mordant.rendering.Whitespace
+import com.github.ajalt.mordant.terminal.Terminal
+import com.github.ajalt.mordant.widgets.Padding
+import com.github.ajalt.mordant.widgets.Panel
+import com.github.ajalt.mordant.widgets.Text
+
+private val TAIFAFEKI = setOf(App.EMR, App.VHL_VIEWER)
+private val INDENT = mapOf(App.CHW_PHONE to 4, App.CLINIC_TABLET to 4, App.FAMILY_WALLET to 4)
+private val HANDOVER =
+  mapOf(
+    App.EMR to "paper cards (DVC QR)",
+    App.CHW_PHONE to "sync + referral",
+    App.CLINIC_TABLET to "",
+    App.FAMILY_WALLET to "VHL QR + passcode",
+  )
+
+/** True when the terminal's output encoding can carry the map's boxes, arrows and emoji. */
+fun supportsUnicode(): Boolean =
+  System.getProperty("stdout.encoding")?.contains("UTF", ignoreCase = true) ?: true
+
+/**
+ * Draws each app as a box holding its journeys with their standing, joined by arrows naming what
+ * passes between them. The current step's box is marked and bold; without colour or Unicode the map
+ * falls back to ASCII boxes and words.
+ */
+fun journeyMap(
+  state: StoryState,
+  terminal: Terminal = Terminal(),
+  unicode: Boolean = supportsUnicode(),
+): String {
+  val current = StepEngine.currentStep(state)
+  val codeWidth = Step.entries.maxOf { it.code.length }
+  val titleWidth = Step.entries.maxOf { it.title.length }
+  fun mark(step: Step) =
+    when {
+      state.isDone(step) -> if (unicode) TextColors.green("✅") else TextColors.green("done       ")
+      step == current || state.metCount(step) > 0 ->
+        if (unicode) TextColors.yellow("🔄") else TextColors.yellow("in progress")
+      else -> if (unicode) TextStyles.dim("⬜") else TextStyles.dim("to do      ")
+    }
+  fun line(step: Step) =
+    "${step.code.padEnd(codeWidth)}  ${step.title.padEnd(titleWidth)}  ${mark(step)} " +
+      "${state.metCount(step)}/${expectations.getValue(step).size}"
+
+  fun width(text: String) =
+    Text(text, whitespace = Whitespace.PRE).measure(terminal, MEASURE_WIDTH).max
+  fun titleOf(app: App) =
+    "${if (app == current?.app) (if (unicode) "▶ " else "> ") else ""}${app.label} · ${app.driver}"
+  fun lines(app: App) = Step.entries.filter { it.app == app }.map(::line)
+
+  val inner = App.entries.maxOf { app -> maxOf(width(titleOf(app)) + 2, lines(app).maxOf(::width)) }
+  val boxWidth = inner + 4
+
+  fun panel(app: App): Panel {
+    val here = app == current?.app
+    val tone = if (app in TAIFAFEKI) TextColors.blue else TextColors.magenta
+    val title = titleOf(app)
+    val body = lines(app).joinToString("\n") { it + " ".repeat(inner - width(it)) }
+    return Panel(
+      Text(body, whitespace = Whitespace.PRE),
+      title = Text(if (here) TextStyles.bold(title) else title),
+      borderType = if (unicode) BorderType.ROUNDED else BorderType.ASCII,
+      borderStyle = if (here) TextColors.yellow + TextStyles.bold else tone,
+      padding = Padding(0, 1, 0, 1),
+    )
+  }
+
+  val down = if (unicode) "▼" else "v"
+  val bar = if (unicode) "│" else "|"
+  fun render(text: String) = terminal.render(Text(text, whitespace = Whitespace.PRE))
+
+  return buildString {
+      appendLine(
+        render(
+          "${TextColors.blue("Taifafeki · facility client")}   ${TextColors.magenta("Onesa · Onesa app")}"
+        )
+      )
+      App.entries.forEach { app ->
+        val indent = " ".repeat(INDENT[app] ?: 0)
+        terminal.render(panel(app)).lines().forEach { appendLine(indent + it) }
+        HANDOVER[app]?.let { what ->
+          val stem = " ".repeat((INDENT[app] ?: 0) + boxWidth / 2)
+          appendLine(render("$stem$bar $what".trimEnd()))
+          appendLine(render("$stem$down"))
+        }
+      }
+    }
+    .trimEnd()
+}
+
+private const val MEASURE_WIDTH = 200

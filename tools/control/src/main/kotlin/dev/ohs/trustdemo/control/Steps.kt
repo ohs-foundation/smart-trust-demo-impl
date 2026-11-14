@@ -33,6 +33,15 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+/** The apps and devices the story is driven on, each drawn as one box of the journey map. */
+enum class App(val label: String, val driver: String, val description: String) {
+  EMR("Hospital EMR", "Dr Anan", "Taifafeki facility client, hospital EMR"),
+  CHW_PHONE("CHW phone", "Vilay (offline)", "Onesa app, CHW, phone offline"),
+  CLINIC_TABLET("Clinic tablet", "Nurse Chanthason", "Onesa app, nurse, tablet"),
+  FAMILY_WALLET("Family wallet", "Bounmy", "Onesa app, family phone"),
+  VHL_VIEWER("VHL viewer", "Dr Anan", "Taifafeki facility client, clinic viewer"),
+}
+
 /** The story's steps, in order, worded as the build map's journey tables. */
 enum class Step(
   val code: String,
@@ -40,6 +49,9 @@ enum class Step(
   val who: String,
   val device: String,
   val screens: String,
+  val app: App,
+  val next: String,
+  val qr: String? = null,
 ) {
   J1(
     "J1",
@@ -47,6 +59,8 @@ enum class Step(
     "Dr Anan",
     "Kesaro hospital, facility client",
     "newborn entry, S1, print cards",
+    App.EMR,
+    "enter Somsak's discharge and print his two cards",
   ),
   J2(
     "J2",
@@ -54,23 +68,55 @@ enum class Step(
     "Vilay (CHW)",
     "phone, offline",
     "scan card, S2, registration form, S3",
+    App.CHW_PHONE,
+    "scan a card, register the household and refer Somsak",
+    "somsak-hepb, somsak-bcg",
   ),
-  J3A("J3a", "Verify the cards", "Nurse Chanthason", "tablet", "referral inbox, S4"),
-  J3B("J3b", "Map and schedule", "Nurse Chanthason", "tablet", "dose match picker, then S5"),
+  J3A(
+    "J3a",
+    "Verify the cards",
+    "Nurse Chanthason",
+    "tablet",
+    "referral inbox, S4",
+    App.CLINIC_TABLET,
+    "open the referral and verify the cards",
+    "somsak-hepb, somsak-bcg",
+  ),
+  J3B(
+    "J3b",
+    "Map and schedule",
+    "Nurse Chanthason",
+    "tablet",
+    "dose match picker, then S5",
+    App.CLINIC_TABLET,
+    "match the doses to Onesan products and schedule the next",
+  ),
   YEAR(
     "Year",
     "A year of Onesan doses",
     "Nurse Chanthason, or `time move J4.0 --with-year-doses`",
     "tablet",
     "record a dose",
+    App.CLINIC_TABLET,
+    "record a dose, or run `trust-demo time move J4.0 --with-year-doses`",
   ),
-  J40("J4.0", "Share health records", "Bounmy", "family phone", "S6, share and consent, S7"),
+  J40(
+    "J4.0",
+    "Share health records",
+    "Bounmy",
+    "family phone",
+    "S6, share and consent, S7",
+    App.FAMILY_WALLET,
+    "share Somsak's records and consent",
+  ),
   J41(
     "J4.1",
     "View the summary",
     "Dr Anan",
     "Kesaro clinic, facility client",
     "scan link and passcode, S8",
+    App.VHL_VIEWER,
+    "scan the link, enter the passcode and view the summary",
   ),
 }
 

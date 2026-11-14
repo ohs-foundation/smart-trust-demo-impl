@@ -18,24 +18,53 @@ package dev.ohs.trustdemo.control
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.Context
+import com.github.ajalt.clikt.core.PrintHelpMessage
 import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.main
+import com.github.ajalt.clikt.core.parse
 import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
+import com.github.ajalt.mordant.input.interactiveSelectList
+import com.github.ajalt.mordant.terminal.YesNoPrompt
 import io.ktor.client.engine.cio.CIO
 import java.time.LocalDate
 import kotlin.io.path.Path
 import kotlinx.coroutines.runBlocking
 
 class TrustDemo : CliktCommand(name = "trust-demo") {
+  override val invokeWithoutSubcommand = true
+
   override fun help(context: Context) = "Drive the SMART Trust demo from outside the apps."
 
-  override fun run() = Unit
+  override fun run() {
+    if (currentContext.invokedSubcommand != null) return
+    val terminal = currentContext.terminal
+    if (!terminal.terminalInfo.interactive) throw PrintHelpMessage(currentContext, error = true)
+    Menu(
+        choose = { title, options ->
+          terminal.interactiveSelectList {
+            title(title)
+            entries(*options.toTypedArray())
+            clearOnExit(true)
+          }
+        },
+        confirm = { YesNoPrompt(it, terminal, default = false).ask() == true },
+        run = { args ->
+          try {
+            trustDemo().parse(args)
+          } catch (failed: CliktError) {
+            echo(failed.message, err = true)
+          }
+        },
+      )
+      .loop()
+  }
 }
 
 private class Stack(env: StackEnv) {
@@ -86,11 +115,29 @@ class ResetCommand : StackCommand("reset") {
 }
 
 class StatusCommand : StackCommand("status") {
+  private val current by option("--current", help = "Print only the current step").flag()
+
   override fun help(context: Context) = "Show the current story step, worked out from the records."
 
   override fun run() = runBlocking {
     val stack = Stack(StackEnv.load(stackEnv))
-    echo(status(StepEngine(stack.onesa, stack.kesaro).state()))
+    val state = StepEngine(stack.onesa, stack.kesaro).state()
+    if (current) echo(currentStep(state))
+    else {
+      echo(journeyMap(state, currentContext.terminal))
+      echo()
+      echo(status(state))
+    }
+  }
+}
+
+class JourneysCommand : StackCommand("journeys") {
+  override fun help(context: Context) =
+    "Draw the journeys by app, with their standing from the records."
+
+  override fun run() = runBlocking {
+    val stack = Stack(StackEnv.load(stackEnv))
+    echo(journeyMap(StepEngine(stack.onesa, stack.kesaro).state(), currentContext.terminal))
   }
 }
 
@@ -100,7 +147,13 @@ class WatchCommand : StackCommand("watch") {
   override fun run() {
     val stack = Stack(StackEnv.load(stackEnv))
     echo("Watching on port ${stack.watchPort}; Ctrl-C stops.")
-    Watch(stack.watchPort, StepEngine(stack.onesa, stack.kesaro)).serve()
+    val terminal = currentContext.terminal
+    Watch(
+        stack.watchPort,
+        StepEngine(stack.onesa, stack.kesaro),
+        render = { journeyMap(it, terminal) },
+      )
+      .serve()
   }
 }
 
@@ -163,14 +216,16 @@ class ExpireConsentsCommand : StackCommand("expire-consents") {
   }
 }
 
-fun main(args: Array<String>) =
+fun trustDemo() =
   TrustDemo()
     .subcommands(
       ResetCommand(),
       StatusCommand(),
+      JourneysCommand(),
       WatchCommand(),
       QrCommand(),
       InspectCommand(),
       TimeCommand().subcommands(MoveCommand(), ExpireConsentsCommand()),
     )
-    .main(args)
+
+fun main(args: Array<String>) = trustDemo().main(args)

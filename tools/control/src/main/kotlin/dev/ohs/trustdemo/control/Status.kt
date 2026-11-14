@@ -31,14 +31,7 @@ fun statusLine(state: StoryState, step: Step): String {
 
 /** The current step and who does it, every step's standing, the date shift and the logins. */
 fun status(state: StoryState): String = buildString {
-  val current = StepEngine.currentStep(state)
-  if (current == null) appendLine("All steps are done.")
-  else {
-    appendLine("Current step: ${current.code} · ${current.title}")
-    appendLine("  who:     ${current.who}")
-    appendLine("  device:  ${current.device}")
-    appendLine("  screens: ${current.screens}")
-  }
+  appendLine(currentStep(state))
   appendLine()
   Step.entries.forEach { step ->
     val total = expectations.getValue(step).size
@@ -58,6 +51,21 @@ fun status(state: StoryState): String = buildString {
   appendLine("Logins (passwords in stack/.env)")
   appendLine("  Keycloak: ${KEYCLOAK_LOGINS.joinToString(", ")}")
   appendLine("  Medplum:  $MEDPLUM_LOGIN")
+}
+
+/** The current step with who, app, device, screens, the next action and the test QR it needs. */
+fun currentStep(state: StoryState): String = buildString {
+  val current = StepEngine.currentStep(state)
+  if (current == null) append("All steps are done.")
+  else {
+    appendLine("Current step: ${current.code} · ${current.title}")
+    appendLine("  who:     ${current.who}")
+    appendLine("  app:     ${current.app.description}")
+    appendLine("  device:  ${current.device}")
+    appendLine("  screens: ${current.screens}")
+    appendLine("  next:    ${current.next}")
+    append("  test QR: ${current.qr?.let { "$it (trust-demo qr <card>)" } ?: "none"}")
+  }
 }
 
 private fun incompleteBeforeWritten(state: StoryState): List<Pair<Step, List<Step>>> =

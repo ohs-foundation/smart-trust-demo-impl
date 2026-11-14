@@ -63,4 +63,15 @@ Medplum's super-admin settings in `stack/.env` apply only when its database is f
 Logins `vilay`, `chanthason`, `bounmy` and `trustdemo-admin` share the password in
 `stack/.env` (`TRUSTDEMO_USER_PASSWORD`).
 
+## Control CLI
+
+`trust-demo` drives the story from outside the apps (`./gradlew :tools:control:installDist`).
+
+```
+trust-demo journeys   # each app's box with its journeys, live from the records; also heads status
+trust-demo            # in a terminal: arrow-key menu (map, current step, QR, inspect, watch, move time, reset)
+```
+
+Piped, or without colour or Unicode, the map falls back to ASCII; `trust-demo` alone prints help when not interactive.
+
 Licensed under Apache-2.0.

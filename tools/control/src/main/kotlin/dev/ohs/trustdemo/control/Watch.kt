@@ -42,6 +42,7 @@ class Watch(
   private val port: Int,
   private val states: StoryStates,
   private val print: (String) -> Unit = ::println,
+  private val render: (StoryState) -> String = { "" },
 ) {
   private val lock = Mutex()
   private var last: String? = null
@@ -73,13 +74,14 @@ class Watch(
     embeddedServer(CIO, port = port) { install(this) }.start(wait = true)
   }
 
-  private suspend fun refresh() = report(line(states.state()))
+  private suspend fun refresh() = states.state().let { state -> report(line(state), render(state)) }
 
-  private suspend fun report(line: String) =
+  private suspend fun report(line: String, map: String = "") =
     lock.withLock {
-      if (line != last) {
-        last = line
-        print("${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)}  $line")
+      val shown = listOf(line, map).filter { it.isNotEmpty() }.joinToString("\n")
+      if (shown != last) {
+        last = shown
+        print("${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)}  $shown")
       }
     }
 

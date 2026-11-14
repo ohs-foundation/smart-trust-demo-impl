@@ -51,7 +51,7 @@ private const val MANIFEST =
 private val WHO_CARDS = mapOf("who-hepb" to "hepb1", "who-bcg" to "bcg")
 private val SOMSAK_CARDS =
   mapOf("somsak-hepb" to "TrustDemoJ1HepB", "somsak-bcg" to "TrustDemoJ1Bcg")
-private val CARDS = SOMSAK_CARDS.keys + WHO_CARDS.keys + "unknown-key-link"
+internal val CARDS = SOMSAK_CARDS.keys + WHO_CARDS.keys + "unknown-key-link"
 
 class QrCommand : CliktCommand(name = "qr") {
   private val card by argument(help = "Which test card").choice(*CARDS.toTypedArray())
