@@ -124,6 +124,20 @@ CI never builds `fhir-gateway`: its plugin comes from a private fork. Push it fr
 
 ### 4. Server
 
+From the laptop, `infra/gcp/server.sh` runs steps 4 and 5 over IAP, using `config.yaml` (project, zone, server, `github_repository`) and `infra/.env`:
+
+| Command | Does |
+| --- | --- |
+| `server.sh setup` | clones or updates the checkout at the current branch, gives your user Docker and registry access, copies `.env` up |
+| `server.sh nginx` | `./dev.sh nginx` |
+| `server.sh up --taifafeki` | `./dev.sh up --pull --taifafeki` (add `--pipes` as needed) |
+| `server.sh cli` | builds `trust-demo` here and ships it |
+| `server.sh trust-demo reset` | runs the CLI there against `infra/.env` (any subcommand) |
+| `server.sh check` | `stack/check.sh infra/.env` |
+| `server.sh ssh` | a shell on the server |
+
+The commands it runs, step by step:
+
 The compose files mount `stack/onesa`, `testkit/` and build `services/vhl` by path, so the server needs a checkout.
 
 Once the repo is public, clone it on the server (the `ssh` output opens a shell):
@@ -175,7 +189,7 @@ gcloud compute scp --recurse tools/control/build/install/control trust-demo:~/sm
 On the server, in `~/smart-trust-demo-impl`:
 
 ```
-tools/control/build/install/control/bin/trust-demo --stack-env infra/.env reset
+tools/control/build/install/control/bin/trust-demo reset --stack-env infra/.env
 ./stack/check.sh infra/.env
 ```
 
@@ -199,7 +213,7 @@ Install the APK on the phones. Release trusts the system CAs, so the public cert
 
 ### 7. Walk the story
 
-Run `trust-demo --stack-env infra/.env watch` on the server and follow [Walk the story](../README.md#walk-the-story). Logins are in `infra/.env` (`TRUSTDEMO_USER_PASSWORD`).
+Run `trust-demo watch --stack-env infra/.env` on the server and follow [Walk the story](../README.md#walk-the-story). Logins are in `infra/.env` (`TRUSTDEMO_USER_PASSWORD`).
 
 ## Update
 

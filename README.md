@@ -200,11 +200,11 @@ Refusal paths, all at J4.1:
 
 The same CLI, apps and check run against a server brought up from `infra/` (`BASE_DOMAIN=demo.example.org`: `<svc>.<country>.demo.example.org`, HTTPS on 443 with public certificates, HAPI on loopback).
 
-- CLI, on the server: `trust-demo --stack-env infra/.env reset` (and `status`, `watch`, `time move J4.0`, ...). An env file with `STACK_HOST` is local; one with `BASE_DOMAIN` is live. `reset` writes the facility client's secrets to `stack/taifafeki/secrets/`, which `infra/docker-compose.taifafeki.yaml` mounts.
+- CLI, on the server: `trust-demo reset --stack-env infra/.env` (and `status`, `watch`, `time move J4.0`, ...; the option goes after the subcommand). An env file with `STACK_HOST` is local; one with `BASE_DOMAIN` is live. `reset` writes the facility client's secrets to `stack/taifafeki/secrets/`, which `infra/docker-compose.taifafeki.yaml` mounts.
 - Onesa APK: build with the live URLs, e.g. `OAUTH_ISSUER=https://keycloak.onesa.demo.example.org/realms/onesa FHIR_BASE_URL=https://gateway.onesa.demo.example.org/fhir/ VHL_BASE_URL=https://vhl.onesa.demo.example.org TRUST_LIST_URL=https://trust.gdhcn.demo.example.org/local-test-list.json ./gradlew :apps:onesa:android:assembleRelease`. Release trusts the system CAs and allows no cleartext; a debug build gets the demo CA only for a VHL host under the stack's wildcard-DNS names.
 - The facility client needs no demo CA (`NODE_EXTRA_CA_CERTS` is optional) and takes every host from its environment.
 - Bring-up from nothing: [docs/deploy.md](docs/deploy.md).
-- Check: `stack/check.sh infra/.env` tests the live URLs over HTTPS without the demo CA, after `trust-demo --stack-env infra/.env reset`.
+- Check: `stack/check.sh infra/.env` tests the live URLs over HTTPS without the demo CA, after `trust-demo reset --stack-env infra/.env`.
 
 ## Deploying
 
