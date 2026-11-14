@@ -65,6 +65,7 @@ import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireLaunchContext
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireService
 import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxViewModel
 import dev.ohs.trustdemo.onesa.feature.referral.ScheduleViewModel
+import dev.ohs.trustdemo.onesa.feature.referral.SentReferralsViewModel
 import dev.ohs.trustdemo.onesa.feature.referral.VerifyCardsViewModel
 import dev.ohs.trustdemo.onesa.feature.role.UserContextViewModel
 import dev.ohs.trustdemo.onesa.feature.scan.ScanCardViewModel
@@ -162,7 +163,7 @@ internal val serviceModule = module {
       caughtUp = get<LocalCopy>()::caughtUp,
     )
   }
-  factory { QuestionnaireService(get(), get()) }
+  factory { QuestionnaireService(get(), get(), get()) }
   single<LinkStore> { SecureLinkStore }
   single {
     ShareService(
@@ -257,6 +258,9 @@ internal val viewModelModule = module {
   viewModel { TrustListViewModel(get()) }
   viewModel { ScanCardViewModel(get(), get()) }
   viewModel { ReferralInboxViewModel(get()) }
+  viewModel {
+    SentReferralsViewModel(get()) { SessionRepository.session.value?.context?.practitionerId }
+  }
   viewModel { WalletViewModel(get()) { SessionRepository.session.value?.context?.patientId } }
   viewModel { ShareViewModel(get(), get()) }
   viewModel { SharedLinksViewModel(get()) }

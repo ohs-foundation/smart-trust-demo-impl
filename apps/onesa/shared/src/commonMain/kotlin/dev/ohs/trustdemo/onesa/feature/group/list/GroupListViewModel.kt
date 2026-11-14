@@ -28,8 +28,15 @@ import kotlinx.coroutines.launch
 class GroupListViewModel(private val groupRepository: GroupRepository) : ViewModel() {
   private val _groups = MutableStateFlow<List<GroupListState>?>(null)
   val groups: StateFlow<List<GroupListState>?> = _groups.asStateFlow()
+  private val _profiles = MutableStateFlow<List<String>>(emptyList())
+  val profiles: StateFlow<List<String>> = _profiles.asStateFlow()
 
   init {
-    viewModelScope.launch { groupRepository.observeGroups().collect { _groups.value = it } }
+    viewModelScope.launch {
+      groupRepository.observeGroups().collect {
+        _groups.value = it
+        _profiles.value = groupRepository.householdProfiles()
+      }
+    }
   }
 }

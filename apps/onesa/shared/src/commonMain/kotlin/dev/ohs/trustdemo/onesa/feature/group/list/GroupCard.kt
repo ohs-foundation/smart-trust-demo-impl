@@ -15,33 +15,17 @@
  */
 package dev.ohs.trustdemo.onesa.feature.group.list
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import dev.ohs.trustdemo.onesa.data.repository.personName
 import dev.ohs.trustdemo.onesa.generated.config.GroupCardConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
+import dev.ohs.trustdemo.onesa.generated.resources.group_head
 import dev.ohs.trustdemo.onesa.generated.resources.group_member_count_one
 import dev.ohs.trustdemo.onesa.generated.resources.group_member_count_other
 import dev.ohs.trustdemo.onesa.generated.resources.group_unknown_name
 import dev.ohs.trustdemo.onesa.generated.state.GroupListState
+import dev.ohs.trustdemo.onesa.ui.RecordRow
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -49,62 +33,31 @@ import org.jetbrains.compose.resources.stringResource
  */
 val LocalSelectedGroupId = compositionLocalOf<String?> { null }
 
+/** A household in the register: its name, household id, head and size. */
 @Composable
 fun GroupCard(
   group: GroupListState,
   config: GroupCardConfig = GroupCardConfig(),
   onClick: (() -> Unit)? = null,
 ) {
-  val name = group.groupName ?: stringResource(Res.string.group_unknown_name)
-  val initials = name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "H"
   val count = group.memberCount ?: "0"
-  val memberLabel =
-    stringResource(
-      if (count == "1") Res.string.group_member_count_one else Res.string.group_member_count_other,
-      count,
-    )
-  val selected = group.groupId != null && group.groupId == LocalSelectedGroupId.current
-
-  Row(
-    modifier =
-      Modifier.fillMaxWidth()
-        .clip(RoundedCornerShape(18.dp))
-        .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-        .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-        .padding(horizontal = 12.dp, vertical = 12.dp),
-    horizontalArrangement = Arrangement.spacedBy(14.dp),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Box(
-      modifier =
-        Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
-      contentAlignment = Alignment.Center,
-    ) {
-      Text(
-        text = initials,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onPrimary,
-        fontWeight = FontWeight.Bold,
+  val head =
+    personName(group.headGivenName, group.headFamilyName)
+      .takeIf { it.isNotBlank() }
+      ?.let { stringResource(Res.string.group_head, it) }
+  val members =
+    if (config.showMemberCount != false) {
+      stringResource(
+        if (count == "1") Res.string.group_member_count_one
+        else Res.string.group_member_count_other,
+        count,
       )
-    }
-    Column(modifier = Modifier.weight(1f)) {
-      Text(
-        text = name,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        color =
-          if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-          else MaterialTheme.colorScheme.onSurface,
-      )
-      if (config.showMemberCount != false) {
-        Text(
-          text = memberLabel,
-          style = MaterialTheme.typography.bodyMedium,
-          color =
-            if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
-    }
-  }
+    } else null
+  RecordRow(
+    label = group.groupName ?: stringResource(Res.string.group_unknown_name),
+    code = group.householdId?.let { "#$it" },
+    detail = listOfNotNull(head, members).joinToString(" • ").ifEmpty { null },
+    selected = group.groupId != null && group.groupId == LocalSelectedGroupId.current,
+    onClick = onClick,
+  )
 }

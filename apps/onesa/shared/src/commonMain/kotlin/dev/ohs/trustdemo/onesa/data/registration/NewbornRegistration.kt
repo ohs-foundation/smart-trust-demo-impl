@@ -23,6 +23,7 @@ import dev.ohs.trustdemo.hcert.CertificateFingerprint
 import dev.ohs.trustdemo.hcert.DvcFhirMapper
 import dev.ohs.trustdemo.hcert.DvcMappingOptions
 import dev.ohs.trustdemo.hcert.DvcMin
+import dev.ohs.trustdemo.onesa.data.repository.personName
 import dev.ohs.trustdemo.onesa.data.verification.ScanTransactions
 import dev.ohs.trustdemo.onesa.generateId
 import dev.ohs.trustdemo.onesa.util.FhirJson
@@ -46,6 +47,34 @@ import kotlinx.serialization.json.putJsonObject
 
 /** A card the CHW scanned: its HC1 text and what it says, read without any trust check. */
 data class ScannedCard(val hc1: String, val dvc: DvcMin)
+
+/** A parent the registration names, as the review lists them: `Khamla Sengmany`, `MTH`. */
+data class ReviewedParent(val name: String, val role: String)
+
+/** A referral the registration writes: who it goes to, why, and how soon. */
+data class ReviewedReferral(
+  val performer: String?,
+  val text: String?,
+  val reason: String?,
+  val priority: String?,
+)
+
+/**
+ * What a registration is about to write, read back from its own transaction for S3: the child, the
+ * parents, the reported doses (product codes), the referral, and how many of each resource.
+ */
+data class RegistrationReview(
+  val given: String,
+  val family: String,
+  val birthDate: String,
+  val sex: String,
+  val birthCountry: String?,
+  val hasNationalId: Boolean,
+  val parents: List<ReviewedParent>,
+  val doses: List<String>,
+  val referral: ReviewedReferral?,
+  val writes: Map<String, Int>,
+)
 
 /** The linkIds of the household registration form. */
 object RegistrationItems {
@@ -115,6 +144,12 @@ object NewbornRegistration {
       "vp-bcg-freeze-dried" to "BCG vaccine, freeze-dried",
     )
 
+  /** The demo's fictional countries, as a card or a form names them by code. */
+  private val COUNTRIES = mapOf("XXR" to "Taifafeki", "XXK" to "Onesa")
+
+  /** A country code with its name when it is one of the demo's countries: `Taifafeki (XXR)`. */
+  fun countryName(code: String): String = COUNTRIES[code]?.let { "$it ($code)" } ?: code
+
   private val json = FhirJson.instance
 
   /**
@@ -175,6 +210,70 @@ object NewbornRegistration {
       referredTo = referredTo.takeIf { cards.isNotEmpty() },
     )
   }
+
+  /** Reads [transaction], as [transaction] builds it, back into what S3 shows before it is sent. */
+  fun review(transaction: JsonObject): RegistrationReview {
+    val resources =
+      transaction.getValue("entry").jsonArray.map { it.jsonObject.getValue("resource").jsonObject }
+    fun ofType(type: String) = resources.filter { it.text("resourceType") == type }
+    val child = ofType("Patient").first { it["birthDate"] != null }
+    val name = child["name"]?.jsonArray?.firstOrNull()?.jsonObject
+    val referral = ofType("ServiceRequest").firstOrNull()
+    val answers = ofType("QuestionnaireResponse").firstOrNull()?.answers().orEmpty()
+    return RegistrationReview(
+      given = name?.get("given")?.jsonArray?.firstOrNull()?.jsonPrimitive?.contentOrNull.orEmpty(),
+      family = name?.text("family").orEmpty(),
+      birthDate = child.text("birthDate").orEmpty(),
+      sex = child.text("gender").orEmpty(),
+      birthCountry = answers[RegistrationItems.BIRTH_COUNTRY],
+      hasNationalId = child["identifier"] != null,
+      parents =
+        ofType("RelatedPerson").map { person ->
+          val parent = person["name"]?.jsonArray?.firstOrNull()?.jsonObject
+          ReviewedParent(
+            name =
+              personName(
+                parent?.get("given")?.jsonArray?.firstOrNull()?.jsonPrimitive?.contentOrNull,
+                parent?.text("family"),
+              ),
+            role = person.firstCode("relationship").orEmpty(),
+          )
+        },
+      doses =
+        ofType("Immunization").mapNotNull {
+          it["vaccineCode"]
+            ?.jsonObject
+            ?.get("coding")
+            ?.jsonArray
+            ?.firstOrNull()
+            ?.jsonObject
+            ?.text("code")
+        },
+      referral =
+        referral?.let {
+          ReviewedReferral(
+            performer = it["performer"]?.jsonArray?.firstOrNull()?.jsonObject?.text("reference"),
+            text = it["code"]?.jsonObject?.text("text"),
+            reason = it["reasonCode"]?.jsonArray?.firstOrNull()?.jsonObject?.text("text"),
+            priority = it.text("priority"),
+          )
+        },
+      writes = resources.groupingBy { it.text("resourceType").orEmpty() }.eachCount(),
+    )
+  }
+
+  private fun JsonObject.text(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
+
+  private fun JsonObject.firstCode(key: String): String? =
+    this[key]
+      ?.jsonArray
+      ?.firstOrNull()
+      ?.jsonObject
+      ?.get("coding")
+      ?.jsonArray
+      ?.firstOrNull()
+      ?.jsonObject
+      ?.text("code")
 
   /** The ids a registration under [key] writes: one confirmed registration, the same records. */
   fun idsFor(key: String): (String) -> String = { purpose ->

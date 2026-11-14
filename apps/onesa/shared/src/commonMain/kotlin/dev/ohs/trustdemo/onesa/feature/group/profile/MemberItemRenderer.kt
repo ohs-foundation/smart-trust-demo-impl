@@ -15,46 +15,37 @@
  */
 package dev.ohs.trustdemo.onesa.feature.group.profile
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import dev.ohs.player.client.renderer.ComponentRenderer
 import dev.ohs.player.client.renderer.RenderOptions
-import dev.ohs.trustdemo.onesa.feature.patient.list.calculateAge
+import dev.ohs.trustdemo.onesa.data.repository.personName
+import dev.ohs.trustdemo.onesa.data.repository.shortAge
 import dev.ohs.trustdemo.onesa.generated.config.MemberItemConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
-import dev.ohs.trustdemo.onesa.generated.resources.label_age
+import dev.ohs.trustdemo.onesa.generated.resources.member_head
 import dev.ohs.trustdemo.onesa.generated.resources.name_unknown
 import dev.ohs.trustdemo.onesa.generated.resources.relationship_child
+import dev.ohs.trustdemo.onesa.generated.resources.relationship_father
 import dev.ohs.trustdemo.onesa.generated.resources.relationship_guardian
+import dev.ohs.trustdemo.onesa.generated.resources.relationship_mother
 import dev.ohs.trustdemo.onesa.generated.resources.relationship_non_relative
 import dev.ohs.trustdemo.onesa.generated.resources.relationship_other_relative
 import dev.ohs.trustdemo.onesa.generated.resources.relationship_parent
 import dev.ohs.trustdemo.onesa.generated.resources.relationship_spouse
 import dev.ohs.trustdemo.onesa.generated.state.GroupMemberState
-import dev.ohs.trustdemo.onesa.ui.Status
-import dev.ohs.trustdemo.onesa.ui.StatusChip
-import dev.ohs.trustdemo.onesa.ui.theme.Tone
+import dev.ohs.trustdemo.onesa.ui.RecordRow
+import kotlin.time.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+
+/** The member [LocalHouseholdHead] names heads the household; null when no record says who does. */
+val LocalHouseholdHead = compositionLocalOf<String?> { null }
 
 class MemberItemRenderer : ComponentRenderer<GroupMemberState, MemberItemConfig> {
   @Composable
@@ -68,86 +59,48 @@ class MemberItemRenderer : ComponentRenderer<GroupMemberState, MemberItemConfig>
   }
 }
 
+/**
+ * A household member: name, then relation and age (or sex), and whether they head the household.
+ */
 @Composable
 fun MemberItemRow(
   item: GroupMemberState,
   config: MemberItemConfig = MemberItemConfig(),
   onClick: (() -> Unit)? = null,
   modifier: Modifier = Modifier,
+  icon: ImageVector? = null,
+  today: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
 ) {
-  val initials =
-    buildString {
-        item.memberGivenName?.firstOrNull()?.uppercaseChar()?.let { append(it) }
-        item.memberFamilyName?.firstOrNull()?.uppercaseChar()?.let { append(it) }
-      }
-      .ifBlank { "?" }
-  val fullName =
-    listOfNotNull(item.memberGivenName, item.memberFamilyName).joinToString(" ").ifBlank {
+  val name =
+    personName(item.memberGivenName, item.memberFamilyName).ifBlank {
       stringResource(Res.string.name_unknown)
     }
-  val relationshipLabel = item.relationshipCode?.toRelationshipLabel()
-
-  Row(
-    modifier =
-      modifier
-        .fillMaxWidth()
-        .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
-        .padding(vertical = 8.dp),
-    verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(12.dp),
-  ) {
-    Box(
-      modifier =
-        Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
-      contentAlignment = Alignment.Center,
-    ) {
-      Text(
-        text = initials,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onPrimary,
-        fontWeight = FontWeight.Bold,
-      )
-    }
-    Column(modifier = Modifier.weight(1f)) {
-      Text(
-        text = fullName,
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = FontWeight.SemiBold,
-      )
-      val subtitleParts = buildList {
-        if (config.showAge != false) {
-          calculateAge(item.memberBirthDate?.toString())?.let {
-            add(stringResource(Res.string.label_age, it))
-          }
-        }
-        if (config.showGender != false) {
-          item.memberGender?.let { add(it.replaceFirstChar { c -> c.uppercaseChar() }) }
-        }
-      }
-      if (subtitleParts.isNotEmpty()) {
-        Text(
-          text = subtitleParts.joinToString(" · "),
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+  val relation =
+    item.relationshipCode?.takeIf { config.showRelationship != false }?.toRelationshipLabel()
+      ?: item.memberGender
+        ?.takeIf { config.showGender != false }
+        ?.replaceFirstChar { it.uppercaseChar() }
+  val age = shortAge(item.memberBirthDate?.toString(), today)?.takeIf { config.showAge != false }
+  val head = item.memberId != null && item.memberId == LocalHouseholdHead.current
+  RecordRow(
+    label = name,
+    modifier = modifier,
+    detail =
+      listOfNotNull(
+          listOfNotNull(relation, age?.let { "($it)" }).joinToString(" ").ifEmpty { null },
+          if (head) stringResource(Res.string.member_head) else null,
         )
-      }
-    }
-    if (relationshipLabel != null && config.showRelationship != false) {
-      StatusChip(Status(relationshipLabel, Tone.Info))
-    }
-    if (onClick != null) {
-      Icon(
-        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-        modifier = Modifier.size(16.dp),
-      )
-    }
-  }
+        .joinToString(" • ")
+        .ifEmpty { null },
+    icon = icon,
+    onClick = onClick,
+  )
 }
 
 private fun String.toRelationshipLabelResource(): StringResource? =
   when (uppercase()) {
+    "FTH" -> Res.string.relationship_father
+    "MTH" -> Res.string.relationship_mother
     "SPS",
     "SPOUSE" -> Res.string.relationship_spouse
     "CHLD",

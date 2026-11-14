@@ -175,6 +175,14 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
               )
             },
             onAddMembers = { groupId -> navController.navigate("scanCard/$groupId") },
+            onRegisterNewborn = { groupId ->
+              navController.navigate(
+                questionnaireHostRoute(
+                  questionnaireId = QuestionnaireIds.NEWBORN_REGISTRATION,
+                  groupId = groupId,
+                )
+              )
+            },
             onAddClinicalData = { patientId ->
               navController.navigate(
                 questionnaireHostRoute(
@@ -217,6 +225,7 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
               patientId = patientId,
               groupId = groupId,
               onBack = { navController.popBackStack() },
+              role = role,
             )
           }
         }
@@ -234,6 +243,14 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
               onBack = { navController.popBackStack() },
               onMemberClick = { id -> navController.navigate("patientProfile/$id") },
               onAddMembers = { navController.navigate("scanCard/$groupId") },
+              onRegisterNewborn = {
+                navController.navigate(
+                  questionnaireHostRoute(
+                    questionnaireId = QuestionnaireIds.NEWBORN_REGISTRATION,
+                    groupId = groupId,
+                  )
+                )
+              },
             )
           }
         }

@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 data class GroupProfileUiState(
   val groupHeader: GroupHeaderState? = null,
   val members: List<GroupMemberState> = emptyList(),
+  val headMemberId: String? = null,
 )
 
 class GroupProfileViewModel(groupId: String, groupRepository: GroupRepository) : ViewModel() {

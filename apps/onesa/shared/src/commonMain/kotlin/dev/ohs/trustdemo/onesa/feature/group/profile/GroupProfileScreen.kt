@@ -15,52 +15,46 @@
  */
 package dev.ohs.trustdemo.onesa.feature.group.profile
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.player.client.registry.LocalViewRegistry
 import dev.ohs.player.client.registry.componentRenderer
-import dev.ohs.player.client.registry.layoutRenderer
 import dev.ohs.player.client.renderer.RenderOptions
 import dev.ohs.trustdemo.onesa.auth.AppRole
+import dev.ohs.trustdemo.onesa.feature.home.RoleTopBar
 import dev.ohs.trustdemo.onesa.feature.role.ScreenAction
 import dev.ohs.trustdemo.onesa.feature.role.actions
 import dev.ohs.trustdemo.onesa.generated.resources.Res
-import dev.ohs.trustdemo.onesa.generated.resources.group_profile_add_members
-import dev.ohs.trustdemo.onesa.generated.resources.group_profile_add_members_description
-import dev.ohs.trustdemo.onesa.generated.resources.group_profile_back
+import dev.ohs.trustdemo.onesa.generated.resources.group_profile_born_abroad
 import dev.ohs.trustdemo.onesa.generated.resources.group_profile_default_name
-import dev.ohs.trustdemo.onesa.generated.state.GroupHeaderState
+import dev.ohs.trustdemo.onesa.generated.resources.group_profile_footnote
+import dev.ohs.trustdemo.onesa.generated.resources.group_profile_members
+import dev.ohs.trustdemo.onesa.generated.resources.group_profile_register_newborn
+import dev.ohs.trustdemo.onesa.generated.resources.group_profile_scan_card
 import dev.ohs.trustdemo.onesa.generated.state.GroupMemberState
 import dev.ohs.trustdemo.onesa.generated.viewtype.ViewTypeCS
+import dev.ohs.trustdemo.onesa.ui.Action
+import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
+import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
+import dev.ohs.trustdemo.onesa.ui.SectionCard
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * A household and its members. A CHW starts a newborn's registration here: from the family's
+ * foreign cards, or from the form alone. [showHeader] is false where Home's header already shows.
+ */
 @Composable
 fun GroupProfileScreen(
   groupId: String,
@@ -68,80 +62,63 @@ fun GroupProfileScreen(
   onBack: () -> Unit,
   onMemberClick: (String) -> Unit,
   onAddMembers: () -> Unit,
+  onRegisterNewborn: () -> Unit = {},
+  showHeader: Boolean = true,
 ) {
   val viewModel = koinViewModel<GroupProfileViewModel>(key = groupId) { parametersOf(groupId) }
   val state by viewModel.uiState.collectAsStateWithLifecycle()
-  val registry = LocalViewRegistry.current
-
-  val headerRenderer =
-    remember(registry) { registry.componentRenderer<GroupHeaderState>(ViewTypeCS.GroupHeader) }
-  val memberRenderer =
-    remember(registry) { registry.componentRenderer<GroupMemberState>(ViewTypeCS.MemberItem) }
-  val memberSectionLayout =
-    remember(registry) { registry.layoutRenderer<GroupMemberState>(ViewTypeCS.SectionCard) }
-
-  val groupName =
-    state?.groupHeader?.groupName ?: stringResource(Res.string.group_profile_default_name)
-
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text(groupName) },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(
-              Icons.AutoMirrored.Filled.ArrowBack,
-              contentDescription = stringResource(Res.string.group_profile_back),
-              tint = MaterialTheme.colorScheme.onPrimary,
-            )
-          }
-        },
-        colors =
-          TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-          ),
-      )
-    },
-    floatingActionButton = {
+  val loaded = state
+  if (loaded == null) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+    return
+  }
+  GroupProfileContent(
+    state = loaded,
+    topBar = { if (showHeader) RoleTopBar(role, onBack) },
+    actions =
       if (ScreenAction.AddNewborn in role.actions()) {
-        ExtendedFloatingActionButton(
-          onClick = onAddMembers,
-          text = { Text(stringResource(Res.string.group_profile_add_members)) },
-          icon = {
-            Icon(
-              Icons.Filled.Add,
-              contentDescription = stringResource(Res.string.group_profile_add_members_description),
-            )
-          },
+        listOf(
+          Action(stringResource(Res.string.group_profile_scan_card), onClick = onAddMembers),
+          Action(
+            stringResource(Res.string.group_profile_register_newborn),
+            onClick = onRegisterNewborn,
+            primary = false,
+          ),
         )
-      }
-    },
-  ) { padding ->
-    val s = state
-    if (s == null) {
-      Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-      }
-      return@Scaffold
-    }
+      } else emptyList(),
+    onMemberClick = onMemberClick,
+  )
+}
 
-    LazyColumn(
-      modifier = Modifier.fillMaxSize().padding(padding),
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
+@Composable
+fun GroupProfileContent(
+  state: GroupProfileUiState,
+  topBar: @Composable () -> Unit,
+  actions: List<Action>,
+  onMemberClick: (String) -> Unit,
+) {
+  val registry = LocalViewRegistry.current
+  val member =
+    remember(registry) { registry.componentRenderer<GroupMemberState>(ViewTypeCS.MemberItem) }
+  val header = state.groupHeader
+  OnesaScaffold(
+    topBar = topBar,
+    actions =
+      actions
+        .takeIf { it.isNotEmpty() }
+        ?.let {
+          { PrimaryActionBar(it, caption = stringResource(Res.string.group_profile_born_abroad)) }
+        },
+  ) {
+    SectionCard(
+      title = header?.groupName ?: stringResource(Res.string.group_profile_default_name),
+      summary =
+        Status(stringResource(Res.string.group_profile_members, state.members.size), Tone.Info),
+      footnote = header?.householdId?.let { stringResource(Res.string.group_profile_footnote, it) },
     ) {
-      s.groupHeader?.let { header ->
-        item(key = "group_header") { headerRenderer.Render(header, RenderOptions()) }
-      }
-
-      if (s.members.isNotEmpty()) {
-        item(key = "members_section") {
-          memberSectionLayout.Render(
-            items = s.members,
-            component = memberRenderer,
-            onItemClick = { member -> member.memberId?.let { onMemberClick(it) } },
-          )
+      CompositionLocalProvider(LocalHouseholdHead provides state.headMemberId) {
+        state.members.forEach { item ->
+          member.Render(item, RenderOptions(onClick = { item.memberId?.let(onMemberClick) }))
         }
       }
     }

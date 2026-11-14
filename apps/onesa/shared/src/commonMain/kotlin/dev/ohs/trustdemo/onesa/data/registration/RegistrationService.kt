@@ -97,41 +97,21 @@ class RegistrationService(
   suspend fun parentOptions(groupId: String): List<JsonObject> =
     NewbornRegistration.parentOptions(members(household(groupId)))
 
+  /** The transaction [register] would send for [response]; it checks the same things first. */
+  suspend fun preview(groupId: String, response: QuestionnaireResponse, key: String): JsonObject {
+    val current = session() ?: error("Sign in again to register a newborn.")
+    return NewbornRegistration.transaction(request(groupId, response, key, current))
+  }
+
   suspend fun register(
     groupId: String,
     response: QuestionnaireResponse,
     key: String,
   ): RegistrationSummary {
     val current = session() ?: error("Sign in again to register a newborn.")
-    val household = household(groupId)
-    val (motherId, fatherId) = NewbornRegistration.parentIds(response)
-    val members = members(household).associateBy { it.id }
-    check(motherId != null || fatherId != null) {
-      "Name at least one parent or guardian: the mother or the father."
-    }
-    val mother =
-      motherId?.let { members[it] ?: error("The mother is not a member of this household.") }
-    val father =
-      fatherId?.let { members[it] ?: error("The father is not a member of this household.") }
-    check(motherId != fatherId) { "The mother and the father are the same person." }
-    check(listOfNotNull(household, mother, father).all { it.versionId() != null }) {
-      "The household has not been downloaded to this phone yet. Sync, then try again."
-    }
-    val cards = scannedCards.cards.value
-    val transaction =
-      NewbornRegistration.transaction(
-        RegistrationRequest(
-          response = response,
-          household = household,
-          mother = mother,
-          father = father,
-          cards = cards,
-          practitionerId = current.practitionerId,
-          organizationId = current.organizationId,
-          now = clock(),
-          newId = NewbornRegistration.idsFor(key),
-        )
-      )
+    val request = request(groupId, response, key, current)
+    val cards = request.cards
+    val transaction = NewbornRegistration.transaction(request)
 
     val reply =
       httpClient.post(baseUrl) {
@@ -155,6 +135,39 @@ class RegistrationService(
       (repository.get("Organization", current.organizationId) as? Organization)?.name?.value
     return NewbornRegistration.summary(response, cards, clinic ?: current.organizationId)
       .copy(listStale = !synced)
+  }
+
+  private suspend fun request(
+    groupId: String,
+    response: QuestionnaireResponse,
+    key: String,
+    current: RegistrationSession,
+  ): RegistrationRequest {
+    val household = household(groupId)
+    val (motherId, fatherId) = NewbornRegistration.parentIds(response)
+    val members = members(household).associateBy { it.id }
+    check(motherId != null || fatherId != null) {
+      "Name at least one parent or guardian: the mother or the father."
+    }
+    val mother =
+      motherId?.let { members[it] ?: error("The mother is not a member of this household.") }
+    val father =
+      fatherId?.let { members[it] ?: error("The father is not a member of this household.") }
+    check(motherId != fatherId) { "The mother and the father are the same person." }
+    check(listOfNotNull(household, mother, father).all { it.versionId() != null }) {
+      "The household has not been downloaded to this phone yet. Sync, then try again."
+    }
+    return RegistrationRequest(
+      response = response,
+      household = household,
+      mother = mother,
+      father = father,
+      cards = scannedCards.cards.value,
+      practitionerId = current.practitionerId,
+      organizationId = current.organizationId,
+      now = clock(),
+      newId = NewbornRegistration.idsFor(key),
+    )
   }
 
   private suspend fun members(household: Group): List<Patient> =

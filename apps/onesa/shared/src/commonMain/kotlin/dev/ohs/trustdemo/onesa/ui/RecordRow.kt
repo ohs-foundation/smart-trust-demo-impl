@@ -45,8 +45,8 @@ import dev.ohs.trustdemo.onesa.ui.theme.OnesaTheme
 
 /**
  * One record in a [SectionCard]: a [label], its [status] chip, a [code] line in monospace (a
- * reference, product code or lot) and a [detail] line. Household members, doses, referrals and
- * queued uploads all take this shape.
+ * reference, product code or lot) and a [detail] line, outlined in the brand when [selected].
+ * Household members, doses, referrals and queued uploads all take this shape.
  */
 @Composable
 fun RecordRow(
@@ -56,9 +56,16 @@ fun RecordRow(
   detail: String? = null,
   status: Status? = null,
   icon: ImageVector? = null,
+  selected: Boolean = false,
   onClick: (() -> Unit)? = null,
 ) {
   val shape = RoundedCornerShape(9.dp)
+  val fill = if (selected) MaterialTheme.colorScheme.primaryContainer else OnesaColors.Bg
+  val edge =
+    BorderStroke(
+      if (selected) 1.5.dp else 1.dp,
+      if (selected) MaterialTheme.colorScheme.primary else OnesaColors.Line,
+    )
   val content: @Composable () -> Unit = {
     Row(
       modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -75,7 +82,7 @@ fun RecordRow(
             fontWeight = FontWeight.Bold,
             color = OnesaColors.Ink,
           )
-          status?.let { StatusChip(it, Modifier.widthIn(max = 170.dp), textAlign = TextAlign.End) }
+          status?.let { StatusChip(it, Modifier.widthIn(max = 140.dp), textAlign = TextAlign.End) }
         }
         code?.let { Text(it, style = OnesaTheme.mono.code, color = OnesaColors.Muted) }
         detail?.let {
@@ -95,18 +102,13 @@ fun RecordRow(
       onClick = onClick,
       modifier = modifier.fillMaxWidth(),
       shape = shape,
-      color = OnesaColors.Bg,
-      border = BorderStroke(1.dp, OnesaColors.Line),
+      color = fill,
+      border = edge,
     ) {
       content()
     }
   } else {
-    Surface(
-      modifier = modifier.fillMaxWidth(),
-      shape = shape,
-      color = OnesaColors.Bg,
-      border = BorderStroke(1.dp, OnesaColors.Line),
-    ) {
+    Surface(modifier = modifier.fillMaxWidth(), shape = shape, color = fill, border = edge) {
       content()
     }
   }

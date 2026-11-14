@@ -23,15 +23,20 @@ import dev.ohs.fhir.model.r4.Group
 import dev.ohs.fhir.model.r4.Immunization
 import dev.ohs.fhir.model.r4.MedicationRequest
 import dev.ohs.fhir.model.r4.Observation
+import dev.ohs.fhir.model.r4.Organization
 import dev.ohs.fhir.model.r4.Patient
 import dev.ohs.fhir.model.r4.Questionnaire as QuestionnaireR4
 import dev.ohs.fhir.model.r4.QuestionnaireResponse
 import dev.ohs.fhir.model.r4.Reference
 import dev.ohs.fhir.model.r4.String as FhirString
+import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationItems
+import dev.ohs.trustdemo.onesa.data.registration.RegistrationReview
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationService
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSummary
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
+import dev.ohs.trustdemo.onesa.data.repository.GroupRepository
+import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileUiState
 import dev.ohs.trustdemo.onesa.generateId
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.util.FhirJson
@@ -88,9 +93,19 @@ private val LAUNCH_CONTEXT_LINK_IDS: Map<String, (QuestionnaireLaunchContext) ->
  * Questionnaires are no longer served from bundled JSON paths - they are expected to already be
  * upserted into the repository (e.g. at app startup) and are looked up here by id.
  */
+/**
+ * What S3 shows before a newborn's registration is sent: the records, the household, the clinic.
+ */
+data class NewbornReview(
+  val review: RegistrationReview,
+  val household: GroupProfileUiState,
+  val referredTo: String?,
+)
+
 class QuestionnaireService(
   private val repository: FhirRepository,
   private val registration: RegistrationService,
+  private val groups: GroupRepository,
 ) {
 
   private val fhirJson = FhirJson.instance
@@ -212,6 +227,26 @@ class QuestionnaireService(
           "No household resources were extracted from this submission."
         },
     )
+  }
+
+  /** Reads back what registering [response] would write, without sending it. */
+  suspend fun reviewNewborn(
+    response: QuestionnaireResponse,
+    launchContext: QuestionnaireLaunchContext,
+    submissionKey: String,
+  ): NewbornReview {
+    val groupId = launchContext.groupId ?: error("A household is required to register a newborn.")
+    val review = NewbornRegistration.review(registration.preview(groupId, response, submissionKey))
+    val clinic =
+      review.referral
+        ?.performer
+        ?.takeIf { it.startsWith("Organization/") }
+        ?.let {
+          (repository.get("Organization", it.removePrefix("Organization/")) as? Organization)
+            ?.name
+            ?.value
+        }
+    return NewbornReview(review, groups.getGroupProfile(groupId), clinic)
   }
 
   private suspend fun submitNewbornRegistration(

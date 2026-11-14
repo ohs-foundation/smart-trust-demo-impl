@@ -33,6 +33,10 @@ import org.jetbrains.compose.resources.StringResource
 enum class HomeDestination(val label: StringResource, val permission: Permission) {
   Referrals(label = Res.string.home_destination_referrals, permission = Permission.Referrals),
   Households(label = Res.string.home_destination_households, permission = Permission.Households),
+  SentReferrals(
+    label = Res.string.home_destination_referrals,
+    permission = Permission.SentReferrals,
+  ),
   TrustLists(label = Res.string.home_destination_trust_lists, permission = Permission.TrustLists),
   Wallet(label = Res.string.home_destination_wallet, permission = Permission.Wallet),
   Sync(label = Res.string.home_destination_sync, permission = Permission.Upload),

@@ -63,11 +63,49 @@ class QuestionnaireHostViewModel(
     }
   }
 
+  /** A newborn's registration goes to review (S3) first; any other form is submitted. */
   fun onSubmit(response: QuestionnaireResponse) {
-    val questionnaire = loadedQuestionnaire ?: return
     val current = _uiState.value as? QuestionnaireHostUiState.Ready ?: return
-
+    if (questionnaireId != QuestionnaireIds.NEWBORN_REGISTRATION) {
+      submit(response, current.questionnaireJson, current.title)
+      return
+    }
     _uiState.value = QuestionnaireHostUiState.Submitting(current.questionnaireJson, current.title)
+    viewModelScope.launch {
+      runCatching { questionnaireService.reviewNewborn(response, launchContext, submissionKey) }
+        .onSuccess { review ->
+          _uiState.value =
+            QuestionnaireHostUiState.Reviewing(
+              current.questionnaireJson,
+              current.title,
+              response,
+              review,
+            )
+        }
+        .onFailure { throwable ->
+          _uiState.value =
+            QuestionnaireHostUiState.Error(
+              throwable.message ?: "Failed to review the registration."
+            )
+        }
+    }
+  }
+
+  /** Sends the registration under review. */
+  fun confirm() {
+    val reviewing = _uiState.value as? QuestionnaireHostUiState.Reviewing ?: return
+    submit(reviewing.response, reviewing.questionnaireJson, reviewing.title)
+  }
+
+  /** Goes back from the review to the form, its answers kept. */
+  fun edit() {
+    val reviewing = _uiState.value as? QuestionnaireHostUiState.Reviewing ?: return
+    _uiState.value = QuestionnaireHostUiState.Ready(reviewing.questionnaireJson, reviewing.title)
+  }
+
+  private fun submit(response: QuestionnaireResponse, questionnaireJson: String, title: String?) {
+    val questionnaire = loadedQuestionnaire ?: return
+    _uiState.value = QuestionnaireHostUiState.Submitting(questionnaireJson, title)
 
     viewModelScope.launch {
       runCatching {

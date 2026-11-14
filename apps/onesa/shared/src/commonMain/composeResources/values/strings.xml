@@ -2,6 +2,9 @@
 <resources>
     <string name="relationship_spouse">Spouse</string>
     <string name="relationship_child">Child</string>
+    <string name="relationship_father">Father</string>
+    <string name="relationship_mother">Mother</string>
+    <string name="member_head">Head</string>
     <string name="relationship_parent">Parent</string>
     <string name="relationship_guardian">Guardian</string>
     <string name="relationship_other_relative">Other relative</string>
@@ -23,7 +26,15 @@
     <string name="home_destination_households">Households</string>
     <string name="home_destination_trust_lists">Trust list</string>
     <string name="home_destination_sync">Sync</string>
+    <string name="sent_title">Referrals you sent</string>
+    <string name="sent_title_place">Referrals from %1$s</string>
+    <string name="sent_empty">No referrals sent yet.</string>
+    <string name="sent_to">To %1$s</string>
+    <string name="sent_status_open">Open</string>
+    <string name="sent_status_completed">Completed</string>
+    <string name="sent_status_withdrawn">Withdrawn</string>
     <string name="home_account">Account</string>
+    <string name="home_back">Back</string>
     <string name="home_signed_in_as">Signed in as %1$s</string>
     <string name="home_sync_now">Sync Now</string>
     <string name="home_cancel_sync">Cancel sync</string>
@@ -98,7 +109,10 @@
     <string name="sync_status_facility_only">The national server accepts records for your facility only.</string>
 
     <!-- Group list screen -->
-    <string name="group_list_register_household">Add household</string>
+    <string name="group_list_register_household">Register Household</string>
+    <string name="group_list_title">Households</string>
+    <string name="group_list_place">%1$s households</string>
+    <string name="group_list_footnote">FHIR Group • profile %1$s</string>
     <string name="group_list_empty">No households</string>
 
     <!-- Trust list status -->
@@ -116,9 +130,11 @@
 
     <!-- Group profile screen -->
     <string name="group_profile_default_name">Household</string>
-    <string name="group_profile_back">Back</string>
-    <string name="group_profile_add_members">Register a newborn</string>
-    <string name="group_profile_add_members_description">Register a newborn in this household</string>
+    <string name="group_profile_scan_card">Scan Foreign Vaccination Card</string>
+    <string name="group_profile_register_newborn">Register Newborn</string>
+    <string name="group_profile_born_abroad">Born abroad? Start with the paper cards.</string>
+    <string name="group_profile_members">%1$d Members</string>
+    <string name="group_profile_footnote">#%1$s • FHIR Group</string>
 
     <!-- Patient list screen -->
     <string name="patient_list_title">Patients</string>
@@ -132,7 +148,6 @@
 
     <!-- Questionnaire screen -->
     <string name="questionnaire_title">Questionnaire</string>
-    <string name="questionnaire_close">Close</string>
     <string name="questionnaire_back">Back</string>
     <string name="questionnaire_retry">Retry</string>
 
@@ -175,34 +190,61 @@
     <string name="record_dose_failed">The dose could not be recorded. Try again.</string>
     <string name="patient_profile_reminder">Reminder: visit between %1$s and %2$s</string>
 
-    <string name="scan_title">Read a vaccination card</string>
     <string name="scan_back">Back</string>
-    <string name="scan_not_verified">Not verified</string>
-    <string name="scan_not_verified_note">This card is only read. Its signature is checked later, at the health centre.</string>
+    <string name="scan_title">Foreign Card Scan</string>
+    <string name="scan_title_read">Foreign Card Scan (%1$d read)</string>
+    <string name="scan_offline_decode">Offline Decode Only</string>
+    <string name="scan_card_number">Card %1$d</string>
+    <string name="scan_works_offline">Works offline. Nothing is checked or saved yet.</string>
+    <string name="scan_read_card">Read Card</string>
+    <string name="scan_read_another">Read Another Card</string>
+    <string name="scan_unverified_title">Unverified Foreign Record (read, not checked)</string>
+    <string name="scan_unverified_text">Payload decoded offline from paper QR. Nothing is saved yet: the doses are saved as reported (primarySource: false) when %1$s is registered. Signature verification and schedule mapping happen at the health center.</string>
+    <string name="scan_decoded">Decoded cards</string>
+    <string name="scan_prequal_code">PreQual Code: %1$s</string>
+    <string name="scan_row_detail">Card %1$d / %2$d • Date %3$s • Issuer %4$s</string>
+    <string name="scan_stored_as_issued">No Local Onesan Schedule Mapping — Stored as Issued</string>
+    <string name="scan_continue">Continue: Register %1$s &amp; Save the Doses</string>
+    <string name="scan_decoded_caption">Decoded on the phone only; nothing is written until registration</string>
     <string name="scan_paste_label">No camera? Paste the card text</string>
-    <string name="scan_use_text">Read this card</string>
     <string name="scan_camera_unavailable">No camera here: paste the card text below.</string>
     <string name="scan_point_camera">Point the camera at the QR on the card</string>
     <string name="scan_with_camera">Scan with camera</string>
     <string name="scan_camera_permission">Allow the camera to scan a card, or paste its text below.</string>
-    <string name="scan_cards_read">Cards read</string>
-    <string name="scan_none_yet">No card read yet.</string>
-    <string name="scan_field_child">Child</string>
-    <string name="scan_field_born">Born</string>
-    <string name="scan_field_given">Given</string>
-    <string name="scan_field_lot">Lot</string>
-    <string name="scan_field_issuer">Issued by</string>
-    <string name="scan_continue">Continue to the registration form</string>
     <string name="scan_error_not_a_card">That is not a vaccination card.</string>
     <string name="scan_error_no_dose">That card names no vaccination.</string>
     <string name="scan_error_already_read">That card was already read.</string>
     <string name="scan_error_camera">The camera could not read it. Try again or paste the text.</string>
-    <string name="registration_done_title">%1$s is registered</string>
-    <string name="registration_born">Born %1$s</string>
-    <string name="registration_doses">Doses noted (reported, not verified)</string>
-    <string name="registration_no_doses">No card was read.</string>
     <string name="registration_referred">Referred to %1$s to verify the cards.</string>
     <string name="registration_done">Done</string>
+    <string name="registration_form_subtitle">SDC form • %1$s</string>
+    <string name="registration_continue">Continue to Review &amp; Referral</string>
+    <string name="registration_reported_title">Newborn Reported at Home Visit:</string>
+    <string name="registration_reported_text">Infant born abroad in %1$s. Not yet in the national records.</string>
+    <string name="registration_member_title">Register Newborn Household Member (SDC)</string>
+    <string name="registration_field_given">Given Name</string>
+    <string name="registration_field_family">Family Name</string>
+    <string name="registration_field_birth_date">Date of Birth</string>
+    <string name="registration_field_sex">Sex</string>
+    <string name="registration_field_relationship">Household Relationship</string>
+    <string name="registration_field_birthplace">Birthplace &amp; Identity Status</string>
+    <string name="registration_child_of">Child of %1$s • RelatedPerson</string>
+    <string name="registration_parent_mother">%1$s (mother)</string>
+    <string name="registration_parent_father">%1$s (father)</string>
+    <string name="registration_born_abroad">Born abroad — %1$s</string>
+    <string name="registration_born_in">Born in %1$s</string>
+    <string name="registration_no_national_id">No Onesan national ID yet</string>
+    <string name="registration_doses_title">Doses read from the paper cards (%1$d)</string>
+    <string name="registration_doses_text">%1$s, saved with %2$s as reported by the family (primarySource: false), not verified</string>
+    <string name="registration_referral_title">Clinic Verification Referral (FHIR ServiceRequest)</string>
+    <string name="registration_referral_target">Target Facility</string>
+    <string name="registration_referral_reason">Referral Reason</string>
+    <string name="registration_referral_priority">Priority</string>
+    <string name="registration_save_all">Save Newborn, Reported Doses &amp; Clinic Referral</string>
+    <string name="registration_save">Save Newborn</string>
+    <string name="registration_writes">%1$s, sent to the national server in one request</string>
+    <string name="registration_saved_title">Saved</string>
+    <string name="registration_saved_text">%1$s, born %2$s, is registered in the household.</string>
 
     <string name="home_destination_referrals">Referrals</string>
     <string name="referral_inbox_empty">No referrals waiting.</string>

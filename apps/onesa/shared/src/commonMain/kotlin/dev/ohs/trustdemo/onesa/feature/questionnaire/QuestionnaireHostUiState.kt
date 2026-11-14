@@ -15,10 +15,19 @@
  */
 package dev.ohs.trustdemo.onesa.feature.questionnaire
 
+import dev.ohs.fhir.model.r4.QuestionnaireResponse
+
 sealed interface QuestionnaireHostUiState {
   data object Loading : QuestionnaireHostUiState
 
   data class Ready(val questionnaireJson: String, val title: String?) : QuestionnaireHostUiState
+
+  data class Reviewing(
+    val questionnaireJson: String,
+    val title: String?,
+    val response: QuestionnaireResponse,
+    val review: NewbornReview,
+  ) : QuestionnaireHostUiState
 
   data class Submitting(val questionnaireJson: String, val title: String?) :
     QuestionnaireHostUiState

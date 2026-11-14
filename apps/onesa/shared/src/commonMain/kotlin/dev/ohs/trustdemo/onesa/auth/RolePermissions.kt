@@ -25,6 +25,7 @@ enum class Permission {
   TrustLists,
   Wallet,
   Upload,
+  SentReferrals,
 }
 
 /** The one place a role is tied to what it may do; the tabs, the actions and the routes read it. */
@@ -34,6 +35,7 @@ val ROLE_PERMISSIONS: Map<AppRole, Set<Permission>> =
       setOf(
         Permission.Households,
         Permission.Register,
+        Permission.SentReferrals,
         Permission.PatientProfile,
         Permission.TrustLists,
         Permission.Upload,

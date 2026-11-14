@@ -23,6 +23,16 @@
           "type": "http://hl7.org/fhir/StructureDefinition/string"
         },
         {
+          "name": "householdId",
+          "path": "identifier.value.first()",
+          "type": "http://hl7.org/fhir/StructureDefinition/string"
+        },
+        {
+          "name": "headReference",
+          "path": "managingEntity.reference",
+          "type": "http://hl7.org/fhir/StructureDefinition/string"
+        },
+        {
           "name": "headGivenName",
           "path": "name.where(false).first()",
           "type": "http://hl7.org/fhir/StructureDefinition/string"

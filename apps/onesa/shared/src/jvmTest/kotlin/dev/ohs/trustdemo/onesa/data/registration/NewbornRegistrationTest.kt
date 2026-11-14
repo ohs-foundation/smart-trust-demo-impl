@@ -125,6 +125,27 @@ class NewbornRegistrationTest {
     }
 
   @Test
+  fun theReviewReadsBackWhatTheTransactionWrites() {
+    val review = NewbornRegistration.review(transaction)
+
+    assertEquals(
+      listOf("Somsak", "Sengmany", "male"),
+      listOf(review.given, review.family, review.sex),
+    )
+    assertEquals(dates.birthDate.toString(), review.birthDate)
+    assertEquals("Taifafeki", review.birthCountry)
+    assertEquals(false, review.hasNationalId)
+    assertEquals(
+      setOf(ReviewedParent("Khamla Sengmany", "MTH"), ReviewedParent("Bounmy Sengmany", "FTH")),
+      review.parents.toSet(),
+    )
+    assertEquals(setOf("vp-hepb-peds-monovalent", "vp-bcg-freeze-dried"), review.doses.toSet())
+    assertEquals("Organization/$organization", review.referral?.performer)
+    assertEquals("routine", review.referral?.priority)
+    assertEquals(entries.groupingBy { it.resource().type() }.eachCount(), review.writes)
+  }
+
+  @Test
   fun registrationExtractsTheJ2Records() {
     for (expectation in expectations.getValue(Step.J2)) {
       val found =

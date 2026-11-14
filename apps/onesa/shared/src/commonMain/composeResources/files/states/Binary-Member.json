@@ -36,6 +36,11 @@
           "name": "relationshipCode",
           "path": "contact.relationship.coding.where(system = 'http://terminology.hl7.org/CodeSystem/v3-RoleCode').code.first()",
           "type": "http://hl7.org/fhir/StructureDefinition/code"
+        },
+        {
+          "name": "linkedPerson",
+          "path": "link.other.reference.first()",
+          "type": "http://hl7.org/fhir/StructureDefinition/string"
         }
       ]
     }

@@ -29,7 +29,8 @@ import org.jetbrains.skia.EncodedImageFormat
 
 /**
  * Renders a composable to `build/screens/<name>.png` at phone or tablet size, so a screen can be
- * set beside its mockup. A render that throws or writes nothing fails the calling test.
+ * set beside its mockup; [settle] extra frames, 50 ms apart, let a screen that loads in the
+ * background draw. A render that throws or writes nothing fails the calling test.
  */
 object ScreenshotHarness {
   val Phone = 360.dp to 720.dp
@@ -41,6 +42,7 @@ object ScreenshotHarness {
     name: String,
     size: Pair<Dp, Dp> = Phone,
     brand: Color = OnesaColors.BrandOnesa,
+    settle: Int = 0,
     content: @Composable () -> Unit,
   ): File {
     val (width, height) = size
@@ -55,7 +57,12 @@ object ScreenshotHarness {
     val file =
       try {
         scene.render()
-        val png = scene.render().encodeToData(EncodedImageFormat.PNG)?.bytes
+        repeat(settle) {
+          Thread.sleep(50)
+          scene.render((it + 1) * 50_000_000L)
+        }
+        val png =
+          scene.render((settle + 1) * 50_000_000L).encodeToData(EncodedImageFormat.PNG)?.bytes
         out.mkdirs()
         File(out, "$name.png").apply { writeBytes(checkNotNull(png) { "$name did not encode" }) }
       } finally {

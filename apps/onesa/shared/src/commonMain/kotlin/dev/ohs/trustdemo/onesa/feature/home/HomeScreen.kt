@@ -42,23 +42,27 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass
+import dev.ohs.fhir.engine.sync.FhirDataStore
 import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.auth.SessionRepository
-import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.feature.group.list.GroupListScreen
 import dev.ohs.trustdemo.onesa.feature.group.list.LocalSelectedGroupId
 import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileScreen
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileScreen
 import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxScreen
+import dev.ohs.trustdemo.onesa.feature.referral.SentReferralsScreen
+import dev.ohs.trustdemo.onesa.feature.role.ScreenAction
+import dev.ohs.trustdemo.onesa.feature.role.actions
 import dev.ohs.trustdemo.onesa.feature.sync.SyncStatusContent
 import dev.ohs.trustdemo.onesa.feature.sync.SyncStatusViewModel
 import dev.ohs.trustdemo.onesa.feature.sync.syncAction
-import dev.ohs.trustdemo.onesa.feature.sync.syncedName
 import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListScreen
 import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListViewModel
 import dev.ohs.trustdemo.onesa.feature.wallet.WalletScreen
 import dev.ohs.trustdemo.onesa.feature.wallet.WalletViewModel
 import dev.ohs.trustdemo.onesa.generated.resources.Res
+import dev.ohs.trustdemo.onesa.generated.resources.group_list_register_household
+import dev.ohs.trustdemo.onesa.generated.resources.home_back
 import dev.ohs.trustdemo.onesa.generated.resources.home_cancel_sync
 import dev.ohs.trustdemo.onesa.generated.resources.home_select_household
 import dev.ohs.trustdemo.onesa.generated.resources.home_sign_out
@@ -80,7 +84,9 @@ import dev.ohs.trustdemo.onesa.generated.resources.shell_portal_connected
 import dev.ohs.trustdemo.onesa.generated.resources.shell_synced
 import dev.ohs.trustdemo.onesa.generated.resources.shell_trust_cached
 import dev.ohs.trustdemo.onesa.generated.resources.shell_trust_stale
+import dev.ohs.trustdemo.onesa.ui.Action
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
+import dev.ohs.trustdemo.onesa.ui.OnesaTopBar
 import dev.ohs.trustdemo.onesa.ui.Status
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 import dev.ohs.trustdemo.onesa.ui.theme.Tone
@@ -102,6 +108,7 @@ fun HomeScreen(
   onAddMembers: (String) -> Unit,
   onAddClinicalData: (String) -> Unit,
   onSignOut: () -> Unit,
+  onRegisterNewborn: (String) -> Unit = {},
   onOpenReferral: (String) -> Unit = {},
   onShareRecords: () -> Unit = {},
   onSharedLinks: () -> Unit = {},
@@ -172,9 +179,20 @@ fun HomeScreen(
       )
     },
     actions =
-      if (destination == HomeDestination.Sync) {
-        listOf(syncAction(uiState.isSyncing, { onSyncNow() }, onCancelSync))
-      } else null,
+      when {
+        destination == HomeDestination.Sync ->
+          listOf(syncAction(uiState.isSyncing, { onSyncNow() }, onCancelSync))
+        destination == HomeDestination.Households &&
+          ScreenAction.RegisterHousehold in role.actions() ->
+          listOf(
+            Action(
+              stringResource(Res.string.group_list_register_household),
+              onClick = onDataCaptureClick,
+              primary = false,
+            )
+          )
+        else -> null
+      },
     snackbarHost = { SnackbarHost(snackbarHostState) },
   ) {
     when (destination) {
@@ -183,11 +201,7 @@ fun HomeScreen(
           Row(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.weight(1f).fillMaxSize()) {
               CompositionLocalProvider(LocalSelectedGroupId provides selectedGroupId) {
-                GroupListScreen(
-                  role = role,
-                  onGroupClick = { selectedGroupId = it },
-                  onDataCaptureClick = onDataCaptureClick,
-                )
+                GroupListScreen(onGroupClick = { selectedGroupId = it })
               }
             }
             VerticalDivider(color = OnesaColors.Line)
@@ -209,19 +223,18 @@ fun HomeScreen(
                     onBack = { selectedGroupId = null },
                     onMemberClick = { selectedPatientId = it },
                     onAddMembers = { onAddMembers(groupId) },
+                    onRegisterNewborn = { onRegisterNewborn(groupId) },
+                    showHeader = false,
                   )
                 else -> EmptyDetailPlaceholder()
               }
             }
           }
         } else {
-          GroupListScreen(
-            role = role,
-            onGroupClick = onGroupClick,
-            onDataCaptureClick = onDataCaptureClick,
-          )
+          GroupListScreen(onGroupClick = onGroupClick)
         }
       HomeDestination.Referrals -> ReferralInboxScreen(onOpen = onOpenReferral)
+      HomeDestination.SentReferrals -> SentReferralsScreen()
       HomeDestination.TrustLists -> TrustListScreen()
       HomeDestination.Wallet ->
         WalletScreen(onShare = onShareRecords, onSharedLinks = onSharedLinks)
@@ -230,18 +243,31 @@ fun HomeScreen(
   }
 }
 
+/** The role's header for a screen opened from Home; its tile is the way back. */
+@Composable
+fun RoleTopBar(role: AppRole, onBack: () -> Unit) {
+  val session by SessionRepository.session.collectAsStateWithLifecycle()
+  val userName =
+    session
+      ?.user
+      ?.let { user -> user.fullName.ifBlank { user.username }.ifBlank { user.email } }
+      .orEmpty()
+  val header = shellHeader(role, userName, rememberLastSync())
+  OnesaTopBar(
+    title = header.title,
+    icon = header.icon,
+    subtitle = header.subtitle,
+    chips = header.chips,
+    status = header.status,
+    onIconClick = onBack,
+    iconLabel = stringResource(Res.string.home_back),
+  )
+}
+
 /** The role's header: who is signed in, where, and how fresh the phone's records are. */
 @Composable
 private fun shellHeader(role: AppRole, userName: String, lastSync: Instant?): ShellHeader {
-  val repository: FhirRepository = koinInject()
-  val session by SessionRepository.session.collectAsStateWithLifecycle()
-  val user = session?.context
-  val place by
-    produceState<String?>(null, user) {
-      value =
-        user?.locationId?.let { repository.get("Location", it) }?.let(::syncedName)
-          ?: user?.organizationId?.let { repository.get("Organization", it) }?.let(::syncedName)
-    }
+  val place = rememberPlace()
   val synced = syncChip(lastSync)
   return when (role) {
     AppRole.CHW ->
@@ -297,6 +323,17 @@ private fun shellHeader(role: AppRole, userName: String, lastSync: Instant?): Sh
     }
   }
 }
+
+/** When this phone last synced, read once. */
+@Composable
+private fun rememberLastSync(): Instant? {
+  val dataStore: FhirDataStore = koinInject()
+  val lastSync by produceState<Instant?>(null) { value = dataStore.readLastSyncTimestamp() }
+  return lastSync
+}
+
+/** The sync chip for a screen outside Home, such as a form. */
+@Composable fun rememberSyncChip(): Status = syncChip(rememberLastSync())
 
 /** Synced today, or offline for some days, from the last successful sync. */
 @Composable

@@ -17,6 +17,7 @@ package dev.ohs.trustdemo.onesa.data.verification
 
 import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
+import dev.ohs.trustdemo.onesa.data.repository.personName
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -35,6 +36,16 @@ data class Referral(
   val reportedDoses: List<String> = emptyList(),
 )
 
+/** A referral the signed-in CHW sent, as her referrals tab lists it. */
+data class SentReferral(
+  val id: String,
+  val patientName: String,
+  val status: String?,
+  val performer: String? = null,
+  val authoredOn: String? = null,
+  val reason: String? = null,
+)
+
 /** A referred child as the synced record names them. */
 data class Child(val name: String, val birthDate: String?)
 
@@ -45,6 +56,55 @@ class ReferralInbox(private val repository: FhirRepository) {
   fun observe(): Flow<List<Referral>> = repository.revision.map { waiting() }
 
   suspend fun get(id: String): Referral? = waiting().firstOrNull { it.id == id }
+
+  /** The referrals [practitionerId] requested, open or done, newest first. */
+  fun observeSent(practitionerId: String?): Flow<List<SentReferral>> =
+    repository.revision.map { sent(practitionerId) }
+
+  internal suspend fun sent(practitionerId: String?): List<SentReferral> =
+    repository
+      .all("ServiceRequest")
+      .map { it.toJson() }
+      .filter {
+        it.isReferral() &&
+          (practitionerId == null || it.reference("requester") == "Practitioner/$practitionerId")
+      }
+      .mapNotNull { request ->
+        val id = request["id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+        val patientId = request.reference("subject")?.removePrefix("Patient/")
+        val performer =
+          request["performer"]
+            ?.jsonArray
+            ?.firstOrNull()
+            ?.jsonObject
+            ?.get("reference")
+            ?.jsonPrimitive
+            ?.contentOrNull
+        SentReferral(
+          id = id,
+          patientName = patientId?.let { patientName(it) } ?: id,
+          status = request["status"]?.jsonPrimitive?.contentOrNull,
+          performer = performer?.let { organizationName(it) },
+          authoredOn = request["authoredOn"]?.jsonPrimitive?.contentOrNull,
+          reason =
+            request["reasonCode"]
+              ?.jsonArray
+              ?.firstOrNull()
+              ?.jsonObject
+              ?.get("text")
+              ?.jsonPrimitive
+              ?.contentOrNull,
+        )
+      }
+      .sortedByDescending { it.authoredOn }
+
+  private suspend fun organizationName(reference: String): String =
+    repository
+      .get("Organization", reference.removePrefix("Organization/"))
+      ?.toJson()
+      ?.get("name")
+      ?.jsonPrimitive
+      ?.contentOrNull ?: reference
 
   /** The doses recorded from the family's cards, not yet verified, for [patientId]. */
   suspend fun reportedDoses(patientId: String): List<ReportedDose> =
@@ -90,11 +150,10 @@ class ReferralInbox(private val repository: FhirRepository) {
     repository.get("Patient", patientId)?.toJson()?.get("name")?.jsonArray?.firstOrNull()?.let {
       val name = it.jsonObject
       name["text"]?.jsonPrimitive?.contentOrNull
-        ?: listOfNotNull(
-            name["given"]?.jsonArray?.firstOrNull()?.jsonPrimitive?.contentOrNull,
-            name["family"]?.jsonPrimitive?.contentOrNull,
-          )
-          .joinToString(" ")
+        ?: personName(
+          name["given"]?.jsonArray?.firstOrNull()?.jsonPrimitive?.contentOrNull,
+          name["family"]?.jsonPrimitive?.contentOrNull,
+        )
     } ?: patientId
 
   private fun JsonObject.isReferral(): Boolean =
