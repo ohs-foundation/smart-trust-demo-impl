@@ -44,6 +44,10 @@ services:
       - KC_PROXY_HEADERS=xforwarded
       # The public issuer, with no port because nginx serves it on 443.
       - KC_HOSTNAME=https://${KEYCLOAK_HOST:?set KEYCLOAK_HOST in .env to the public Keycloak hostname}
+      # Substituted into the realm at import.
+      - FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET=${FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET}
+      - TRUSTDEMO_CLI_CLIENT_SECRET=${TRUSTDEMO_CLI_CLIENT_SECRET}
+      - TRUSTDEMO_USER_PASSWORD=${TRUSTDEMO_USER_PASSWORD}
     command:
       - "start"
       - "--features=persistent-user-sessions"
@@ -71,8 +75,9 @@ services:
     restart: unless-stopped
     image: hapiproject/hapi:v8.8.0-1
     container_name: ohs-hapi-fhir
+    # No auth of its own: loopback only, for the trust-demo CLI on this machine.
     ports:
-      - "${HAPI_FHIR_PORT:-8082}:8080"
+      - "127.0.0.1:${HAPI_FHIR_PORT:-8082}:8080"
     volumes:
       - ../stack/onesa/hapi-fhir/application.yaml:/data/hapi-fhir/config/application.yaml:ro
       - ../stack/onesa/hapi-fhir/health/Healthcheck.class:/healthcheck/Healthcheck.class:ro
