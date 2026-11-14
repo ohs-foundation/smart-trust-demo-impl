@@ -11,6 +11,6 @@ export async function requireSession(medplumUrl: string, token: string | undefin
   const response = await fetchJson(`${medplumUrl}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
   if (!response.ok) throw new NoSession();
   const profile = ((await response.json()) as { profile?: { resourceType?: string; id?: string } }).profile;
-  if (!profile?.resourceType || !profile.id) throw new NoSession();
-  return `${profile.resourceType}/${profile.id}`;
+  if (profile?.resourceType !== "Practitioner" || !profile.id) throw new NoSession();
+  return `Practitioner/${profile.id}`;
 }

@@ -2,7 +2,7 @@ import { createPrivateKey, sign, X509Certificate } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { WitIssuer, WitRegistry, WitTrust } from "smart-trust-kotlin-hcert-core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { NoSession, requireSession } from "./session";
 import { DEV_SIGNER, LOCAL_SIGNER, TrustLists } from "./trustLists";
 import { LinkHandles, scanLink, type Viewer } from "./viewer";
@@ -109,9 +109,28 @@ describe("aVerifiedLinkIsFetched", () => {
   it("forgets a handle after ten minutes", async () => {
     let now = NOW;
     const handles = new LinkHandles(() => now);
-    const handle = handles.keep({ url: "u", key: KEY }, "Practitioner/anan");
+    const handle = handles.keep({ url: "u", key: KEY, exp: NOW + 86400 }, "Practitioner/anan");
     now += 601;
     expect(handles.get(handle, "Practitioner/anan")).toBeUndefined();
+  });
+
+  it("forgets a handle when the link expires, if that comes first", () => {
+    let now = NOW;
+    const handles = new LinkHandles(() => now);
+    const handle = handles.keep({ url: "u", key: KEY, exp: NOW + 60 }, "Practitioner/anan");
+    expect(handles.get(handle, "Practitioner/anan")).toBeDefined();
+    now += 60;
+    expect(handles.get(handle, "Practitioner/anan")).toBeUndefined();
+  });
+
+  it("keeps twenty handles per profile and drops the oldest", () => {
+    const handles = new LinkHandles(() => NOW);
+    const held = Array.from({ length: 21 }, () => handles.keep({ url: "u", key: KEY, exp: NOW + 86400 }, "Practitioner/anan"));
+    const other = handles.keep({ url: "u", key: KEY, exp: NOW + 86400 }, "Practitioner/other");
+    expect(handles.get(held[0]!, "Practitioner/anan")).toBeUndefined();
+    expect(handles.get(held[1]!, "Practitioner/anan")).toBeDefined();
+    expect(handles.get(held[20]!, "Practitioner/anan")).toBeDefined();
+    expect(handles.get(other, "Practitioner/other")).toBeDefined();
   });
 });
 
@@ -151,6 +170,13 @@ describe("aCallerWithoutAMedplumSessionIsRefused", () => {
     await expect(requireSession("http://medplum:8103", "stale", async () => new Response("", { status: 401 }))).rejects.toBeInstanceOf(NoSession);
     await expect(requireSession("http://medplum:8103", undefined, medplum)).rejects.toBeInstanceOf(NoSession);
   });
+
+  it("accepts only a Practitioner profile", async () => {
+    for (const resourceType of ["Patient", "RelatedPerson", "Device"]) {
+      const medplum = async () => Response.json({ profile: { resourceType, id: "x" } });
+      await expect(requireSession("http://medplum:8103", "token", medplum)).rejects.toBeInstanceOf(NoSession);
+    }
+  });
 });
 
 describe("theTrustListsAreChecked", () => {
@@ -179,5 +205,52 @@ describe("theTrustListsAreChecked", () => {
     await v.trust.refresh();
     expect(await scan(v, link())).toMatchObject({ kind: "fetch" });
     expect(v.trust.statuses()[0]).toMatchObject({ fetchedAt: NOW, lastFailure: { reason: "connection refused" } });
+  });
+});
+
+describe("aListIsNeverReplacedByAnOlderOne", () => {
+  const listCreated = (created: string) => read("local-test-list.json").replace("2026-11-14T00:00:00Z", created);
+  // The re-dated lists are not re-signed, so the proof check is stubbed; the comparison of `created` is what is under test.
+  const proofHolds = () => vi.spyOn(WitTrust.getInstance(), "verifyDidProof").mockImplementation(() => undefined);
+
+  it("compares the proof's created time and keeps the newer list", async () => {
+    const spy = proofHolds();
+    try {
+      let served = listCreated("2026-11-14T06:00:00Z");
+      const trust = new TrustLists(
+        { local: { url: LOCAL_URL, signer: LOCAL_SIGNER }, dev: { url: DEV_URL, signer: DEV_SIGNER } },
+        async (url) => (url === LOCAL_URL ? served : read("who", "root-did.json")),
+        () => NOW,
+      );
+      await trust.refresh();
+      served = listCreated("2026-11-14T05:00:00Z");
+      await trust.refresh();
+      expect(trust.statuses()[0]).toMatchObject({ fetchedAt: NOW, lastFailure: { reason: expect.stringContaining("older") } });
+      served = listCreated("2026-11-14T07:00:00Z");
+      await trust.refresh();
+      expect(trust.statuses()[0]?.lastFailure).toBeUndefined();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("shows a last good list older than 24 hours as stale", async () => {
+    let now = NOW;
+    let down = false;
+    const trust = new TrustLists(
+      { local: { url: LOCAL_URL, signer: LOCAL_SIGNER }, dev: { url: DEV_URL, signer: DEV_SIGNER } },
+      async (url) => {
+        if (down) throw new Error("connection refused");
+        return url === LOCAL_URL ? read("local-test-list.json") : read("who", "root-did.json");
+      },
+      () => now,
+    );
+    await trust.refresh();
+    down = true;
+    now += 24 * 3600;
+    await trust.refresh();
+    expect(trust.statuses()[0]?.stale).toBe(false);
+    now += 1;
+    expect(trust.statuses()[0]?.stale).toBe(true);
   });
 });

@@ -31,12 +31,14 @@ export function runtime(env = process.env): Viewer {
     fetchList,
     now,
   );
-  let refreshedAt = now();
-  void trust.refresh();
+  let refreshedAt = 0;
+  const refresh = async () => {
+    await trust.refresh();
+    if (trust.statuses().every((list) => !list.lastFailure)) refreshedAt = now();
+  };
+  void refresh();
   setInterval(() => {
-    if (trust.linkStore() && now() - refreshedAt < HOUR) return;
-    refreshedAt = now();
-    void trust.refresh();
+    if (now() - refreshedAt >= HOUR) void refresh();
   }, RETRY_MILLIS).unref();
   viewer = { trust, handles: new LinkHandles(now), session: (token) => requireSession(medplumUrl, token), now };
   return viewer;

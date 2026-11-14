@@ -83,6 +83,7 @@ function TrustLists({ token }: { token: () => string }) {
         {lists.data?.map((list) => (
           <li key={list.name}>
             {list.name}: {list.fetchedAt ? `fetched ${when(list.fetchedAt)}, ${list.entryCount} entries` : "not loaded"}
+            {list.stale && <span role="alert"> Stale: older than 24 hours.</span>}
             {list.lastFailure && <span role="alert"> Last failure {when(list.lastFailure.at)}: {list.lastFailure.reason}</span>}
           </li>
         ))}

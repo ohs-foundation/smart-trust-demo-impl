@@ -3,6 +3,7 @@ import { checkLink, type Link } from "./checkLink";
 import type { TrustLists } from "./trustLists";
 
 const HANDLE_SECONDS = 600;
+const HANDLES_PER_OWNER = 20;
 
 export type LinkOutcome =
   | { kind: "notVerified"; step: string; reason: string }
@@ -15,11 +16,13 @@ export class LinkHandles {
 
   constructor(private readonly now: () => number) {}
 
-  keep(link: Pick<Link, "url" | "key" | "flag"> & Partial<Link>, owner: string): string {
+  keep(link: Link, owner: string): string {
     const now = this.now();
     for (const [handle, entry] of this.held) if (entry.until <= now) this.held.delete(handle);
+    const owned = [...this.held].filter(([, entry]) => entry.owner === owner);
+    for (const [handle] of owned.slice(0, Math.max(0, owned.length - HANDLES_PER_OWNER + 1))) this.held.delete(handle);
     const handle = randomUUID();
-    this.held.set(handle, { link: link as Link, owner, until: now + HANDLE_SECONDS });
+    this.held.set(handle, { link, owner, until: Math.min(now + HANDLE_SECONDS, link.exp) });
     return handle;
   }
 

@@ -7,6 +7,7 @@ export const DEV_SIGNER = devSigner;
 
 const VHL_DOMAIN = "DEMO-VHL";
 const CSCA_USAGE = "#CSCA";
+const STALE_SECONDS = 24 * 3600;
 
 export interface ListSource {
   url: string;
@@ -19,6 +20,7 @@ export interface ListStatus {
   signer: string;
   fetchedAt?: number;
   entryCount: number;
+  stale: boolean;
   lastFailure?: { at: number; reason: string };
 }
 
@@ -35,6 +37,7 @@ interface Method {
 
 interface Loaded {
   fetchedAt: number;
+  createdAt: number;
   entryCount: number;
   store: WitTrustStore;
   anchors: Set<string>;
@@ -67,14 +70,18 @@ export class TrustLists {
   }
 
   statuses(): ListStatus[] {
-    return (["local", "dev"] as const).map((name) => ({
-      name,
-      url: this.sources[name].url,
-      signer: (JSON.parse(this.sources[name].signer) as { id: string }).id,
-      fetchedAt: this.loaded.get(name)?.fetchedAt,
-      entryCount: this.loaded.get(name)?.entryCount ?? 0,
-      lastFailure: this.failures.get(name),
-    }));
+    return (["local", "dev"] as const).map((name) => {
+      const loaded = this.loaded.get(name);
+      return {
+        name,
+        url: this.sources[name].url,
+        signer: (JSON.parse(this.sources[name].signer) as { id: string }).id,
+        fetchedAt: loaded?.fetchedAt,
+        entryCount: loaded?.entryCount ?? 0,
+        stale: loaded !== undefined && this.now() - loaded.fetchedAt > STALE_SECONDS,
+        lastFailure: this.failures.get(name),
+      };
+    });
   }
 
   private async refreshOne(name: Name): Promise<void> {
@@ -82,25 +89,28 @@ export class TrustLists {
     try {
       const text = await this.fetchText(url);
       WitTrust.getInstance().verifyDidProof(text, signer);
-      this.loaded.set(name, name === "local" ? this.linkList(text) : this.wholeList(text));
+      const createdAt = Date.parse((JSON.parse(text) as { proof: { created: string } }).proof.created) / 1000;
+      const held = this.loaded.get(name);
+      if (!(createdAt >= (held?.createdAt ?? 0))) throw new Error("the list's proof is older than the one held");
+      this.loaded.set(name, name === "local" ? this.linkList(text, createdAt) : this.wholeList(text, createdAt));
       this.failures.delete(name);
     } catch (error) {
       this.failures.set(name, { at: this.now(), reason: error instanceof Error ? error.message : String(error) });
     }
   }
 
-  private linkList(text: string): Loaded {
+  private linkList(text: string, createdAt: number): Loaded {
     const list = JSON.parse(text) as { verificationMethod: Method[] };
     const methods = list.verificationMethod.filter((method) => domainOf(method) === VHL_DOMAIN);
     const store = new WitTrustStore();
     const entryCount = store.addDidDocument(JSON.stringify({ ...list, verificationMethod: methods }));
     if (entryCount === 0) throw new Error(`the list has no ${VHL_DOMAIN} entries`);
     const anchors = new Set(methods.filter((method) => method.keyusage?.code === CSCA_USAGE).flatMap((method) => method.publicKeyJwk?.x5c?.slice(0, 1) ?? []));
-    return { fetchedAt: this.now(), entryCount, store, anchors };
+    return { fetchedAt: this.now(), createdAt, entryCount, store, anchors };
   }
 
-  private wholeList(text: string): Loaded {
+  private wholeList(text: string, createdAt: number): Loaded {
     const store = new WitTrustStore();
-    return { fetchedAt: this.now(), entryCount: store.addDidDocument(text), store, anchors: new Set() };
+    return { fetchedAt: this.now(), createdAt, entryCount: store.addDidDocument(text), store, anchors: new Set() };
   }
 }
