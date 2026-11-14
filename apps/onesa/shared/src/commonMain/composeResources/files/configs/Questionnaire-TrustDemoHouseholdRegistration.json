@@ -72,14 +72,12 @@
     {
       "linkId": "mother",
       "text": "The child's mother",
-      "type": "choice",
-      "required": true
+      "type": "choice"
     },
     {
       "linkId": "father",
       "text": "The child's father",
-      "type": "choice",
-      "required": true
+      "type": "choice"
     },
     {
       "linkId": "relationship",

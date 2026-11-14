@@ -63,15 +63,15 @@ object RegistrationItems {
 
 /**
  * Everything the registration transaction is built from. [mother] and [father] are the household
- * members the form names as the child's parents. [newId] gives the id of the record made for a
- * purpose; the same answer for the same purpose lets a retry rewrite the records of the attempt
- * before it.
+ * members the form names as the child's parents; at least one is named. [newId] gives the id of the
+ * record made for a purpose; the same answer for the same purpose lets a retry rewrite the records
+ * of the attempt before it.
  */
 data class RegistrationRequest(
   val response: QuestionnaireResponse,
   val household: Group,
-  val mother: Patient,
-  val father: Patient,
+  val mother: Patient?,
+  val father: Patient?,
   val cards: List<ScannedCard>,
   val practitionerId: String,
   val organizationId: String,
@@ -81,8 +81,8 @@ data class RegistrationRequest(
 
 /**
  * Turns the answered household registration form and the scanned cards into the one transaction
- * that registers a newborn: the child, both parents as related persons, the household's new member
- * and managing entity, the parents' links, the reported doses and the referral.
+ * that registers a newborn: the child, the parents named as related persons, the household's new
+ * member and managing entity, the parents' links, the reported doses and the referral.
  *
  * Extraction is in code rather than the data-capture template engine: the transaction updates an
  * existing Group and Patients, takes doses from scanned cards, and wires references between records
@@ -154,10 +154,10 @@ object NewbornRegistration {
    */
   fun parentOptions(members: List<Patient>): List<JsonObject> = members.map(::member)
 
-  /** The ids of the mother and the father the form names. */
-  fun parentIds(response: QuestionnaireResponse): Pair<String, String> {
+  /** The ids of the mother and the father the form names; either may be absent. */
+  fun parentIds(response: QuestionnaireResponse): Pair<String?, String?> {
     val answers = response.toJson().answers()
-    return answers.required(RegistrationItems.MOTHER) to answers.required(RegistrationItems.FATHER)
+    return answers[RegistrationItems.MOTHER] to answers[RegistrationItems.FATHER]
   }
 
   /** What S3 tells the CHW: the child, each dose as reported, and the referral's recipient. */
@@ -190,14 +190,18 @@ object NewbornRegistration {
 
     val childId = request.newId("child")
     val child = "Patient/$childId"
-    val mother = Parent(request.mother, "MTH", request.newId("related:${request.mother.id}"))
-    val father = Parent(request.father, "FTH", request.newId("related:${request.father.id}"))
-    val parents = listOf(mother, father)
+    val mother = request.mother?.let { Parent(it, "MTH", request.newId("related:${it.id}")) }
+    val father = request.father?.let { Parent(it, "FTH", request.newId("related:${it.id}")) }
+    val parents = listOfNotNull(mother, father)
     val informant =
-      when (val code = answers.required(RegistrationItems.RELATIONSHIP)) {
-        "MTH" -> mother
-        "FTH" -> father
-        else -> error("Unknown relationship $code")
+      if (mother != null && father != null) {
+        when (val code = answers.required(RegistrationItems.RELATIONSHIP)) {
+          "MTH" -> mother
+          "FTH" -> father
+          else -> error("Unknown relationship $code")
+        }
+      } else {
+        parents.single()
       }
     val doses =
       request.cards.map { it to request.newId("dose:${CertificateFingerprint.of(it.hc1)}") }

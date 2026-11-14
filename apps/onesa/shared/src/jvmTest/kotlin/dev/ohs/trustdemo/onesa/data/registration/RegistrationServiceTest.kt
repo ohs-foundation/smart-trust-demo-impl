@@ -82,7 +82,7 @@ class RegistrationServiceTest {
     }
   }
 
-  private fun form(given: String) =
+  private fun form(given: String, mother: String? = "khamla", father: String? = "bounmy") =
     FhirJson.instance.decodeFromString(
       Resource.serializer(),
       """{"resourceType":"QuestionnaireResponse","status":"completed","item":[
@@ -91,10 +91,52 @@ class RegistrationServiceTest {
         {"linkId":"family","answer":[{"valueString":"Sengmany"}]},
         {"linkId":"sex","answer":[{"valueCoding":{"code":"female"}}]},
         {"linkId":"birthDate","answer":[{"valueDate":"2026-11-14"}]},
-        {"linkId":"mother","answer":[{"valueCoding":{"code":"khamla"}}]},
-        {"linkId":"father","answer":[{"valueCoding":{"code":"bounmy"}}]},
+        ${parent("mother", mother)}
+        ${parent("father", father)}
         {"linkId":"relationship","answer":[{"valueCoding":{"code":"MTH"}}]}]}""",
     ) as QuestionnaireResponse
+
+  private fun parent(linkId: String, id: String?) =
+    id?.let { """{"linkId":"$linkId","answer":[{"valueCoding":{"code":"$it"}}]},""" }.orEmpty()
+
+  @Test
+  fun aNewbornWithOneParentRegisters() = runTest {
+    synced()
+
+    service.register("house", form("Noy", mother = null), key = "one")
+
+    val child =
+      server.resources.values.single { it.text("resourceType") == "Patient" && it.isNew() }
+    assertEquals(
+      listOf("FTH"),
+      child.getValue("contact").jsonArray.map { it.jsonObject.roleCode() },
+    )
+    val related = server.resources.filterKeys { it.startsWith("RelatedPerson/") }
+    assertEquals(listOf("FTH"), related.values.map { it.roleCode() })
+    assertEquals(
+      related.keys.single(),
+      server.resources
+        .getValue("Group/house")
+        .getValue("managingEntity")
+        .jsonObject
+        .text("reference"),
+    )
+    assertTrue("Patient/khamla" !in server.attempts.single())
+    assertEquals(4, server.resources.getValue("Group/house").getValue("member").jsonArray.size)
+  }
+
+  @Test
+  fun aNewbornWithNoParentIsRefused() = runTest {
+    synced()
+
+    val refusal =
+      assertFailsWith<IllegalStateException> {
+        service.register("house", form("Noy", mother = null, father = null), key = "none")
+      }
+
+    assertEquals("Name at least one parent or guardian: the mother or the father.", refusal.message)
+    assertTrue(server.attempts.isEmpty())
+  }
 
   @Test
   fun theFormOffersTheHouseholdAndNamesTheFatherItKnows() = runTest {

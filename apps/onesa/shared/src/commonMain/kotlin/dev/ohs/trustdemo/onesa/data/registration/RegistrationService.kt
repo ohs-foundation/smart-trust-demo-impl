@@ -106,10 +106,15 @@ class RegistrationService(
     val household = household(groupId)
     val (motherId, fatherId) = NewbornRegistration.parentIds(response)
     val members = members(household).associateBy { it.id }
-    val mother = members[motherId] ?: error("The mother is not a member of this household.")
-    val father = members[fatherId] ?: error("The father is not a member of this household.")
-    check(mother.id != father.id) { "The mother and the father are the same person." }
-    check(listOf(household, mother, father).all { it.versionId() != null }) {
+    check(motherId != null || fatherId != null) {
+      "Name at least one parent or guardian: the mother or the father."
+    }
+    val mother =
+      motherId?.let { members[it] ?: error("The mother is not a member of this household.") }
+    val father =
+      fatherId?.let { members[it] ?: error("The father is not a member of this household.") }
+    check(motherId != fatherId) { "The mother and the father are the same person." }
+    check(listOfNotNull(household, mother, father).all { it.versionId() != null }) {
       "The household has not been downloaded to this phone yet. Sync, then try again."
     }
     val cards = scannedCards.cards.value
