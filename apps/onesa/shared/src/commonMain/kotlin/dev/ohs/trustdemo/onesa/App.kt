@@ -332,7 +332,9 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
                     questionnaireId = QuestionnaireIds.NEWBORN_REGISTRATION,
                     groupId = groupId,
                   )
-                )
+                ) {
+                  popUpTo("scanCard/{groupId}") { inclusive = true }
+                }
               },
             )
           }
