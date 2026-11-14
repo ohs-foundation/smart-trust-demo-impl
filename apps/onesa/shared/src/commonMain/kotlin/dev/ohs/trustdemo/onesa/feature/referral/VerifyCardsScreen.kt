@@ -81,6 +81,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_failed_reason
 import dev.ohs.trustdemo.onesa.generated.resources.verify_imported
 import dev.ohs.trustdemo.onesa.generated.resources.verify_imported_elsewhere
 import dev.ohs.trustdemo.onesa.generated.resources.verify_nothing_imported
+import dev.ohs.trustdemo.onesa.generated.resources.verify_open_schedule
 import dev.ohs.trustdemo.onesa.generated.resources.verify_other_child
 import dev.ohs.trustdemo.onesa.generated.resources.verify_replaced
 import dev.ohs.trustdemo.onesa.generated.resources.verify_results
@@ -93,7 +94,7 @@ import org.koin.core.parameter.parametersOf
 /** S4: verifies each of a referred child's cards against the trust list and imports its dose. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VerifyCardsScreen(referralId: String, onBack: () -> Unit) {
+fun VerifyCardsScreen(referralId: String, onBack: () -> Unit, onOpenSchedule: () -> Unit) {
   val viewModel = koinViewModel<VerifyCardsViewModel>(key = referralId) { parametersOf(referralId) }
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   var pasted by remember { mutableStateOf("") }
@@ -225,6 +226,15 @@ fun VerifyCardsScreen(referralId: String, onBack: () -> Unit) {
         )
       }
       state.results.forEach { Outcome(it) }
+      if (state.referral != null && state.unmatched.isEmpty()) {
+        Button(
+          onClick = onOpenSchedule,
+          enabled = !state.busy && state.pending == null,
+          modifier = Modifier.fillMaxWidth(),
+        ) {
+          Text(stringResource(Res.string.verify_open_schedule))
+        }
+      }
     }
   }
 }

@@ -17,13 +17,16 @@ package dev.ohs.trustdemo.onesa.feature.patient.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -45,11 +48,15 @@ import dev.ohs.player.client.registry.LocalViewRegistry
 import dev.ohs.player.client.registry.componentRenderer
 import dev.ohs.player.client.registry.layoutRenderer
 import dev.ohs.player.client.renderer.RenderOptions
+import dev.ohs.trustdemo.onesa.data.schedule.BookedVisit
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_add_clinical_data
 import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_back
 import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_default_name
 import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_not_found
+import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_reminder
+import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_visit
+import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_visit_dose
 import dev.ohs.trustdemo.onesa.generated.state.AllergyReactionState
 import dev.ohs.trustdemo.onesa.generated.state.PatientAllergyState
 import dev.ohs.trustdemo.onesa.generated.state.PatientConditionState
@@ -215,10 +222,34 @@ fun PatientProfileScreen(patientId: String, onBack: () -> Unit, onAddClinicalDat
           telecomSection.Render(items = s.telecoms, component = telecomRenderer, onItemClick = {})
         }
       }
+      s.visit?.let { visit -> item(key = "visit") { BookedVisitCard(visit) } }
       if (s.contacts.isNotEmpty()) {
         item(key = "contacts") {
           contactSection.Render(items = s.contacts, component = contactRenderer, onItemClick = {})
         }
+      }
+    }
+  }
+}
+
+@Composable
+private fun BookedVisitCard(visit: BookedVisit) {
+  Card(Modifier.fillMaxWidth()) {
+    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Text(
+        stringResource(Res.string.patient_profile_visit),
+        style = MaterialTheme.typography.titleMedium,
+      )
+      visit.doses.forEach { dose ->
+        Text(
+          dose.due?.let { stringResource(Res.string.patient_profile_visit_dose, dose.name, it) }
+            ?: dose.name
+        )
+      }
+      if (visit.reminderFrom != null && visit.reminderTo != null) {
+        Text(
+          stringResource(Res.string.patient_profile_reminder, visit.reminderFrom, visit.reminderTo)
+        )
       }
     }
   }

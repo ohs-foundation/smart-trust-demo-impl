@@ -15,6 +15,7 @@
  */
 package dev.ohs.trustdemo.onesa.feature.patient.profile
 
+import dev.ohs.trustdemo.onesa.data.schedule.BookedVisit
 import dev.ohs.trustdemo.onesa.generated.state.AllergyReactionState
 import dev.ohs.trustdemo.onesa.generated.state.PatientAllergyState
 import dev.ohs.trustdemo.onesa.generated.state.PatientConditionState
@@ -33,4 +34,5 @@ data class ProfileUiState(
   val immunizations: List<PatientImmunizationState> = emptyList(),
   val contacts: List<PatientContactState> = emptyList(),
   val telecoms: List<PatientTelecomState> = emptyList(),
+  val visit: BookedVisit? = null,
 )

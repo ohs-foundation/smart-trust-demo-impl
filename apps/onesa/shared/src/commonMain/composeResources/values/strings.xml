@@ -99,6 +99,10 @@
     <string name="allergy_unknown">Unknown substance</string>
     <string name="immunization_unknown">Unknown vaccine</string>
     <string name="immunization_given">Given %1$s</string>
+    <string name="immunization_verified">Verified</string>
+    <string name="patient_profile_visit">Recommended doses</string>
+    <string name="patient_profile_visit_dose">%1$s, due %2$s</string>
+    <string name="patient_profile_reminder">Reminder: visit between %1$s and %2$s</string>
 
     <string name="scan_title">Read a vaccination card</string>
     <string name="scan_back">Back</string>
@@ -156,4 +160,17 @@
     <string name="match_changed">The national map or the dose changed meanwhile. Nothing was saved. Check the choices and pick again.</string>
     <string name="match_done">Matched to %1$s. The national map now has this product.</string>
     <string name="verify_imported_elsewhere">Already imported for another child</string>
+    <string name="verify_open_schedule">See the schedule</string>
+    <string name="schedule_title">Schedule</string>
+    <string name="schedule_complete">Complete</string>
+    <string name="schedule_due">Due %1$s</string>
+    <string name="schedule_not_yet">Not yet, from %1$s</string>
+    <string name="schedule_could_not">Could not be evaluated</string>
+    <string name="schedule_reported">Reported, not counted</string>
+    <string name="schedule_unmapped">Verified, but not mapped to a schedule dose</string>
+    <string name="schedule_unreadable">Dose could not be evaluated</string>
+    <string name="schedule_book">Book 6-Week Visit &amp; Complete Referral</string>
+    <string name="schedule_booked">Visit booked from %1$s for %2$d doses. The referral is complete.</string>
+    <string name="schedule_referral_changed">The referral changed meanwhile. Nothing was saved. Check the schedule and book again.</string>
+    <string name="schedule_could_not_load">The schedule could not be read or saved. Check the connection and try again.</string>
 </resources>

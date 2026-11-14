@@ -113,7 +113,7 @@ object ScanTransactions {
   private fun provenanceId(hc1: String): String =
     idFrom(CertificateFingerprint.of("provenance:${CertificateFingerprint.of(hc1)}"))
 
-  private fun idFrom(digest: String): String {
+  internal fun idFrom(digest: String): String {
     val hex = digest.take(32).toCharArray()
     hex[12] = '5'
     hex[16] = "89ab"[hex[16].digitToInt(16) and 3]

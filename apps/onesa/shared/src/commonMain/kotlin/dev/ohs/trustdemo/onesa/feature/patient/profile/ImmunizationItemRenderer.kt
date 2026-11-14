@@ -25,6 +25,7 @@ import dev.ohs.trustdemo.onesa.generated.config.ImmunizationItemConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.immunization_given
 import dev.ohs.trustdemo.onesa.generated.resources.immunization_unknown
+import dev.ohs.trustdemo.onesa.generated.resources.immunization_verified
 import dev.ohs.trustdemo.onesa.generated.state.PatientImmunizationState
 import org.jetbrains.compose.resources.stringResource
 
@@ -41,9 +42,14 @@ class ImmunizationItemRenderer :
       title = item.vaccineName ?: stringResource(Res.string.immunization_unknown),
       modifier = options.modifier,
       subtitle =
-        if (config.showDate != false)
-          item.occurrenceDate?.let { stringResource(Res.string.immunization_given, it) }
-        else null,
+        listOfNotNull(
+            if (config.showDate != false)
+              item.occurrenceDate?.let { stringResource(Res.string.immunization_given, it) }
+            else null,
+            if (item.verified == true) stringResource(Res.string.immunization_verified) else null,
+          )
+          .joinToString(", ")
+          .ifEmpty { null },
       accentColor =
         if (isCompleted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline,
       status =

@@ -14,7 +14,7 @@
         },
         {
           "name": "vaccineName",
-          "path": "vaccineCode.coding.display.first()",
+          "path": "iif(vaccineCode.coding.display.exists(), vaccineCode.coding.display.first(), vaccineCode.coding.code.first())",
           "type": "http://hl7.org/fhir/StructureDefinition/string"
         },
         {
@@ -26,6 +26,11 @@
           "name": "immunizationStatus",
           "path": "status",
           "type": "http://hl7.org/fhir/StructureDefinition/code"
+        },
+        {
+          "name": "verified",
+          "path": "primarySource",
+          "type": "http://hl7.org/fhir/StructureDefinition/boolean"
         },
         {
           "name": "immunizationPatientRef",

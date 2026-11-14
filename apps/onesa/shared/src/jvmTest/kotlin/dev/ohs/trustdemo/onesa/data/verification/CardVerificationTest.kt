@@ -30,6 +30,10 @@ import dev.ohs.trustdemo.onesa.data.hcert.PinnedTrustList
 import dev.ohs.trustdemo.onesa.data.hcert.SignedCards
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSession
 import dev.ohs.trustdemo.onesa.data.repository.InMemorySampleFhirRepository
+import dev.ohs.trustdemo.onesa.data.schedule.BookingOutcome
+import dev.ohs.trustdemo.onesa.data.schedule.SchedulePlans
+import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
+import dev.ohs.trustdemo.onesa.data.schedule.VisitBooking
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import dev.ohs.trustdemo.trustkit.StandIn
 import io.ktor.client.HttpClient
@@ -48,6 +52,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate as Day
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -453,6 +458,116 @@ class CardVerificationTest {
     )
   }
 
+  private val booking =
+    VisitBooking(
+      schedule =
+        ScheduleService(
+          repository,
+          {
+            SchedulePlans.parse(protocol("TrustDemoDT03"), protocol("TrustDemoOnesaInfantSchedule"))
+          },
+        ) {
+          Day.parse("2026-11-14")
+        },
+      session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
+      httpClient = HttpClient(gateway.engine),
+      baseUrl = "http://gateway/fhir",
+      refresh = { refreshes++ },
+      clock = { Instant.fromEpochSeconds(nowSeconds) },
+    )
+
+  private fun protocol(name: String): String =
+    File("src/commonMain/composeResources/files/protocols/PlanDefinition-$name.json").readText()
+
+  private suspend fun withMappedDosesAndReferral() {
+    importedDoses()
+    matching.confirm(matching.unmatched(patientId).single(), hepBChoice)
+    gateway.immunizations.values.forEach { repository.upsert(decode(it)) }
+    gateway.serviceRequests[referral.id] =
+      FhirJson.instance
+        .parseToJsonElement(
+          """{"resourceType":"ServiceRequest","id":"${referral.id}","status":"active","intent":"order",
+          "code":{"coding":[{"system":"http://snomed.info/sct","code":"3457005"}]},
+          "subject":{"reference":"Patient/$patientId"}}"""
+        )
+        .jsonObject
+  }
+
+  @Test
+  fun bookingSatisfiesTheJ3bContract() = runTest {
+    withMappedDosesAndReferral()
+
+    val outcome = assertIs<BookingOutcome.Booked>(booking.book(referral.id, patientId))
+
+    assertEquals(3, outcome.doses)
+    assertEquals("2026-02-12", outcome.date.toString())
+    val recommendation = gateway.recommendations.values.single()
+    assertEquals(
+      listOf("XXK-EPI-PENTA-1", "XXK-EPI-OPV-1", "XXK-EPI-PCV-1"),
+      recommendation.getValue("recommendation").jsonArray.map {
+        it.jsonObject
+          .getValue("vaccineCode")
+          .jsonArray
+          .single()
+          .jsonObject
+          .getValue("coding")
+          .jsonArray
+          .single()
+          .jsonObject
+          .text("code")
+      },
+    )
+    val reminder = gateway.tasks.values.single()
+    assertEquals(
+      "ImmunizationRecommendation/${gateway.recommendations.keys.single()}",
+      reminder.getValue("focus").jsonObject.text("reference"),
+    )
+    assertEquals(
+      "2026-02-12" to "2026-02-19",
+      reminder.getValue("restriction").jsonObject.getValue("period").jsonObject.let {
+        it.text("start") to it.text("end")
+      },
+    )
+    val stored =
+      mapOf(
+        "Provenance" to gateway.provenances.values.toList(),
+        "ConceptMap" to gateway.conceptMaps.values.toList(),
+        "ImmunizationRecommendation" to gateway.recommendations.values.toList(),
+        "Task" to gateway.tasks.values.toList(),
+        "ServiceRequest" to gateway.serviceRequests.values.toList(),
+      )
+    val dates = Dates(LocalDate.parse("2026-11-14"))
+    val contract = expectations.getValue(Step.J3B)
+    assertEquals(5, contract.size)
+    for (expectation in contract) {
+      val found = stored.getValue(expectation.query.type).map(::decode)
+      assertTrue(expectation.satisfied(found, dates), expectation.label)
+    }
+  }
+
+  @Test
+  fun bookingTwiceWritesOneRecommendation() = runTest {
+    withMappedDosesAndReferral()
+
+    booking.book(referral.id, patientId)
+    booking.book(referral.id, patientId)
+
+    assertEquals(1, gateway.recommendations.size)
+    assertEquals(1, gateway.tasks.size)
+    assertEquals("completed", gateway.serviceRequests.getValue(referral.id).text("status"))
+  }
+
+  @Test
+  fun aReferralChangedMeanwhileIsNotOverwritten() = runTest {
+    withMappedDosesAndReferral()
+    gateway.beforeTransaction = { gateway.touch("ServiceRequest/${referral.id}") }
+
+    assertIs<BookingOutcome.Changed>(booking.book(referral.id, patientId))
+
+    assertEquals(0, gateway.recommendations.size)
+    assertEquals("active", gateway.serviceRequests.getValue(referral.id).text("status"))
+  }
+
   private fun codings(dose: JsonObject): List<Pair<String, String>> =
     dose.getValue("vaccineCode").jsonObject.getValue("coding").jsonArray.map {
       it.jsonObject.getValue("system").jsonPrimitive.content to
@@ -508,6 +623,9 @@ private class FakeGateway {
 
   val immunizations = linkedMapOf<String, JsonObject>()
   val conceptMaps = linkedMapOf<String, JsonObject>()
+  val serviceRequests = linkedMapOf<String, JsonObject>()
+  val recommendations = linkedMapOf<String, JsonObject>()
+  val tasks = linkedMapOf<String, JsonObject>()
   var beforeTransaction: (() -> Unit)? = null
   private val versions = mutableMapOf<String, Int>()
   val provenances = linkedMapOf<String, JsonObject>()
@@ -538,6 +656,7 @@ private class FakeGateway {
       val found =
         when (path.first()) {
           "ConceptMap" -> conceptMaps[path.last()]
+          "ServiceRequest" -> serviceRequests[path.last()]
           else -> immunizations[path.last()]
         }
       if (found == null) respond("", HttpStatusCode.NotFound, ok)
@@ -568,6 +687,9 @@ private class FakeGateway {
           entry.method == "DELETE" -> immunizations.remove(id)
           entry.type == "Immunization" -> immunizations[id] = entry.resource!!
           entry.type == "ConceptMap" -> conceptMaps[id] = entry.resource!!
+          entry.type == "ServiceRequest" -> serviceRequests[id] = entry.resource!!
+          entry.type == "ImmunizationRecommendation" -> recommendations[id] = entry.resource!!
+          entry.type == "Task" -> tasks[id] = entry.resource!!
           entry.type == "Provenance" -> provenances[id] = entry.resource!!
           entry.type == "AuditEvent" -> auditEvents += entry.resource!!
         }

@@ -38,6 +38,9 @@ import dev.ohs.trustdemo.onesa.data.repository.FhirEngineRepository
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.data.repository.GroupRepository
 import dev.ohs.trustdemo.onesa.data.repository.PatientRepository
+import dev.ohs.trustdemo.onesa.data.schedule.SchedulePlans
+import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
+import dev.ohs.trustdemo.onesa.data.schedule.VisitBooking
 import dev.ohs.trustdemo.onesa.data.sync.DataStoreInitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.InitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.SyncManager
@@ -54,6 +57,7 @@ import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireHostViewModel
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireLaunchContext
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireService
 import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxViewModel
+import dev.ohs.trustdemo.onesa.feature.referral.ScheduleViewModel
 import dev.ohs.trustdemo.onesa.feature.referral.VerifyCardsViewModel
 import dev.ohs.trustdemo.onesa.feature.role.UserContextViewModel
 import dev.ohs.trustdemo.onesa.feature.scan.ScanCardViewModel
@@ -130,6 +134,16 @@ internal val serviceModule = module {
       refresh = { get<SyncManager>().syncNow() },
     )
   }
+  single { ScheduleService(get(), SchedulePlans::load) }
+  single {
+    VisitBooking(
+      schedule = get(),
+      session = ::registrationSession,
+      httpClient = OidcAuthApi.defaultHttpClient(),
+      baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
+      refresh = { get<SyncManager>().syncNow() },
+    )
+  }
   factory { QuestionnaireService(get(), get()) }
 }
 
@@ -200,4 +214,5 @@ internal val viewModelModule = module {
   viewModel { ScanCardViewModel(get(), get()) }
   viewModel { ReferralInboxViewModel(get()) }
   viewModel { (referralId: String) -> VerifyCardsViewModel(referralId, get(), get(), get()) }
+  viewModel { (referralId: String) -> ScheduleViewModel(referralId, get(), get(), get()) }
 }

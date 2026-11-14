@@ -44,6 +44,7 @@ import dev.ohs.trustdemo.onesa.feature.login.LoginScreen
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileScreen
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireHostScreen
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireIds
+import dev.ohs.trustdemo.onesa.feature.referral.ScheduleScreen
 import dev.ohs.trustdemo.onesa.feature.referral.VerifyCardsScreen
 import dev.ohs.trustdemo.onesa.feature.role.NoRoleScreen
 import dev.ohs.trustdemo.onesa.feature.role.UserContextState
@@ -208,7 +209,19 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
           arguments = listOf(navArgument("referralId") { type = NavType.StringType }),
         ) { back ->
           val referralId = back.arguments?.read { getStringOrNull("referralId") }.orEmpty()
-          VerifyCardsScreen(referralId = referralId, onBack = { navController.popBackStack() })
+          VerifyCardsScreen(
+            referralId = referralId,
+            onBack = { navController.popBackStack() },
+            onOpenSchedule = { navController.navigate("schedule/$referralId") },
+          )
+        }
+
+        composable(
+          route = "schedule/{referralId}",
+          arguments = listOf(navArgument("referralId") { type = NavType.StringType }),
+        ) { back ->
+          val referralId = back.arguments?.read { getStringOrNull("referralId") }.orEmpty()
+          ScheduleScreen(referralId = referralId, onBack = { navController.popBackStack() })
         }
 
         composable(

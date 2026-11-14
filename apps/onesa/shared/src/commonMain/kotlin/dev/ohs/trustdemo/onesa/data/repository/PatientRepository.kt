@@ -19,6 +19,7 @@ import dev.ohs.trustdemo.onesa.data.Extraction.extractor
 import dev.ohs.trustdemo.onesa.data.datasource.allPatientIds
 import dev.ohs.trustdemo.onesa.data.datasource.patientProfileSearchResult
 import dev.ohs.trustdemo.onesa.data.datasource.patientSummarySearchResult
+import dev.ohs.trustdemo.onesa.data.schedule.BookedVisits
 import dev.ohs.trustdemo.onesa.feature.patient.profile.ProfileUiState
 import dev.ohs.trustdemo.onesa.generated.state.AllergyReactionState
 import dev.ohs.trustdemo.onesa.generated.state.PatientAllergyState
@@ -74,7 +75,9 @@ class PatientRepository(private val fhirRepository: FhirRepository) {
           extractor.extract<PatientContactState>(result).filter {
             it.contactGivenName != null || it.contactFamilyName != null
           },
-        telecoms = extractor.extract<PatientTelecomState>(result).filter { it.telecomValue != null },
+        telecoms =
+          extractor.extract<PatientTelecomState>(result).filter { it.telecomValue != null },
+        visit = BookedVisits(fhirRepository).of(patientId),
       )
     }
 }
