@@ -28,6 +28,7 @@ import dev.ohs.fhir.model.r4.Questionnaire as QuestionnaireR4
 import dev.ohs.fhir.model.r4.QuestionnaireResponse
 import dev.ohs.fhir.model.r4.Reference
 import dev.ohs.fhir.model.r4.String as FhirString
+import dev.ohs.trustdemo.onesa.data.registration.RegistrationItems
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationService
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSummary
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
@@ -144,10 +145,22 @@ class QuestionnaireService(
         ?.takeIf { questionnaire.id == QuestionnaireIds.NEWBORN_REGISTRATION }
         ?.let { registration.initialAnswers(it) }
         .orEmpty()
-    val prepared =
+    val withAnswers =
       registrationAnswers.entries.fold(withContext) { current, (linkId, answer) ->
         current.withInitialAnswer(linkId, answer).first
       }
+    val parentOptions =
+      launchContext.groupId
+        ?.takeIf { questionnaire.id == QuestionnaireIds.NEWBORN_REGISTRATION }
+        ?.let { registration.parentOptions(it) }
+    val prepared =
+      if (parentOptions == null) withAnswers
+      else
+        listOf(RegistrationItems.MOTHER, RegistrationItems.FATHER).fold(withAnswers) {
+          current,
+          linkId ->
+          current.withAnswerOptions(linkId, parentOptions)
+        }
 
     val preparedJson = fhirJson.encodeToString(JsonObject.serializer(), prepared)
 
@@ -158,10 +171,12 @@ class QuestionnaireService(
     }
   }
 
+  /** Submits [response]; [submissionKey] stays the same across retries of one registration. */
   suspend fun submit(
     questionnaire: QuestionnaireR4,
     response: QuestionnaireResponse,
     launchContext: QuestionnaireLaunchContext,
+    submissionKey: String = generateId(),
   ): QuestionnaireSubmissionResult =
     when (questionnaire.id) {
       QuestionnaireIds.HOUSEHOLD_REGISTRATION ->
@@ -173,7 +188,8 @@ class QuestionnaireService(
       QuestionnaireIds.PATIENT_CLINICAL_DATA ->
         submitClinicalData(questionnaire, response, launchContext)
 
-      QuestionnaireIds.NEWBORN_REGISTRATION -> submitNewbornRegistration(response, launchContext)
+      QuestionnaireIds.NEWBORN_REGISTRATION ->
+        submitNewbornRegistration(response, launchContext, submissionKey)
 
       else -> error("No submission handling is defined for questionnaire '${questionnaire.id}'.")
     }
@@ -201,9 +217,10 @@ class QuestionnaireService(
   private suspend fun submitNewbornRegistration(
     response: QuestionnaireResponse,
     launchContext: QuestionnaireLaunchContext,
+    submissionKey: String,
   ): QuestionnaireSubmissionResult {
     val groupId = launchContext.groupId ?: error("A household is required to register a newborn.")
-    val summary = registration.register(groupId, response)
+    val summary = registration.register(groupId, response, submissionKey)
     return QuestionnaireSubmissionResult(
       savedResourceCount = 1,
       bundleJson = "",
@@ -348,6 +365,18 @@ class QuestionnaireService(
 
 private fun Patient.toGroupMember(): Group.Member =
   Group.Member(entity = Reference(reference = FhirString(value = "Patient/$id")))
+
+private fun JsonObject.withAnswerOptions(linkId: String, options: List<JsonObject>): JsonObject {
+  val node = toMutableMap()
+  if (this["linkId"]?.jsonPrimitive?.contentOrNull == linkId) {
+    node["answerOption"] = JsonArray(options)
+  }
+  this["item"]
+    ?.jsonArray
+    ?.map { it.jsonObject.withAnswerOptions(linkId, options) }
+    ?.let { node["item"] = JsonArray(it) }
+  return JsonObject(node)
+}
 
 private fun JsonObject.withInitialAnswer(
   linkId: String,

@@ -31,9 +31,11 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import java.io.File
+import java.io.IOException
 import java.time.LocalDate as JavaDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
@@ -78,7 +80,6 @@ class DoseRecordingTest {
       },
       caughtUp = { true },
       today = { LocalDate.parse("2026-08-01") },
-      newId = { "dose-${++ids}" },
     )
   private val epi = ig("CodeSystem-TrustDemoOnesaEpiSchedule.json")
 
@@ -117,6 +118,7 @@ class DoseRecordingTest {
       recording.products(dose).singleOrNull()?.code,
       lot,
       LocalDate.parse(date),
+      id = "dose-${++ids}",
     )
   }
 
@@ -173,6 +175,52 @@ class DoseRecordingTest {
   }
 
   @Test
+  fun aRetriedRecordingWritesOneDose() = runTest {
+    withSyncedReferenceData()
+    val stored = mutableMapOf<String, JsonObject>()
+    var requests = 0
+    val lossy =
+      DoseRecording(
+        repository = repository,
+        choices = { recording.doses() },
+        session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
+        httpClient =
+          HttpClient(
+            MockEngine { request ->
+              requests++
+              FhirJson.instance
+                .parseToJsonElement((request.body as TextContent).text)
+                .jsonObject
+                .getValue("entry")
+                .jsonArray
+                .map { it.jsonObject }
+                .forEach {
+                  val url = it.getValue("request").jsonObject.getValue("url").jsonPrimitive.content
+                  stored[url] = it.getValue("resource").jsonObject
+                }
+              if (requests == 1) throw IOException("the reply was lost")
+              respond(
+                """{"resourceType":"Bundle","type":"transaction-response"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, "application/fhir+json"),
+              )
+            }
+          ),
+        baseUrl = "http://gateway/fhir",
+        refresh = { true },
+        caughtUp = { true },
+        today = { LocalDate.parse("2026-08-01") },
+      )
+    val entry = entry("XXK-EPI-PENTA-1", "2025-12-10")
+
+    assertFailsWith<IOException> { lossy.record(entry) }
+    assertIs<RecordOutcome.Recorded>(lossy.record(entry))
+
+    assertEquals(2, requests)
+    assertEquals(listOf("Immunization/${entry.id}"), stored.keys.toList())
+  }
+
+  @Test
   fun aStaleCopyAsksForASyncBeforeTheRepeatCheck() = runTest {
     withSyncedReferenceData()
     var caughtUp = true
@@ -186,7 +234,6 @@ class DoseRecordingTest {
         refresh = { error("offline") },
         caughtUp = { caughtUp },
         today = { LocalDate.parse("2026-08-01") },
-        newId = { "dose-${++ids}" },
       )
     val entry = entry("XXK-EPI-PENTA-1", "2025-12-10")
 

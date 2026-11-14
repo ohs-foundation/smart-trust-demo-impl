@@ -19,6 +19,7 @@ import dev.ohs.fhir.model.r4.Group
 import dev.ohs.fhir.model.r4.Organization
 import dev.ohs.fhir.model.r4.Patient
 import dev.ohs.fhir.model.r4.QuestionnaireResponse
+import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.data.sync.succeeded
 import dev.ohs.trustdemo.onesa.util.FhirJson
@@ -29,6 +30,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlin.time.Clock
@@ -52,9 +54,18 @@ data class RegistrationSummary(
   val listStale: Boolean = false,
 )
 
+/** The household changed since this phone read it, so nothing was written. */
+class HouseholdChangedException :
+  IllegalStateException(
+    "The household changed while you were registering. Nothing was saved; open the form again."
+  )
+
 /**
- * Registers a newborn into a household: loads the household and its parents from the local store,
- * builds the transaction with [NewbornRegistration], and posts it to the gateway as one request.
+ * Registers a newborn into a household: loads the household and the parents the form names from the
+ * local store, builds the transaction with [NewbornRegistration], and posts it to the gateway as
+ * one request. The Group and the parents are written only at the version this phone read: if the
+ * gateway holds a newer one, nothing is written. A [key] fixes the ids of one confirmed
+ * registration, so a retry rewrites the records of the attempt before it.
  *
  * The transaction goes straight to the gateway rather than through the engine's sync upload. The
  * engine uploads each local change as its own `PUT` or `PATCH` and cannot send the household's
@@ -73,27 +84,47 @@ class RegistrationService(
 ) {
   private val json = FhirJson.instance
 
-  suspend fun initialAnswers(groupId: String): Map<String, JsonObject> =
-    NewbornRegistration.initialAnswers(household(groupId), scannedCards.cards.value)
+  suspend fun initialAnswers(groupId: String): Map<String, JsonObject> {
+    val household = household(groupId)
+    return NewbornRegistration.initialAnswers(
+      household,
+      scannedCards.cards.value,
+      members(household),
+    )
+  }
 
-  suspend fun register(groupId: String, response: QuestionnaireResponse): RegistrationSummary {
+  /** The household's members, whom the form offers as the child's parents. */
+  suspend fun parentOptions(groupId: String): List<JsonObject> =
+    NewbornRegistration.parentOptions(members(household(groupId)))
+
+  suspend fun register(
+    groupId: String,
+    response: QuestionnaireResponse,
+    key: String,
+  ): RegistrationSummary {
     val current = session() ?: error("Sign in again to register a newborn.")
     val household = household(groupId)
-    val parents =
-      household.member
-        .mapNotNull { it.entity.idOf("Patient") }
-        .mapNotNull { repository.get("Patient", it) as? Patient }
+    val (motherId, fatherId) = NewbornRegistration.parentIds(response)
+    val members = members(household).associateBy { it.id }
+    val mother = members[motherId] ?: error("The mother is not a member of this household.")
+    val father = members[fatherId] ?: error("The father is not a member of this household.")
+    check(mother.id != father.id) { "The mother and the father are the same person." }
+    check(listOf(household, mother, father).all { it.versionId() != null }) {
+      "The household has not been downloaded to this phone yet. Sync, then try again."
+    }
     val cards = scannedCards.cards.value
     val transaction =
       NewbornRegistration.transaction(
         RegistrationRequest(
           response = response,
           household = household,
-          parents = parents,
+          mother = mother,
+          father = father,
           cards = cards,
           practitionerId = current.practitionerId,
           organizationId = current.organizationId,
           now = clock(),
+          newId = NewbornRegistration.idsFor(key),
         )
       )
 
@@ -103,6 +134,12 @@ class RegistrationService(
         contentType(ContentType("application", "fhir+json"))
         setBody(json.encodeToString(JsonObject.serializer(), transaction))
       }
+    if (
+      reply.status == HttpStatusCode.PreconditionFailed || reply.status == HttpStatusCode.Conflict
+    ) {
+      succeeded(refresh)
+      throw HouseholdChangedException()
+    }
     check(reply.status.isSuccess()) {
       "The registration was not accepted (HTTP ${reply.status.value}): ${reply.bodyAsText().take(300)}"
     }
@@ -114,6 +151,13 @@ class RegistrationService(
     return NewbornRegistration.summary(response, cards, clinic ?: current.organizationId)
       .copy(listStale = !synced)
   }
+
+  private suspend fun members(household: Group): List<Patient> =
+    household.member
+      .mapNotNull { it.entity.idOf("Patient") }
+      .mapNotNull { repository.get("Patient", it) as? Patient }
+
+  private fun Resource.versionId(): String? = meta?.versionId?.value
 
   private suspend fun household(groupId: String): Group =
     repository.get("Group", groupId) as? Group ?: error("Household $groupId was not found.")

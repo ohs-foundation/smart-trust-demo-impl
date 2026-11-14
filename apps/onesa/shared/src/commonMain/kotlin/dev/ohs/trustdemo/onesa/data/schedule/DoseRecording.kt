@@ -48,13 +48,17 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
-/** What the nurse typed for a dose given at the clinic. */
+/**
+ * What the nurse typed for a dose given at the clinic. The [id] of its Immunization is fixed once
+ * per confirmed recording, so a retry after a lost reply rewrites the same record.
+ */
 data class DoseEntry(
   val patientId: String,
   val dose: EpiDose,
   val product: String?,
   val lotNumber: String,
   val date: LocalDate,
+  val id: String = generateId(),
 )
 
 /** Why an entry cannot be recorded. */
@@ -81,9 +85,9 @@ sealed interface RecordOutcome {
 
 /**
  * The nurse's own record of a dose given at the clinic: an Immunization with `primarySource` true,
- * shaped as the IG's `TrustDemoOnesaImmunization`, written by one transaction under a new id. A
- * dose with the same schedule code that already counts (TD.DT.03) is written only after she
- * confirms, because a repeat dose is real.
+ * shaped as the IG's `TrustDemoOnesaImmunization`, written by one transaction under the id of the
+ * entry. A dose with the same schedule code that already counts (TD.DT.03) is written only after
+ * she confirms, because a repeat dose is real.
  */
 class DoseRecording(
   private val repository: FhirRepository,
@@ -94,7 +98,6 @@ class DoseRecording(
   private val refresh: suspend () -> Boolean,
   private val caughtUp: () -> Boolean,
   private val today: () -> LocalDate = { Clock.System.todayIn(TimeZone.currentSystemDefault()) },
-  private val newId: () -> String = ::generateId,
 ) {
   private val json = FhirJson.instance
 
@@ -134,12 +137,11 @@ class DoseRecording(
       }
     }
 
-    val id = newId()
     val dose = immunization(entry, current)
     val transaction = buildJsonObject {
       put("resourceType", "Bundle")
       put("type", "transaction")
-      putJsonArray("entry") { add(createEntry("Immunization", id, dose)) }
+      putJsonArray("entry") { add(createEntry("Immunization", entry.id, dose)) }
     }
     val reply =
       httpClient.post(baseUrl) {

@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "name": "TrustDemoHouseholdRegistration",
   "title": "Add a newborn to the household",
-  "description": "Adds a newborn to a household and notes any foreign vaccination cards. Copied from the IG's TrustDemoHouseholdRegistration, with Sex and Relationship added.",
+  "description": "Adds a newborn to a household and notes any foreign vaccination cards. Copied from the IG's TrustDemoHouseholdRegistration, with Sex, Relationship, Mother and Father added.",
   "status": "draft",
   "experimental": true,
   "subjectType": [
@@ -68,6 +68,18 @@
       "linkId": "foreignCards",
       "text": "Does the family hold vaccination cards from abroad?",
       "type": "boolean"
+    },
+    {
+      "linkId": "mother",
+      "text": "The child's mother",
+      "type": "choice",
+      "required": true
+    },
+    {
+      "linkId": "father",
+      "text": "The child's father",
+      "type": "choice",
+      "required": true
     },
     {
       "linkId": "relationship",

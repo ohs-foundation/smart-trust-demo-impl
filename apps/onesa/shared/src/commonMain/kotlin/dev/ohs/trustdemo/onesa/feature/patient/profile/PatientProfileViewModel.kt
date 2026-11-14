@@ -23,6 +23,7 @@ import dev.ohs.trustdemo.onesa.data.schedule.DoseProblem
 import dev.ohs.trustdemo.onesa.data.schedule.DoseRecording
 import dev.ohs.trustdemo.onesa.data.schedule.RecordOutcome
 import dev.ohs.trustdemo.onesa.data.verification.EpiDose
+import dev.ohs.trustdemo.onesa.generateId
 import kotlin.time.Clock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +49,7 @@ data class RecordDoseForm(
   val busy: Boolean = false,
   val failed: Boolean = false,
   val syncFirst: Boolean = false,
+  val recordingId: String = generateId(),
 )
 
 class PatientProfileViewModel(
@@ -122,7 +124,8 @@ class PatientProfileViewModel(
       )
     }
     viewModelScope.launch {
-      val entry = DoseEntry(patientId, dose, form.product?.code, form.lotNumber, date)
+      val entry =
+        DoseEntry(patientId, dose, form.product?.code, form.lotNumber, date, id = form.recordingId)
       when (val outcome = attempt { recording.record(entry, confirmed) }) {
         is RecordOutcome.Recorded -> {
           _recordedStale.value = outcome.listStale

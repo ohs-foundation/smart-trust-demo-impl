@@ -107,12 +107,13 @@ class NewbornRegistrationTest {
       RegistrationRequest(
         response = response,
         household = household,
-        parents = parents,
+        mother = parents[1],
+        father = parents[0],
         cards = cards,
         practitionerId = "TrustDemoVilay",
         organizationId = organization,
         now = now,
-        newId = ids::next,
+        newId = { ids.next() },
       )
     )
 

@@ -19,6 +19,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.ohs.fhir.model.r4.Questionnaire as QuestionnaireR4
 import dev.ohs.fhir.model.r4.QuestionnaireResponse
+import dev.ohs.trustdemo.onesa.generateId
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,6 +40,7 @@ class QuestionnaireHostViewModel(
   val uiState: StateFlow<QuestionnaireHostUiState> = _uiState.asStateFlow()
 
   private var loadedQuestionnaire: QuestionnaireR4? = null
+  private val submissionKey = generateId()
 
   init {
     load()
@@ -68,7 +70,9 @@ class QuestionnaireHostViewModel(
     _uiState.value = QuestionnaireHostUiState.Submitting(current.questionnaireJson, current.title)
 
     viewModelScope.launch {
-      runCatching { questionnaireService.submit(questionnaire, response, launchContext) }
+      runCatching {
+          questionnaireService.submit(questionnaire, response, launchContext, submissionKey)
+        }
         .onSuccess { result -> _uiState.value = QuestionnaireHostUiState.Submitted(result) }
         .onFailure { throwable ->
           _uiState.value =

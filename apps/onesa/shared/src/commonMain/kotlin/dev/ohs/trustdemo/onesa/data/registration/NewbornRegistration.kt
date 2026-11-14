@@ -23,6 +23,7 @@ import dev.ohs.trustdemo.hcert.CertificateFingerprint
 import dev.ohs.trustdemo.hcert.DvcFhirMapper
 import dev.ohs.trustdemo.hcert.DvcMappingOptions
 import dev.ohs.trustdemo.hcert.DvcMin
+import dev.ohs.trustdemo.onesa.data.verification.ScanTransactions
 import dev.ohs.trustdemo.onesa.generateId
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import dev.ohs.trustdemo.onesa.util.createEntry
@@ -56,18 +57,26 @@ object RegistrationItems {
   const val BIRTH_COUNTRY = "birthCountry"
   const val FOREIGN_CARDS = "foreignCards"
   const val RELATIONSHIP = "relationship"
+  const val MOTHER = "mother"
+  const val FATHER = "father"
 }
 
-/** Everything the registration transaction is built from. */
+/**
+ * Everything the registration transaction is built from. [mother] and [father] are the household
+ * members the form names as the child's parents. [newId] gives the id of the record made for a
+ * purpose; the same answer for the same purpose lets a retry rewrite the records of the attempt
+ * before it.
+ */
 data class RegistrationRequest(
   val response: QuestionnaireResponse,
   val household: Group,
-  val parents: List<Patient>,
+  val mother: Patient,
+  val father: Patient,
   val cards: List<ScannedCard>,
   val practitionerId: String,
   val organizationId: String,
   val now: Instant,
-  val newId: () -> String = ::generateId,
+  val newId: (purpose: String) -> String = { generateId() },
 )
 
 /**
@@ -82,6 +91,9 @@ data class RegistrationRequest(
 object NewbornRegistration {
   const val QUESTIONNAIRE_URL =
     "http://ohs.dev/fhir/trust-demo/Questionnaire/TrustDemoHouseholdRegistration"
+
+  /** The system of the codes that name a household member as an answer to the form. */
+  const val MEMBER_SYSTEM = "http://ohs.dev/fhir/trust-demo/CodeSystem/household-member"
 
   private const val ROLE_CODE = "http://terminology.hl7.org/CodeSystem/v3-RoleCode"
   private const val GENDER = "http://hl7.org/fhir/administrative-gender"
@@ -105,24 +117,48 @@ object NewbornRegistration {
 
   private val json = FhirJson.instance
 
-  /** The answers the form opens with: the household, and the child as the first card names it. */
-  fun initialAnswers(household: Group, cards: List<ScannedCard>): Map<String, JsonObject> =
-    buildMap {
-      household.identifier
-        .firstNotNullOfOrNull { it.value?.value }
-        ?.let { put(RegistrationItems.HOUSEHOLD, buildJsonObject { put("valueString", it) }) }
-      val dvc = cards.firstOrNull()?.dvc ?: return@buildMap
-      val name = DvcFhirMapper.humanName(dvc.n)
-      name.given
-        .firstNotNullOfOrNull { it.value }
-        ?.let { put(RegistrationItems.GIVEN, buildJsonObject { put("valueString", it) }) }
-      name.family?.value?.let {
-        put(RegistrationItems.FAMILY, buildJsonObject { put("valueString", it) })
-      }
-      put(RegistrationItems.BIRTH_DATE, buildJsonObject { put("valueDate", dvc.dob) })
-      put(RegistrationItems.SEX, coding(GENDER, dvc.s.lowercase()))
-      put(RegistrationItems.FOREIGN_CARDS, buildJsonObject { put("valueBoolean", true) })
+  /**
+   * The answers the form opens with: the household, the parents when [members] hold exactly one
+   * mother and one father on record, and the child as the first card names it.
+   */
+  fun initialAnswers(
+    household: Group,
+    cards: List<ScannedCard>,
+    members: List<Patient> = emptyList(),
+  ): Map<String, JsonObject> = buildMap {
+    household.identifier
+      .firstNotNullOfOrNull { it.value?.value }
+      ?.let { put(RegistrationItems.HOUSEHOLD, buildJsonObject { put("valueString", it) }) }
+    val adults = members.filter { it.link.isNotEmpty() }
+    adults
+      .singleOrNull { it.genderCode() == "female" }
+      ?.let { put(RegistrationItems.MOTHER, member(it)) }
+    adults
+      .singleOrNull { it.genderCode() == "male" }
+      ?.let { put(RegistrationItems.FATHER, member(it)) }
+    val dvc = cards.firstOrNull()?.dvc ?: return@buildMap
+    val name = DvcFhirMapper.humanName(dvc.n)
+    name.given
+      .firstNotNullOfOrNull { it.value }
+      ?.let { put(RegistrationItems.GIVEN, buildJsonObject { put("valueString", it) }) }
+    name.family?.value?.let {
+      put(RegistrationItems.FAMILY, buildJsonObject { put("valueString", it) })
     }
+    put(RegistrationItems.BIRTH_DATE, buildJsonObject { put("valueDate", dvc.dob) })
+    put(RegistrationItems.SEX, coding(GENDER, dvc.s.lowercase()))
+    put(RegistrationItems.FOREIGN_CARDS, buildJsonObject { put("valueBoolean", true) })
+  }
+
+  /**
+   * The household members the CHW can name as the child's parents, as the form's answer options.
+   */
+  fun parentOptions(members: List<Patient>): List<JsonObject> = members.map(::member)
+
+  /** The ids of the mother and the father the form names. */
+  fun parentIds(response: QuestionnaireResponse): Pair<String, String> {
+    val answers = response.toJson().answers()
+    return answers.required(RegistrationItems.MOTHER) to answers.required(RegistrationItems.FATHER)
+  }
 
   /** What S3 tells the CHW: the child, each dose as reported, and the referral's recipient. */
   fun summary(
@@ -140,6 +176,11 @@ object NewbornRegistration {
     )
   }
 
+  /** The ids a registration under [key] writes: one confirmed registration, the same records. */
+  fun idsFor(key: String): (String) -> String = { purpose ->
+    ScanTransactions.idFrom(CertificateFingerprint.of("registration:$key:$purpose"))
+  }
+
   fun transaction(request: RegistrationRequest): JsonObject {
     val answers = request.response.toJson().answers()
     val authored = request.now.toString()
@@ -147,20 +188,19 @@ object NewbornRegistration {
     val org = "Organization/${request.organizationId}"
     val practitioner = "Practitioner/${request.practitionerId}"
 
-    val childId = request.newId()
+    val childId = request.newId("child")
     val child = "Patient/$childId"
-    val parents = request.parents.map { Parent(it, request.newId()) }
-    val mother =
-      parents.firstOrNull { it.code == "MTH" } ?: error("The household has no mother on record")
-    val father =
-      parents.firstOrNull { it.code == "FTH" } ?: error("The household has no father on record")
+    val mother = Parent(request.mother, "MTH", request.newId("related:${request.mother.id}"))
+    val father = Parent(request.father, "FTH", request.newId("related:${request.father.id}"))
+    val parents = listOf(mother, father)
     val informant =
       when (val code = answers.required(RegistrationItems.RELATIONSHIP)) {
         "MTH" -> mother
         "FTH" -> father
         else -> error("Unknown relationship $code")
       }
-    val doses = request.cards.map { it to request.newId() }
+    val doses =
+      request.cards.map { it to request.newId("dose:${CertificateFingerprint.of(it.hc1)}") }
 
     val somsak = buildJsonObject {
       put("resourceType", "Patient")
@@ -209,13 +249,15 @@ object NewbornRegistration {
           putJsonObject("other") { put("reference", parent.relatedPerson) }
           put("type", "seealso")
         }
-        parent to
-          JsonObject(resource + ("link" to JsonArray(resource["link"]?.jsonArray.orEmpty() + link)))
+        val links = resource["link"]?.jsonArray.orEmpty()
+        parent to JsonObject(resource + ("link" to JsonArray(links.filter { it != link } + link)))
       }
 
     val group = json.encodeToJsonElement(Group.serializer(), request.household).jsonObject
     val members =
-      group["member"]?.jsonArray.orEmpty() +
+      group["member"]?.jsonArray.orEmpty().filter {
+        it.jsonObject["entity"]?.jsonObject?.get("reference")?.jsonPrimitive?.contentOrNull != child
+      } +
         buildJsonObject {
           putJsonObject("entity") { put("reference", child) }
           putJsonObject("period") { put("start", today) }
@@ -293,31 +335,20 @@ object NewbornRegistration {
           add(createEntry("RelatedPerson", parent.relatedPersonId, resource))
         }
         updatedParents.forEach { (parent, resource) ->
-          add(putEntry("Patient/${parent.patient.id}", resource))
+          add(putEntry("Patient/${parent.patient.id}", resource, ifMatch = resource.ifMatch()))
         }
-        add(putEntry("Group/${request.household.id}", updatedGroup))
+        add(putEntry("Group/${request.household.id}", updatedGroup, ifMatch = group.ifMatch()))
         immunizations.forEach { (id, resource) -> add(createEntry("Immunization", id, resource)) }
         if (immunizations.isNotEmpty())
-          add(createEntry("ServiceRequest", request.newId(), referral))
-        add(createEntry("QuestionnaireResponse", request.newId(), record))
+          add(createEntry("ServiceRequest", request.newId("referral"), referral))
+        add(createEntry("QuestionnaireResponse", request.newId("response"), record))
       }
     }
   }
 
-  private class Parent(val patient: Patient, val relatedPersonId: String) {
+  private class Parent(val patient: Patient, val code: String, val relatedPersonId: String) {
     val relatedPerson = "RelatedPerson/$relatedPersonId"
-    val gender: String? =
-      json
-        .encodeToJsonElement(Patient.serializer(), patient)
-        .jsonObject["gender"]
-        ?.jsonPrimitive
-        ?.contentOrNull
-    val code: String? =
-      when (gender) {
-        "female" -> "MTH"
-        "male" -> "FTH"
-        else -> null
-      }
+    val gender: String? = patient.genderCode()
     val name: JsonObject =
       patient.name.firstOrNull()?.let {
         buildJsonObject {
@@ -343,6 +374,35 @@ object NewbornRegistration {
       )
     return json.encodeToJsonElement(Immunization.serializer(), resources.immunization).jsonObject
   }
+
+  /**
+   * The version the record was read at, as the `If-Match` that refuses a write over a newer one.
+   */
+  private fun JsonObject.ifMatch(): String? =
+    this["meta"]?.jsonObject?.get("versionId")?.jsonPrimitive?.contentOrNull?.let { "W/\"$it\"" }
+
+  private fun Patient.genderCode(): String? =
+    json
+      .encodeToJsonElement(Patient.serializer(), this)
+      .jsonObject["gender"]
+      ?.jsonPrimitive
+      ?.contentOrNull
+
+  private fun member(patient: Patient): JsonObject = buildJsonObject {
+    putJsonObject("valueCoding") {
+      put("system", MEMBER_SYSTEM)
+      put("code", patient.id ?: error("A household member has no id"))
+      put("display", displayName(patient))
+    }
+  }
+
+  private fun displayName(patient: Patient): String =
+    patient.name
+      .firstOrNull()
+      ?.let { name ->
+        (name.given.mapNotNull { it.value } + listOfNotNull(name.family?.value)).joinToString(" ")
+      }
+      ?.takeIf { it.isNotBlank() } ?: patient.id.orEmpty()
 
   private fun product(vp: String): JsonObject? =
     PRODUCTS[vp]?.let { display ->
