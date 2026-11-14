@@ -22,5 +22,7 @@ export const fetchSummary = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { runtime } = await import("./runtime");
     const { fetchSummary: fetchFromOnesa } = await import("./summary");
+    const { setResponseHeader } = await import("@tanstack/react-start/server");
+    setResponseHeader("Cache-Control", "no-store");
     return fetchFromOnesa(runtime(), data);
   });

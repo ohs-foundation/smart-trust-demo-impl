@@ -39,6 +39,9 @@ declare module "smart-trust-kotlin-hcert-core" {
     getInstance(): {
       buildManifestRequest(link: Omit<VhlPayload, "exp"> & { exp?: number }, recipient: string, passcode: string | null, embeddedLengthMax: number | null): { url: string; contentType: string; body: string };
       parseManifest(bundleJson: string): { url?: string; reference?: string; contentType?: string; title?: string }[];
+      newKey(): string;
+      encrypt(content: Uint8Array, contentType: string, key: string): string;
+      decrypt(jwe: string, key: string): { contentType?: string; content: Uint8Array };
       buildSignatureBase(request: SignatureRequest): { contentDigest?: string; signatureInput: string; base: Uint8Array };
       signatureHeader(signature: Uint8Array, alg: string): string;
     };

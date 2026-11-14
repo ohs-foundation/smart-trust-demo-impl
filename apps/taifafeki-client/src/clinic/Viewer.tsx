@@ -2,22 +2,37 @@ import { normalizeErrorString } from "@medplum/core";
 import { useMedplum } from "@medplum/react-hooks";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
-import { scanVhl, trustListStatuses } from "../server/links";
+import { fetchSummary, scanVhl, trustListStatuses } from "../server/links";
+import { writeReceipt } from "./receipt";
 import { Scanner } from "./Scanner";
+import { SummaryScreen, type Receipt } from "./SummaryScreen";
+import { openSummary, readSummary, type SummaryView } from "./summary";
 
 const when = (epochSeconds: number) => new Date(epochSeconds * 1000).toISOString().replace("T", " ").slice(0, 16) + " UTC";
 
-export function Viewer() {
+interface Opened {
+  view: SummaryView;
+  receipt: Receipt;
+}
+
+export function Viewer({ organization }: { organization: string }) {
   const medplum = useMedplum();
   const [camera, setCamera] = useState(false);
   const [pasted, setPasted] = useState("");
   const [passcode, setPasscode] = useState("");
+  const [opening, setOpening] = useState(false);
+  const [notice, setNotice] = useState<string>();
+  const [opened, setOpened] = useState<Opened>();
   const token = () => medplum.getAccessToken() ?? "";
   const scan = useMutation({
     mutationFn: (text: string) => scanVhl({ data: { token: token(), text } }),
-    onMutate: () => setPasscode(""),
+    onMutate: () => {
+      setPasscode("");
+      setNotice(undefined);
+    },
   });
   const { mutate } = scan;
+  const found = scan.data?.kind === "fetch" ? scan.data : undefined;
   const scanned = useCallback(
     (text: string) => {
       setCamera(false);
@@ -25,6 +40,38 @@ export function Viewer() {
     },
     [mutate],
   );
+
+  const open = async (handle: string) => {
+    setOpening(true);
+    setNotice(undefined);
+    try {
+      const outcome = await fetchSummary({ data: { token: token(), handle, passcode } });
+      if (outcome.kind === "refused") return setNotice(outcome.message);
+      const bundle = await openSummary(outcome.documents, outcome.key).catch(() => undefined);
+      if (!bundle) return setNotice("The summary could not be opened");
+      const view = readSummary(bundle);
+      setOpened({ view, receipt: { state: "pending" } });
+      const practitionerId = medplum.getProfile()?.id ?? "";
+      const receipt = await writeReceipt(medplum, { bundle, organizationId: organization, practitionerId, now: new Date() }).then(
+        (): Receipt => ({ state: "recorded" }),
+        (error: unknown): Receipt => ({ state: "failed", reason: normalizeErrorString(error) }),
+      );
+      setOpened((current) => (current?.view === view ? { view, receipt } : current));
+    } catch (error) {
+      setNotice(normalizeErrorString(error));
+    } finally {
+      setPasscode("");
+      setOpening(false);
+    }
+  };
+
+  const close = () => {
+    setOpened(undefined);
+    setPasted("");
+    scan.reset();
+  };
+
+  if (opened) return <SummaryScreen view={opened.view} receipt={opened.receipt} onClose={close} />;
 
   return (
     <section>
@@ -55,17 +102,21 @@ export function Viewer() {
           <p>It ended on {when(scan.data.exp)}. Treat this card as paper.</p>
         </div>
       )}
-      {scan.data?.kind === "fetch" && (
+      {found && (
         <div>
           <h2>Link verified</h2>
-          <p>{scan.data.label ?? "Health summary"}, valid until {when(scan.data.exp)}.</p>
-          {scan.data.needsPasscode && (
+          <p>{found.label ?? "Health summary"}, valid until {when(found.exp)}.</p>
+          {found.needsPasscode && (
             <p>
               <label>
                 Passcode <input value={passcode} onChange={(event) => setPasscode(event.target.value)} inputMode="numeric" autoComplete="off" />
               </label>
             </p>
           )}
+          <p>
+            <button disabled={opening || (found.needsPasscode && !passcode)} onClick={() => void open(found.handle)}>Open summary</button>
+          </p>
+          {notice && <p role="alert">{notice}</p>}
         </div>
       )}
       <TrustLists token={token} />
