@@ -29,7 +29,8 @@ generated="$work/ig/fsh-generated/resources"
 if [ "${1:-}" = "--check" ]; then
   diff -r "$generated" "$here/resources" && echo "ig/resources matches $IG_COMMIT"
 else
+  mkdir "$work/resources"
+  cp "$generated"/*.json "$work/resources/"
   rm -rf "$here/resources"
-  mkdir -p "$here/resources"
-  cp "$generated"/*.json "$here/resources/"
+  mv "$work/resources" "$here/resources"
 fi
