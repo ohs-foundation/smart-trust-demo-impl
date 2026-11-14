@@ -17,6 +17,7 @@ package dev.ohs.trustdemo.onesa.data.schedule
 
 import dev.ohs.trustdemo.hcert.CertificateFingerprint
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSession
+import dev.ohs.trustdemo.onesa.data.sync.succeeded
 import dev.ohs.trustdemo.onesa.data.verification.ScanTransactions
 import dev.ohs.trustdemo.onesa.data.verification.text
 import dev.ohs.trustdemo.onesa.util.FhirJson
@@ -34,7 +35,6 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlin.time.Clock
 import kotlin.time.Instant
-import kotlinx.coroutines.CancellationException
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
@@ -61,6 +61,9 @@ sealed interface BookingOutcome {
   /** The referral is no longer open, so there is nothing to complete; nothing was written. */
   data object NoLongerOpen : BookingOutcome
 
+  /** The last write has not come back from the server yet; nothing is written until it has. */
+  data object SyncFirst : BookingOutcome
+
   /** An action or a dose could not be evaluated, so the schedule is not booked over the gap. */
   data object Incomplete : BookingOutcome
 
@@ -81,14 +84,17 @@ data class OpenReferral(
  * doses due, the reminder Task for the visit, and completes the referral. The recommendation's id
  * follows from the child and the Task's from the recommendation, so booking again replaces both
  * rather than adding to them. The referral is written only at the version S5 loaded, and only while
- * it is active: if it has moved, nothing is written and the nurse is asked again.
+ * it is active: if it has moved, nothing is written and the nurse is asked again. Nothing is
+ * written either while the last write has not come back to this phone, since the schedule would be
+ * read from an incomplete record.
  */
 class VisitBooking(
   private val schedule: ScheduleService,
   private val session: suspend () -> RegistrationSession?,
   private val httpClient: HttpClient,
   private val baseUrl: String,
-  private val refresh: suspend () -> Unit,
+  private val refresh: suspend () -> Boolean,
+  private val caughtUp: () -> Boolean,
   private val clock: () -> Instant = Clock.System::now,
 ) {
   private val json = FhirJson.instance
@@ -103,6 +109,7 @@ class VisitBooking(
   suspend fun book(referral: OpenReferral, patientId: String): BookingOutcome {
     val current = session() ?: error("Sign in again to book the visit.")
     if (referral.status != "active") return BookingOutcome.NoLongerOpen
+    if (!caughtUp()) return BookingOutcome.SyncFirst
     val evaluated = schedule.evaluate(patientId)
     if (!evaluated.complete) return BookingOutcome.Incomplete
     val due = evaluated.items.filter { it.standing is Standing.Due }
@@ -152,18 +159,7 @@ class VisitBooking(
       }
     return when {
       reply.status == HttpStatusCode.PreconditionFailed -> BookingOutcome.Changed
-      reply.status.isSuccess() -> {
-        val stale =
-          try {
-            refresh()
-            false
-          } catch (e: CancellationException) {
-            throw e
-          } catch (_: Exception) {
-            true
-          }
-        BookingOutcome.Booked(visit, due.size, stale)
-      }
+      reply.status.isSuccess() -> BookingOutcome.Booked(visit, due.size, !succeeded(refresh))
       else ->
         error(
           "The booking was not accepted (HTTP ${reply.status.value}): ${reply.bodyAsText().take(300)}"

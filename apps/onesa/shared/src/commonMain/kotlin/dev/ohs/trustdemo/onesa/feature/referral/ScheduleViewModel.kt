@@ -40,6 +40,7 @@ data class ScheduleUiState(
   val booked: BookingOutcome.Booked? = null,
   val referralChanged: Boolean = false,
   val failed: Boolean = false,
+  val syncFirst: Boolean = false,
 ) {
   val isOpen: Boolean
     get() = open?.status == "active"
@@ -68,7 +69,9 @@ class ScheduleViewModel(
     val referral = state.referral ?: return
     val open = state.open ?: return
     if (!state.canBook) return
-    _uiState.update { it.copy(busy = true, failed = false, referralChanged = false) }
+    _uiState.update {
+      it.copy(busy = true, failed = false, referralChanged = false, syncFirst = false)
+    }
     viewModelScope.launch {
       when (val outcome = attempt { booking.book(open, referral.patientId) }) {
         is BookingOutcome.Booked -> {
@@ -81,7 +84,14 @@ class ScheduleViewModel(
           reload(referral)
           _uiState.update { it.copy(referralChanged = true) }
         }
-        else -> _uiState.update { it.copy(busy = false, failed = outcome == null) }
+        else ->
+          _uiState.update {
+            it.copy(
+              busy = false,
+              failed = outcome == null,
+              syncFirst = outcome == BookingOutcome.SyncFirst,
+            )
+          }
       }
     }
   }

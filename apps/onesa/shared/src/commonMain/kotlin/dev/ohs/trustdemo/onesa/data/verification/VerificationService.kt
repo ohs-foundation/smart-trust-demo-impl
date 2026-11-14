@@ -26,6 +26,7 @@ import dev.ohs.trustdemo.onesa.data.hcert.HcertService
 import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSession
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
+import dev.ohs.trustdemo.onesa.data.sync.succeeded
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import io.ktor.client.HttpClient
 import io.ktor.client.request.bearerAuth
@@ -50,7 +51,12 @@ private val FULL_DATE = Regex("""\d{4}-\d{2}-\d{2}""")
 /** What a scan came to, for S4 to show. */
 sealed interface ScanOutcome {
   /** The card verified and its dose is now on the patient's record as a verified Immunization. */
-  data class Imported(val dose: String, val replacedReported: Boolean) : ScanOutcome
+  data class Imported(
+    val dose: String,
+    val replacedReported: Boolean,
+    /** True when the dose is in but the local copy could not be refreshed. */
+    val listStale: Boolean = false,
+  ) : ScanOutcome
 
   /** The card verified, but its dose was imported by an earlier scan. */
   data class AlreadyImported(val dose: String) : ScanOutcome
@@ -100,7 +106,7 @@ class VerificationService(
   private val session: suspend () -> RegistrationSession?,
   private val httpClient: HttpClient,
   private val baseUrl: String,
-  private val refresh: suspend () -> Unit,
+  private val refresh: suspend () -> Boolean,
   private val clock: () -> Instant = Clock.System::now,
 ) {
   private val json = FhirJson.instance
@@ -157,8 +163,12 @@ class VerificationService(
       return existing(current, request, pending.referral, dvc, pending.dose) ?: throw e
     }
     replaced.forEach { repository.remove("Immunization", it.id) }
-    refresh()
-    return ScanOutcome.Imported(pending.dose, replacedReported = replaced.isNotEmpty())
+    val synced = succeeded(refresh)
+    return ScanOutcome.Imported(
+      pending.dose,
+      replacedReported = replaced.isNotEmpty(),
+      listStale = !synced,
+    )
   }
 
   private fun request(current: RegistrationSession, referral: Referral, hc1: String) =

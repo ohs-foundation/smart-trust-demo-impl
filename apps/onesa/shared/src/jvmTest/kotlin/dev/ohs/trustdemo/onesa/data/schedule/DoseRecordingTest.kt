@@ -72,7 +72,11 @@ class DoseRecordingTest {
       session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
       httpClient = HttpClient(engine),
       baseUrl = "http://gateway/fhir",
-      refresh = { written.forEach { repository.upsert(decode(it)) } },
+      refresh = {
+        written.forEach { repository.upsert(decode(it)) }
+        true
+      },
+      caughtUp = { true },
       today = { LocalDate.parse("2026-08-01") },
       newId = { "dose-${++ids}" },
     )
@@ -166,6 +170,32 @@ class DoseRecordingTest {
     val dates = Dates(JavaDate.parse("2026-11-14"))
     val contract = expectations.getValue(Step.YEAR).single()
     assertTrue(contract.satisfied(written.map(::decode), dates), contract.label)
+  }
+
+  @Test
+  fun aStaleCopyAsksForASyncBeforeTheRepeatCheck() = runTest {
+    withSyncedReferenceData()
+    var caughtUp = true
+    val lagging =
+      DoseRecording(
+        repository = repository,
+        choices = { epi.getValue("concept").jsonArray.map { it.jsonObject.dose() } },
+        session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
+        httpClient = HttpClient(engine),
+        baseUrl = "http://gateway/fhir",
+        refresh = { error("offline") },
+        caughtUp = { caughtUp },
+        today = { LocalDate.parse("2026-08-01") },
+        newId = { "dose-${++ids}" },
+      )
+    val entry = entry("XXK-EPI-PENTA-1", "2025-12-10")
+
+    assertEquals(RecordOutcome.Recorded(listStale = true), lagging.record(entry))
+    caughtUp = false
+
+    assertEquals(RecordOutcome.SyncFirst, lagging.record(entry))
+    assertEquals(1, written.size)
+    assertIs<RecordOutcome.Recorded>(lagging.record(entry, confirmed = true))
   }
 
   @Test

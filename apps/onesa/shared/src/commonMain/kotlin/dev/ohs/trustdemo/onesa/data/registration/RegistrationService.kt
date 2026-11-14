@@ -20,6 +20,7 @@ import dev.ohs.fhir.model.r4.Organization
 import dev.ohs.fhir.model.r4.Patient
 import dev.ohs.fhir.model.r4.QuestionnaireResponse
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
+import dev.ohs.trustdemo.onesa.data.sync.succeeded
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import dev.ohs.trustdemo.onesa.util.idOf
 import io.ktor.client.HttpClient
@@ -47,6 +48,8 @@ data class RegistrationSummary(
   val birthDate: String,
   val doses: List<String>,
   val referredTo: String?,
+  /** True when the registration is in but the local copy could not be refreshed. */
+  val listStale: Boolean = false,
 )
 
 /**
@@ -65,7 +68,7 @@ class RegistrationService(
   private val session: suspend () -> RegistrationSession?,
   private val httpClient: HttpClient,
   private val baseUrl: String,
-  private val refresh: suspend () -> Unit,
+  private val refresh: suspend () -> Boolean,
   private val clock: () -> Instant = Clock.System::now,
 ) {
   private val json = FhirJson.instance
@@ -105,10 +108,11 @@ class RegistrationService(
     }
 
     scannedCards.clear()
-    refresh()
+    val synced = succeeded(refresh)
     val clinic =
       (repository.get("Organization", current.organizationId) as? Organization)?.name?.value
     return NewbornRegistration.summary(response, cards, clinic ?: current.organizationId)
+      .copy(listStale = !synced)
   }
 
   private suspend fun household(groupId: String): Group =

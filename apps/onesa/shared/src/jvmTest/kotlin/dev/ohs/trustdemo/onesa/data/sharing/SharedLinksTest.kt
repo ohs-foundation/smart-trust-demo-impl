@@ -41,7 +41,13 @@ class SharedLinksTest {
 
   private var family: String? = "bounmy"
 
-  private fun linksOver(status: HttpStatusCode): SharedLinks =
+  private fun linksOver(
+    status: HttpStatusCode,
+    refresh: suspend () -> Boolean = {
+      refreshes++
+      true
+    },
+  ): SharedLinks =
     SharedLinks(
       repository = repository,
       accessToken = { "token" },
@@ -61,7 +67,7 @@ class SharedLinksTest {
       links = links,
       names = { if (it == "somsak") "Somsak" else null },
       family = { family },
-      refresh = { refreshes++ },
+      refresh = refresh,
       today = { today },
     )
 
@@ -105,7 +111,7 @@ class SharedLinksTest {
 
     val outcome = shared.withdraw("c1")
 
-    assertEquals(WithdrawOutcome.Withdrawn, outcome)
+    assertEquals(WithdrawOutcome.Withdrawn(), outcome)
     assertEquals(listOf(Triple(HttpMethod.Post, "/vhl/\$withdraw", withdrawBody("c1"))), requests)
     assertEquals(setOf("c2"), links.kept.keys)
     assertEquals("HC1:two", links.kept.getValue("c2").link)
@@ -115,6 +121,15 @@ class SharedLinksTest {
     assertEquals(ShareStatus.Active, shares.getValue("c2").status)
     assertEquals(true, shares.getValue("c2").kept)
     assertEquals(1, refreshes)
+  }
+
+  @Test
+  fun aFailedRefreshStillReportsTheWithdrawal() = runTest {
+    twoSharesForSomsak()
+    val shared = linksOver(HttpStatusCode.OK, refresh = { error("offline") })
+
+    assertEquals(WithdrawOutcome.Withdrawn(listStale = true), shared.withdraw("c1"))
+    assertEquals(setOf("c2"), links.kept.keys)
   }
 
   @Test

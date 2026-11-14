@@ -48,6 +48,7 @@ import dev.ohs.trustdemo.onesa.data.sharing.ShareService
 import dev.ohs.trustdemo.onesa.data.sharing.SharedLinks
 import dev.ohs.trustdemo.onesa.data.sync.DataStoreInitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.InitialSyncStore
+import dev.ohs.trustdemo.onesa.data.sync.LocalCopy
 import dev.ohs.trustdemo.onesa.data.sync.StoreOwnership
 import dev.ohs.trustdemo.onesa.data.sync.SyncManager
 import dev.ohs.trustdemo.onesa.data.sync.createSyncTimestampDataStore
@@ -113,7 +114,7 @@ internal val serviceModule = module {
       session = { registrationSession(get()) },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
-      refresh = { get<SyncManager>().syncNow() },
+      refresh = get<LocalCopy>()::refreshAfterWrite,
     )
   }
   single { ReferralInbox(get()) }
@@ -124,7 +125,7 @@ internal val serviceModule = module {
       session = { registrationSession(get()) },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
-      refresh = { get<SyncManager>().syncNow() },
+      refresh = get<LocalCopy>()::refreshAfterWrite,
     )
   }
   single {
@@ -133,9 +134,10 @@ internal val serviceModule = module {
       session = { registrationSession(get()) },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
-      refresh = { get<SyncManager>().syncNow() },
+      refresh = get<LocalCopy>()::refreshAfterWrite,
     )
   }
+  single { LocalCopy(get()) }
   single { ScheduleService(get(), SchedulePlans::load) }
   single {
     VisitBooking(
@@ -143,7 +145,8 @@ internal val serviceModule = module {
       session = { registrationSession(get()) },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
-      refresh = { get<SyncManager>().syncNow() },
+      refresh = get<LocalCopy>()::refreshAfterWrite,
+      caughtUp = get<LocalCopy>()::caughtUp,
     )
   }
   single {
@@ -153,7 +156,8 @@ internal val serviceModule = module {
       session = { registrationSession(get()) },
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
-      refresh = { get<SyncManager>().syncNow() },
+      refresh = get<LocalCopy>()::refreshAfterWrite,
+      caughtUp = get<LocalCopy>()::caughtUp,
     )
   }
   factory { QuestionnaireService(get(), get()) }
@@ -176,7 +180,7 @@ internal val serviceModule = module {
       links = get(),
       family = { SessionRepository.session.value?.context?.patientId },
       names = get<ShareService>()::nameOf,
-      refresh = { get<SyncManager>().syncNow() },
+      refresh = get<LocalCopy>()::refreshAfterWrite,
     )
   }
 }
@@ -235,7 +239,7 @@ internal val viewModelModule = module {
   viewModel { (questionnaireId: String, launchContext: QuestionnaireLaunchContext) ->
     QuestionnaireHostViewModel(questionnaireId, launchContext, get())
   }
-  viewModel { HomeViewModel(get(), get()) }
+  viewModel { HomeViewModel(get<LocalCopy>(), get()) }
   viewModel { AuthViewModel(get(), get()) }
   viewModel {
     UserContextViewModel(

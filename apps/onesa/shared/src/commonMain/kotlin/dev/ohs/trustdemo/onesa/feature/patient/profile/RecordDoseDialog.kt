@@ -48,6 +48,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.record_dose_product
 import dev.ohs.trustdemo.onesa.generated.resources.record_dose_save
 import dev.ohs.trustdemo.onesa.generated.resources.record_dose_schedule
 import dev.ohs.trustdemo.onesa.generated.resources.record_dose_unreadable_date
+import dev.ohs.trustdemo.onesa.generated.resources.sync_first
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -93,6 +94,7 @@ internal fun RecordDoseDialog(form: RecordDoseForm, viewModel: PatientProfileVie
               stringResource(Res.string.record_dose_future)
             form.problem == DoseProblem.DateBeforeBirth ->
               stringResource(Res.string.record_dose_before_birth)
+            form.syncFirst -> stringResource(Res.string.sync_first)
             form.failed -> stringResource(Res.string.record_dose_failed)
             else -> null
           }

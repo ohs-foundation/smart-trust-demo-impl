@@ -33,6 +33,7 @@ import dev.ohs.trustdemo.onesa.data.di.viewModelModule
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.data.repository.InMemorySampleFhirRepository
 import dev.ohs.trustdemo.onesa.data.sync.FakeSyncManager
+import dev.ohs.trustdemo.onesa.data.sync.LocalCopy
 import dev.ohs.trustdemo.onesa.data.sync.SyncManager
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -58,6 +59,7 @@ class HomeScreenTest {
           single<FhirRepository> { InMemorySampleFhirRepository() }
           single { newFhirDataStore() }
           single<SyncManager> { syncManager }
+          single { LocalCopy(syncManager) }
         },
         repositoryModule,
         viewModelModule,

@@ -67,6 +67,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.shared_notice_changed
 import dev.ohs.trustdemo.onesa.generated.resources.shared_notice_gone
 import dev.ohs.trustdemo.onesa.generated.resources.shared_notice_not_yours
 import dev.ohs.trustdemo.onesa.generated.resources.shared_notice_withdrawn
+import dev.ohs.trustdemo.onesa.generated.resources.shared_notice_withdrawn_stale
 import dev.ohs.trustdemo.onesa.generated.resources.shared_open
 import dev.ohs.trustdemo.onesa.generated.resources.shared_refusal_attempts_exhausted
 import dev.ohs.trustdemo.onesa.generated.resources.shared_refusal_expired
@@ -127,7 +128,7 @@ fun SharedLinksScreen(onBack: () -> Unit, onShowQr: (String) -> Unit) {
       notice?.let {
         item {
           val color =
-            if (it == WithdrawOutcome.Withdrawn) MaterialTheme.colorScheme.onSurface
+            if (it is WithdrawOutcome.Withdrawn) MaterialTheme.colorScheme.onSurface
             else MaterialTheme.colorScheme.error
           Text(noticeText(it), color = color)
         }
@@ -245,7 +246,11 @@ private fun Refusal?.text(): StringResource =
 @Composable
 private fun noticeText(outcome: WithdrawOutcome): String =
   when (outcome) {
-    WithdrawOutcome.Withdrawn -> stringResource(Res.string.shared_notice_withdrawn)
+    is WithdrawOutcome.Withdrawn ->
+      stringResource(
+        if (outcome.listStale) Res.string.shared_notice_withdrawn_stale
+        else Res.string.shared_notice_withdrawn
+      )
     WithdrawOutcome.Changed -> stringResource(Res.string.shared_notice_changed)
     WithdrawOutcome.NotYours -> stringResource(Res.string.shared_notice_not_yours)
     WithdrawOutcome.Gone -> stringResource(Res.string.shared_notice_gone)

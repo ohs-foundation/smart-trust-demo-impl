@@ -59,6 +59,7 @@ import dev.ohs.trustdemo.onesa.feature.scan.QrScan
 import dev.ohs.trustdemo.onesa.feature.scan.QrScannerView
 import dev.ohs.trustdemo.onesa.feature.scan.cameraScanningAvailable
 import dev.ohs.trustdemo.onesa.generated.resources.Res
+import dev.ohs.trustdemo.onesa.generated.resources.list_stale
 import dev.ohs.trustdemo.onesa.generated.resources.match_changed
 import dev.ohs.trustdemo.onesa.generated.resources.match_confirm
 import dev.ohs.trustdemo.onesa.generated.resources.match_done
@@ -209,6 +210,7 @@ fun VerifyCardsScreen(referralId: String, onBack: () -> Unit, onOpenSchedule: ()
         Text(stringResource(Res.string.match_changed), color = MaterialTheme.colorScheme.error)
       }
       state.matchedTo.forEach { Text(stringResource(Res.string.match_done, it.display)) }
+      if (state.listStale) Text(stringResource(Res.string.list_stale))
       state.unmatched.forEach { dose ->
         MatchPicker(
           dose = dose,
@@ -251,6 +253,7 @@ private fun Outcome(outcome: ScanOutcome) {
           )
           Text(outcome.dose)
           if (outcome.replacedReported) Text(stringResource(Res.string.verify_replaced))
+          if (outcome.listStale) Text(stringResource(Res.string.list_stale))
         }
         is ScanOutcome.AlreadyImported -> {
           Text(

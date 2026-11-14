@@ -60,7 +60,8 @@ class PatientProfileScreenTest {
               { null },
               HttpClient(MockEngine { error("") }),
               "",
-              {},
+              { true },
+              { true },
             )
           }
         },

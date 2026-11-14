@@ -17,6 +17,7 @@ package dev.ohs.trustdemo.onesa.data.sharing
 
 import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
+import dev.ohs.trustdemo.onesa.data.sync.succeeded
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
@@ -91,7 +92,8 @@ data class SharedLink(
 
 /** What asking the service to withdraw a share came to. */
 sealed interface WithdrawOutcome {
-  data object Withdrawn : WithdrawOutcome
+  /** The share is withdrawn; when [listStale] the local copy could not be refreshed. */
+  data class Withdrawn(val listStale: Boolean = false) : WithdrawOutcome
 
   /** The share changed while the request was made; asking again is safe. */
   data object Changed : WithdrawOutcome
@@ -117,7 +119,7 @@ class SharedLinks(
   private val links: LinkStore,
   private val family: () -> String?,
   private val names: suspend (String) -> String?,
-  private val refresh: suspend () -> Unit,
+  private val refresh: suspend () -> Boolean,
   private val today: () -> LocalDate = { Clock.System.todayIn(TimeZone.UTC) },
 ) {
   private val json = FhirJson.instance
@@ -183,11 +185,10 @@ class SharedLinks(
       HttpStatusCode.OK -> {
         withdrawn += consentId
         links.remove(consentId)
-        refresh()
-        WithdrawOutcome.Withdrawn
+        WithdrawOutcome.Withdrawn(listStale = !succeeded(refresh))
       }
       HttpStatusCode.Conflict -> {
-        refresh()
+        succeeded(refresh)
         WithdrawOutcome.Changed
       }
       HttpStatusCode.Forbidden -> WithdrawOutcome.NotYours

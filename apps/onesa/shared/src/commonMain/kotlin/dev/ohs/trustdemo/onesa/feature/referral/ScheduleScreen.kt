@@ -44,10 +44,10 @@ import dev.ohs.trustdemo.onesa.data.schedule.ScheduleDose
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleItem
 import dev.ohs.trustdemo.onesa.data.schedule.Standing
 import dev.ohs.trustdemo.onesa.generated.resources.Res
+import dev.ohs.trustdemo.onesa.generated.resources.list_stale
 import dev.ohs.trustdemo.onesa.generated.resources.scan_back
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_book
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_booked
-import dev.ohs.trustdemo.onesa.generated.resources.schedule_booked_stale
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_complete
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_could_not
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_could_not_load
@@ -61,6 +61,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.schedule_reported
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_title
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_unmapped
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_unreadable
+import dev.ohs.trustdemo.onesa.generated.resources.sync_first
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -119,6 +120,9 @@ fun ScheduleScreen(referralId: String, onBack: () -> Unit) {
         Doses(Res.string.schedule_unmapped, schedule.unmapped)
         Doses(Res.string.schedule_unreadable, schedule.unreadable)
       }
+      if (state.syncFirst) {
+        Text(stringResource(Res.string.sync_first), color = MaterialTheme.colorScheme.error)
+      }
       if (state.referralChanged) {
         Text(
           stringResource(Res.string.schedule_referral_changed),
@@ -130,7 +134,7 @@ fun ScheduleScreen(referralId: String, onBack: () -> Unit) {
           stringResource(Res.string.schedule_booked, it.date.toString(), it.doses),
           style = MaterialTheme.typography.titleMedium,
         )
-        if (it.listStale) Text(stringResource(Res.string.schedule_booked_stale))
+        if (it.listStale) Text(stringResource(Res.string.list_stale))
       }
       val gap = state.schedule?.complete == false
       if (gap)

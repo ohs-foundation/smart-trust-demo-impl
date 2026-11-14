@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSummary
 import dev.ohs.trustdemo.onesa.generated.resources.Res
+import dev.ohs.trustdemo.onesa.generated.resources.list_stale
 import dev.ohs.trustdemo.onesa.generated.resources.registration_born
 import dev.ohs.trustdemo.onesa.generated.resources.registration_done
 import dev.ohs.trustdemo.onesa.generated.resources.registration_done_title
@@ -51,6 +52,7 @@ fun RegistrationSummaryCard(summary: RegistrationSummary, onDone: () -> Unit) {
     if (summary.doses.isEmpty()) Text(stringResource(Res.string.registration_no_doses))
     summary.doses.forEach { Text(it) }
     summary.referredTo?.let { Text(stringResource(Res.string.registration_referred, it)) }
+    if (summary.listStale) Text(stringResource(Res.string.list_stale))
     Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
       Text(stringResource(Res.string.registration_done))
     }

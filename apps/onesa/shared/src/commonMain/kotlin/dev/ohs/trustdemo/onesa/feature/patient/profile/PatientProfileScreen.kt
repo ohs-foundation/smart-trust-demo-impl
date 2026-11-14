@@ -51,6 +51,7 @@ import dev.ohs.player.client.registry.layoutRenderer
 import dev.ohs.player.client.renderer.RenderOptions
 import dev.ohs.trustdemo.onesa.data.schedule.BookedVisit
 import dev.ohs.trustdemo.onesa.generated.resources.Res
+import dev.ohs.trustdemo.onesa.generated.resources.list_stale
 import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_add_clinical_data
 import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_back
 import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_default_name
@@ -79,6 +80,7 @@ fun PatientProfileScreen(patientId: String, onBack: () -> Unit, onAddClinicalDat
     koinViewModel<PatientProfileViewModel>(key = patientId) { parametersOf(patientId) }
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   val form by viewModel.form.collectAsStateWithLifecycle()
+  val recordedStale by viewModel.recordedStale.collectAsStateWithLifecycle()
   val registry = LocalViewRegistry.current
 
   val headerRenderer =
@@ -179,6 +181,7 @@ fun PatientProfileScreen(patientId: String, onBack: () -> Unit, onAddClinicalDat
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
       item(key = "patient_header") { headerRenderer.Render(s.patient, RenderOptions()) }
+      if (recordedStale) item(key = "stale") { Text(stringResource(Res.string.list_stale)) }
 
       if (s.allergies.isNotEmpty()) {
         item(key = "allergies") {

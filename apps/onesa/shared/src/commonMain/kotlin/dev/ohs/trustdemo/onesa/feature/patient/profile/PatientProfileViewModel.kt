@@ -47,6 +47,7 @@ data class RecordDoseForm(
   val alreadyRecorded: LocalDate? = null,
   val busy: Boolean = false,
   val failed: Boolean = false,
+  val syncFirst: Boolean = false,
 )
 
 class PatientProfileViewModel(
@@ -58,6 +59,10 @@ class PatientProfileViewModel(
   val uiState: StateFlow<ProfileUiState?> = _uiState.asStateFlow()
   private val _form = MutableStateFlow<RecordDoseForm?>(null)
   val form: StateFlow<RecordDoseForm?> = _form.asStateFlow()
+  private val _recordedStale = MutableStateFlow(false)
+
+  /** True when the last dose is recorded but the local copy could not be refreshed. */
+  val recordedStale: StateFlow<Boolean> = _recordedStale.asStateFlow()
 
   init {
     viewModelScope.launch {
@@ -67,6 +72,7 @@ class PatientProfileViewModel(
 
   fun openForm() {
     val today = Clock.System.todayIn(TimeZone.currentSystemDefault()).toString()
+    _recordedStale.value = false
     viewModelScope.launch {
       val doses = attempt { recording.doses() }.orEmpty()
       _form.value = RecordDoseForm(doses = doses, date = today, failed = doses.isEmpty())
@@ -106,11 +112,23 @@ class PatientProfileViewModel(
       _form.update { it?.copy(dateUnreadable = true) }
       return
     }
-    _form.update { it?.copy(busy = true, failed = false, problem = null, dateUnreadable = false) }
+    _form.update {
+      it?.copy(
+        busy = true,
+        failed = false,
+        syncFirst = false,
+        problem = null,
+        dateUnreadable = false,
+      )
+    }
     viewModelScope.launch {
       val entry = DoseEntry(patientId, dose, form.product?.code, form.lotNumber, date)
       when (val outcome = attempt { recording.record(entry, confirmed) }) {
-        is RecordOutcome.Recorded -> _form.value = null
+        is RecordOutcome.Recorded -> {
+          _recordedStale.value = outcome.listStale
+          _form.value = null
+        }
+        RecordOutcome.SyncFirst -> _form.update { it?.copy(busy = false, syncFirst = true) }
         is RecordOutcome.Refused ->
           _form.update { it?.copy(busy = false, problem = outcome.problem) }
         is RecordOutcome.AlreadyRecorded ->

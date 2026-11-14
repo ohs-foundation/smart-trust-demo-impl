@@ -19,6 +19,7 @@ import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSession
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
+import dev.ohs.trustdemo.onesa.data.sync.succeeded
 import dev.ohs.trustdemo.onesa.generateId
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import dev.ohs.trustdemo.onesa.util.createEntry
@@ -58,7 +59,7 @@ data class UnmatchedDose(
 /** What the nurse's choice came to. */
 sealed interface MatchOutcome {
   /** The dose carries [dose], and the national map names it for the product. */
-  data class Matched(val dose: EpiDose) : MatchOutcome
+  data class Matched(val dose: EpiDose, val listStale: Boolean = false) : MatchOutcome
 
   /** The map or the dose changed since she looked; nothing was written. */
   data object Changed : MatchOutcome
@@ -79,7 +80,7 @@ class DoseMatchService(
   private val session: suspend () -> RegistrationSession?,
   private val httpClient: HttpClient,
   private val baseUrl: String,
-  private val refresh: suspend () -> Unit,
+  private val refresh: suspend () -> Boolean,
   private val clock: () -> Instant = Clock.System::now,
   private val newId: () -> String = ::generateId,
 ) {
@@ -137,8 +138,8 @@ class DoseMatchService(
         dose.product in epiCodesOf(map) -> MatchOutcome.Changed
         else -> write(current, dose, choice, map, immunization)
       }
-    refresh()
-    return outcome
+    val synced = succeeded(refresh)
+    return if (outcome is MatchOutcome.Matched) outcome.copy(listStale = !synced) else outcome
   }
 
   private suspend fun write(

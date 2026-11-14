@@ -19,6 +19,7 @@ import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSession
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
+import dev.ohs.trustdemo.onesa.data.sync.succeeded
 import dev.ohs.trustdemo.onesa.data.verification.EpiDose
 import dev.ohs.trustdemo.onesa.data.verification.NationalMap
 import dev.ohs.trustdemo.onesa.data.verification.ScanTransactions
@@ -36,7 +37,6 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlin.time.Clock
-import kotlinx.coroutines.CancellationException
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -69,6 +69,9 @@ sealed interface RecordOutcome {
   /** The dose is written; when [listStale] the local copy could not be refreshed. */
   data class Recorded(val listStale: Boolean = false) : RecordOutcome
 
+  /** The last write has not come back from the server yet; the dose is not checked or written. */
+  data object SyncFirst : RecordOutcome
+
   /** The entry is not one that could have happened; nothing was written. */
   data class Refused(val problem: DoseProblem) : RecordOutcome
 
@@ -88,7 +91,8 @@ class DoseRecording(
   private val session: suspend () -> RegistrationSession?,
   private val httpClient: HttpClient,
   private val baseUrl: String,
-  private val refresh: suspend () -> Unit,
+  private val refresh: suspend () -> Boolean,
+  private val caughtUp: () -> Boolean,
   private val today: () -> LocalDate = { Clock.System.todayIn(TimeZone.currentSystemDefault()) },
   private val newId: () -> String = ::generateId,
 ) {
@@ -123,10 +127,12 @@ class DoseRecording(
         else -> null
       }
     if (problem != null) return RecordOutcome.Refused(problem)
-    if (!confirmed)
+    if (!confirmed) {
+      if (!caughtUp()) return RecordOutcome.SyncFirst
       counted(entry)?.let {
         return RecordOutcome.AlreadyRecorded(it)
       }
+    }
 
     val id = newId()
     val dose = immunization(entry, current)
@@ -144,16 +150,7 @@ class DoseRecording(
     check(reply.status.isSuccess()) {
       "The dose was not accepted (HTTP ${reply.status.value}): ${reply.bodyAsText().take(300)}"
     }
-    val stale =
-      try {
-        refresh()
-        false
-      } catch (e: CancellationException) {
-        throw e
-      } catch (_: Exception) {
-        true
-      }
-    return RecordOutcome.Recorded(stale)
+    return RecordOutcome.Recorded(!succeeded(refresh))
   }
 
   private suspend fun immunization(entry: DoseEntry, current: RegistrationSession): JsonObject {

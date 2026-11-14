@@ -47,6 +47,7 @@ data class VerifyCardsUiState(
   val choices: List<EpiDose> = emptyList(),
   val matchChanged: Boolean = false,
   val matchedTo: List<EpiDose> = emptyList(),
+  val listStale: Boolean = false,
 )
 
 /** Scans each card of a referral's child through [VerificationService]. */
@@ -84,6 +85,7 @@ class VerifyCardsViewModel(
           matchChanged = outcome is MatchOutcome.Changed,
           matchedTo =
             if (outcome is MatchOutcome.Matched) it.matchedTo + outcome.dose else it.matchedTo,
+          listStale = it.listStale || (outcome is MatchOutcome.Matched && outcome.listStale),
         )
       }
       loadUnmatched()

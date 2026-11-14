@@ -15,6 +15,7 @@
  */
 package dev.ohs.trustdemo.onesa.data.verification
 
+import dev.ohs.fhir.engine.sync.SyncJobStatus
 import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.control.Dates
 import dev.ohs.trustdemo.control.Step
@@ -34,6 +35,8 @@ import dev.ohs.trustdemo.onesa.data.schedule.BookingOutcome
 import dev.ohs.trustdemo.onesa.data.schedule.SchedulePlans
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
 import dev.ohs.trustdemo.onesa.data.schedule.VisitBooking
+import dev.ohs.trustdemo.onesa.data.sync.FakeSyncManager
+import dev.ohs.trustdemo.onesa.data.sync.LocalCopy
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import dev.ohs.trustdemo.trustkit.StandIn
 import io.ktor.client.HttpClient
@@ -91,7 +94,7 @@ class CardVerificationTest {
       session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
       httpClient = HttpClient(gateway.engine),
       baseUrl = "http://gateway/fhir",
-      refresh = {},
+      refresh = { true },
       clock = { Instant.fromEpochSeconds(nowSeconds) },
     )
 
@@ -102,7 +105,10 @@ class CardVerificationTest {
       session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
       httpClient = HttpClient(gateway.engine),
       baseUrl = "http://gateway/fhir",
-      refresh = { refreshes++ },
+      refresh = {
+        refreshes++
+        true
+      },
       clock = { Instant.fromEpochSeconds(nowSeconds) },
     )
 
@@ -459,7 +465,10 @@ class CardVerificationTest {
     )
   }
 
-  private val booking =
+  private fun visitBooking(
+    refresh: suspend () -> Boolean,
+    caughtUp: () -> Boolean = { true },
+  ): VisitBooking =
     VisitBooking(
       schedule =
         ScheduleService(
@@ -473,9 +482,16 @@ class CardVerificationTest {
       session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
       httpClient = HttpClient(gateway.engine),
       baseUrl = "http://gateway/fhir",
-      refresh = { refreshes++ },
+      refresh = refresh,
+      caughtUp = caughtUp,
       clock = { Instant.fromEpochSeconds(nowSeconds) },
     )
+
+  private val booking =
+    visitBooking({
+      refreshes++
+      true
+    })
 
   private fun protocol(name: String): String =
     File("src/commonMain/composeResources/files/protocols/PlanDefinition-$name.json").readText()
@@ -547,6 +563,42 @@ class CardVerificationTest {
   }
 
   private suspend fun book() = booking.book(booking.open(referral.id), patientId)
+
+  @Test
+  fun bookingWaitsForASyncAfterAFailedRefresh() = runTest {
+    withMappedDosesAndReferral()
+    var status: SyncJobStatus = SyncJobStatus.Failed()
+    val copy = LocalCopy(FakeSyncManager { status })
+    val lagging = visitBooking(copy::refreshAfterWrite, copy::caughtUp)
+    val open = lagging.open(referral.id)
+
+    assertEquals(false, copy.refreshAfterWrite())
+    assertIs<BookingOutcome.SyncFirst>(lagging.book(open, patientId))
+    assertEquals(0, gateway.recommendations.size)
+    assertEquals("active", gateway.serviceRequests.getValue(referral.id).text("status"))
+
+    status = SyncJobStatus.Succeeded()
+    copy.syncNow()
+    assertIs<BookingOutcome.Booked>(lagging.book(open, patientId))
+  }
+
+  @Test
+  fun aMatchedDoseSaysWhenTheListCouldNotBeRefreshed() = runTest {
+    importedDoses()
+    val failing =
+      DoseMatchService(
+        repository = repository,
+        session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
+        httpClient = HttpClient(gateway.engine),
+        baseUrl = "http://gateway/fhir",
+        refresh = { error("offline") },
+        clock = { Instant.fromEpochSeconds(nowSeconds) },
+      )
+
+    val outcome = failing.confirm(failing.unmatched(patientId).single(), hepBChoice)
+
+    assertEquals(MatchOutcome.Matched(hepBChoice, listStale = true), outcome)
+  }
 
   private fun reopenReferral() {
     gateway.serviceRequests[referral.id] =
@@ -642,7 +694,8 @@ class CardVerificationTest {
         session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
         httpClient = HttpClient(gateway.engine),
         baseUrl = "http://gateway/fhir",
-        refresh = {},
+        refresh = { true },
+        caughtUp = { true },
         clock = { Instant.fromEpochSeconds(nowSeconds) },
       )
 
