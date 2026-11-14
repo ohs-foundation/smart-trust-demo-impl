@@ -128,6 +128,7 @@ services:
       GATEWAY_URL: http://gateway:8080/fhir
       JWKS_URL: http://keycloak:8080/realms/ohs-player/protocol/openid-connect/certs
       TOKEN_ISSUER: http://keycloak.onesa.${STACK_HOST}:${PROXY_PORT}/realms/ohs-player
+      VHL_ALLOWED_CLIENTS: ohs-player-reference-app,trust-demo-cli
       STACK_HOST: ${STACK_HOST}
       VHL_TLS_PORT: ${VHL_TLS_PORT}
       LINK_KEY_FILE: /run/keys/XXK_LINK.key.pem

@@ -18,9 +18,11 @@ package dev.ohs.trustdemo.vhl
 import com.auth0.jwk.JwkProvider
 import java.time.Clock
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
@@ -37,6 +39,7 @@ private const val LINK_LABEL = "Immunization summary"
 class VhlDeps(
   val publicUrl: String,
   val issuer: String,
+  val allowedClients: Set<String>,
   val jwks: JwkProvider,
   val hapi: FhirBackend,
   val gateway: FhirBackend,
@@ -50,8 +53,7 @@ class VhlService(private val deps: VhlDeps) {
   suspend fun generate(caller: String, bearer: String, request: ShareRequest): JsonObject {
     val now = deps.clock.instant()
     val records = Records(deps.publicUrl, now)
-    val expires = request.expires()
-    if (!expires.isAfter(now)) throw BadRequest("the period has already ended")
+    if (!request.expires.isAfter(now)) throw BadRequest("the period has already ended")
 
     val household = household(caller, bearer)
     val outside = request.people.filterNot { it in household }
@@ -60,11 +62,9 @@ class VhlService(private val deps: VhlDeps) {
     val shares =
       request.people.map { person ->
         val patient = deps.gateway.read("Patient/$person", bearer = bearer)
-        val immunizations =
-          deps.gateway.search("Immunization", mapOf("patient" to person, "_count" to "200"), bearer)
+        val immunizations = deps.gateway.search("Immunization", mapOf("patient" to person), bearer)
         records.prepare(caller, patient, immunizations, request)
       }
-
     val issued =
       shares.map { share ->
         val key = Hcert.vhl.newKey()
@@ -73,26 +73,40 @@ class VhlService(private val deps: VhlDeps) {
           VhlPayload(
             url = records.manifestUrl(share.listId, share.patient),
             key = key,
-            exp = expires.epochSecond,
+            exp = request.expires.epochSecond,
             flag = PASSCODE_FLAG,
             label = LINK_LABEL,
             v = 1,
           )
-        deps.passcodes.keep(share.consent.id(), request.passcode)
-        deps.hapi.transaction(records.transaction(share, jwe))
-        share to deps.signer.sign(link, now, expires)
+        Triple(share, jwe, deps.signer.sign(link, now, request.expires))
       }
-    return response(issued)
+
+    issued.forEach { (share, _, _) -> deps.passcodes.keep(share.consent.id(), request.passcode) }
+    deps.hapi.transaction(records.transaction(issued.map { (share, jwe, _) -> share to jwe }))
+    return response(issued.map { (share, _, hc1) -> share to hc1 })
   }
 
-  private suspend fun household(caller: String, bearer: String): Set<String> =
-    deps.gateway
-      .search("Group", mapOf("member" to "Patient/$caller"), bearer)
+  /**
+   * The patients of the households the caller manages, as the gateway's household check reads them.
+   */
+  private suspend fun household(caller: String, bearer: String): Set<String> {
+    val managers =
+      deps.gateway
+        .read("Patient/$caller", bearer = bearer)["link"]
+        ?.jsonArray
+        ?.mapNotNull { it.jsonObject["other"]?.jsonObject?.text("reference") }
+        ?.filter { it.startsWith("RelatedPerson/") }
+        .orEmpty()
+    return managers
+      .flatMap { deps.gateway.search("Group", mapOf("managing-entity" to it), bearer) }
       .flatMap { it["member"]?.jsonArray.orEmpty() }
-      .mapNotNull { it.jsonObject["entity"]?.jsonObject?.text("reference") }
+      .map { it.jsonObject }
+      .filterNot { it["inactive"]?.jsonPrimitive?.boolean == true }
+      .mapNotNull { it["entity"]?.jsonObject?.text("reference") }
       .filter { it.startsWith("Patient/") }
       .map { it.removePrefix("Patient/") }
       .toSet()
+  }
 
   private fun response(issued: List<Pair<Share, String>>) = buildJsonObject {
     put("resourceType", "Parameters")

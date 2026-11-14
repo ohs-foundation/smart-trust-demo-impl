@@ -15,6 +15,7 @@
  */
 package dev.ohs.trustdemo.vhl
 
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -35,23 +36,22 @@ class NotYourHousehold(message: String) : Exception(message)
 
 private const val MIN_PASSCODE = 4
 private const val MAX_PASSCODE = 12
+private const val PURPOSE = "TREAT"
+private val MAX_PERIOD = Duration.ofDays(365)
 private val DATE = Regex("""\d{4}-\d{2}-\d{2}""")
 
 /** The `$generate-vhl` input: who to share, for what, until when, behind which passcode. */
 class ShareRequest(
   val people: List<String>,
-  val purpose: String,
-  val periodStart: String?,
+  val periodStart: String,
   val periodEnd: String,
   val passcode: String,
 ) {
+  /** The instant the consent starts: the start of the day when the period starts on a date. */
+  val starts: Instant = instantOf(periodStart, endOfDay = false)
+
   /** The instant the consent ends: the end of the day when the period ends on a date. */
-  fun expires(): Instant =
-    if (DATE.matches(periodEnd)) {
-      LocalDate.parse(periodEnd).plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC)
-    } else {
-      OffsetDateTime.parse(periodEnd).toInstant()
-    }
+  val expires: Instant = instantOf(periodEnd, endOfDay = true)
 
   companion object {
     fun parse(text: String): ShareRequest {
@@ -80,6 +80,9 @@ class ShareRequest(
             ?: throw BadRequest("each person is a Patient reference")
         }
       if (people.isEmpty()) throw BadRequest("at least one person is needed")
+      if (one("purpose").string("valueCode") != PURPOSE) {
+        throw BadRequest("the only purpose is $PURPOSE")
+      }
       val period =
         one("period")["valuePeriod"]?.jsonObject ?: throw BadRequest("period is a Period")
       val passcode =
@@ -88,21 +91,34 @@ class ShareRequest(
         throw BadRequest("the passcode is $MIN_PASSCODE to $MAX_PASSCODE characters")
       }
       val request =
-        ShareRequest(
-          people = people.distinct(),
-          purpose = one("purpose").string("valueCode") ?: throw BadRequest("purpose is a code"),
-          periodStart = period.string("start"),
-          periodEnd = period.string("end") ?: throw BadRequest("the period needs an end"),
-          passcode = passcode,
-        )
-      try {
-        request.expires()
-      } catch (e: DateTimeParseException) {
-        throw BadRequest("the period end is not a date or dateTime")
+        try {
+          ShareRequest(
+            people = people.distinct(),
+            periodStart = period.string("start") ?: throw BadRequest("the period needs a start"),
+            periodEnd = period.string("end") ?: throw BadRequest("the period needs an end"),
+            passcode = passcode,
+          )
+        } catch (e: DateTimeParseException) {
+          throw BadRequest("the period start and end are dates or dateTimes")
+        }
+      if (request.starts.isAfter(request.expires))
+        throw BadRequest("the period ends before it starts")
+      if (Duration.between(request.starts, request.expires) > MAX_PERIOD) {
+        throw BadRequest("the period is at most ${MAX_PERIOD.toDays()} days")
       }
       return request
     }
 
     private fun JsonObject.string(name: String) = this[name]?.jsonPrimitive?.content
+
+    private fun instantOf(text: String, endOfDay: Boolean): Instant =
+      if (DATE.matches(text)) {
+        LocalDate.parse(text)
+          .plusDays(if (endOfDay) 1 else 0)
+          .atStartOfDay()
+          .toInstant(ZoneOffset.UTC)
+      } else {
+        OffsetDateTime.parse(text).toInstant()
+      }
   }
 }

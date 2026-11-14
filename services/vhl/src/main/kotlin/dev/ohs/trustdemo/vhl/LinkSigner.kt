@@ -31,13 +31,32 @@ import who.smart.trust.payloads.Payload
 import who.smart.trust.types.CoseAlgorithm
 import who.smart.trust.vhl.VhlPayload
 
-/** Signs a link's HCERT as the link issuer [country]; the key is a mounted test key. */
-class LinkSigner(
+/** Signs a link's HCERT as the link issuer. */
+interface LinkSigner {
+  fun sign(link: VhlPayload, issuedAt: Instant, expires: Instant): String
+
+  companion object {
+    /** A signer for issuer [country] from a mounted test key and its certificate. */
+    fun fromPem(keyPem: String, certificatePem: String, country: String): LinkSigner {
+      val key = KeyFactory.getInstance("EC").generatePrivate(PKCS8EncodedKeySpec(pemBody(keyPem)))
+      val certificate =
+        CertificateFactory.getInstance("X.509")
+          .generateCertificate(ByteArrayInputStream(pemBody(certificatePem)))
+      return EcLinkSigner(key, certificate.encoded, country)
+    }
+
+    private fun pemBody(pem: String): ByteArray =
+      Base64.getMimeDecoder()
+        .decode(pem.lines().filterNot { it.startsWith("-----") }.joinToString(""))
+  }
+}
+
+private class EcLinkSigner(
   private val key: PrivateKey,
   private val certificateDer: ByteArray,
   private val country: String,
-) {
-  fun sign(link: VhlPayload, issuedAt: Instant, expires: Instant): String {
+) : LinkSigner {
+  override fun sign(link: VhlPayload, issuedAt: Instant, expires: Instant): String {
     val request =
       IssueRequest(
         payloads = listOf(Payload.Vhl(link)),
@@ -57,23 +76,9 @@ class LinkSigner(
     return ok(Hcert.issuer.finish(pending, signature)).hc1
   }
 
-  companion object {
-    fun fromPem(keyPem: String, certificatePem: String, country: String): LinkSigner {
-      val key = KeyFactory.getInstance("EC").generatePrivate(PKCS8EncodedKeySpec(pemBody(keyPem)))
-      val certificate =
-        CertificateFactory.getInstance("X.509")
-          .generateCertificate(ByteArrayInputStream(pemBody(certificatePem)))
-      return LinkSigner(key, certificate.encoded, country)
+  private fun <T, E> ok(result: HcertResult<T, E>): T =
+    when (result) {
+      is HcertResult.Ok -> result.value
+      is HcertResult.Err -> error("link issuance failed: ${result.error}")
     }
-
-    private fun pemBody(pem: String): ByteArray =
-      Base64.getMimeDecoder()
-        .decode(pem.lines().filterNot { it.startsWith("-----") }.joinToString(""))
-
-    private fun <T, E> ok(result: HcertResult<T, E>): T =
-      when (result) {
-        is HcertResult.Ok -> result.value
-        is HcertResult.Err -> error("link issuance failed: ${result.error}")
-      }
-  }
 }

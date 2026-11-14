@@ -28,6 +28,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
+import java.net.URI
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -36,32 +37,38 @@ import kotlinx.serialization.json.jsonObject
 private val fhirContentType = ContentType.parse("application/fhir+json")
 
 /** A FHIR server the service calls; a caller's bearer token is passed through when given. */
-class FhirBackend(private val baseUrl: String, engine: HttpClientEngine) {
+class FhirBackend(
+  private val baseUrl: String,
+  engine: HttpClientEngine,
+  private val relaysCaller: Boolean = false,
+) {
   private val client = HttpClient(engine)
 
   suspend fun read(
     path: String,
     params: Map<String, String> = emptyMap(),
     bearer: String? = null,
-  ): JsonObject {
-    val response =
-      client.get("$baseUrl/$path") {
-        header(HttpHeaders.Accept, fhirContentType.toString())
-        bearer?.let { header(HttpHeaders.Authorization, "Bearer $it") }
-        params.forEach { (name, value) -> parameter(name, value) }
-      }
-    return decode(response.status, response.bodyAsText(), "GET $path")
-  }
+  ): JsonObject = get("$baseUrl/$path", params, bearer)
 
+  /** Every resource a search finds, following the bundle's next links to the last page. */
   suspend fun search(
     type: String,
     params: Map<String, String>,
     bearer: String? = null,
-  ): List<JsonObject> =
-    read(type, params, bearer)["entry"]
-      ?.jsonArray
-      ?.mapNotNull { it.jsonObject["resource"]?.jsonObject }
-      .orEmpty()
+  ): List<JsonObject> {
+    var page = read(type, params, bearer)
+    val found = page.resources().toMutableList()
+    while (true) {
+      val next =
+        page["link"]
+          ?.jsonArray
+          ?.map { it.jsonObject }
+          ?.firstOrNull { it.text("relation") == "next" } ?: break
+      page = get("$baseUrl?${URI(next.text("url")!!).rawQuery}", emptyMap(), bearer)
+      found += page.resources()
+    }
+    return found
+  }
 
   suspend fun transaction(bundle: JsonObject) {
     val response =
@@ -72,11 +79,29 @@ class FhirBackend(private val baseUrl: String, engine: HttpClientEngine) {
     decode(response.status, response.bodyAsText(), "POST transaction")
   }
 
+  private suspend fun get(url: String, params: Map<String, String>, bearer: String?): JsonObject {
+    val response =
+      client.get(url) {
+        header(HttpHeaders.Accept, fhirContentType.toString())
+        bearer?.let { header(HttpHeaders.Authorization, "Bearer $it") }
+        params.forEach { (name, value) -> parameter(name, value) }
+      }
+    return decode(response.status, response.bodyAsText(), "GET")
+  }
+
+  private fun JsonObject.resources() =
+    this["entry"]?.jsonArray?.mapNotNull { it.jsonObject["resource"]?.jsonObject }.orEmpty()
+
   private fun decode(status: HttpStatusCode, text: String, what: String): JsonObject {
-    if (!status.isSuccess()) throw BackendRefused(status, "$what answered ${status.value}")
+    if (!status.isSuccess()) {
+      val denied =
+        relaysCaller &&
+          (status == HttpStatusCode.Forbidden || status == HttpStatusCode.Unauthorized)
+      throw BackendRefused(denied, "$what answered ${status.value}")
+    }
     return Json.parseToJsonElement(text).jsonObject
   }
 }
 
-/** A backend answered with a failure; [status] is what it said. */
-class BackendRefused(val status: HttpStatusCode, message: String) : Exception(message)
+/** A backend answered with a failure; [deniedCaller] when the caller's own token was refused. */
+class BackendRefused(val deniedCaller: Boolean, message: String) : Exception(message)

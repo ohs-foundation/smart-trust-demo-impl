@@ -25,6 +25,7 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.Parameters
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import java.security.KeyPair
@@ -49,6 +50,7 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 const val ISSUER = "http://keycloak.onesa.test:8480/realms/ohs-player"
+const val CLIENT = "ohs-player-reference-app"
 const val PUBLIC_URL = "https://vhl.onesa.test:8443"
 private const val KEY_ID = "test-key"
 
@@ -90,6 +92,7 @@ class TestIdentityProvider(private val pair: KeyPair = newKeyPair()) {
 
   fun token(
     fhirUser: String?,
+    azp: String = CLIENT,
     issuer: String = ISSUER,
     expiresAt: Instant = Instant.now().plusSeconds(3600),
     signedWith: KeyPair = pair,
@@ -98,6 +101,7 @@ class TestIdentityProvider(private val pair: KeyPair = newKeyPair()) {
       .withKeyId(KEY_ID)
       .withIssuer(issuer)
       .withSubject("subject")
+      .withClaim("azp", azp)
       .withExpiresAt(Date.from(expiresAt))
       .apply { fhirUser?.let { withClaim("fhirUser", it) } }
       .sign(Algorithm.RSA256(null, signedWith.private as RSAPrivateKey))
@@ -117,26 +121,32 @@ fun searchset(vararg resources: JsonObject): JsonObject = buildJsonObject {
   )
 }
 
-fun patient(id: String, family: String, given: String): JsonObject = buildJsonObject {
-  put("resourceType", "Patient")
-  put("id", id)
-  putJsonArray("identifier") {
-    add(
-      buildJsonObject {
-        put("system", "http://smart.who.int/trust-demo/sid/onesa-national-id")
-        put("value", "ID-$id")
+fun patient(id: String, family: String, given: String, managedBy: String? = null): JsonObject =
+  buildJsonObject {
+    put("resourceType", "Patient")
+    put("id", id)
+    managedBy?.let {
+      putJsonArray("link") {
+        add(buildJsonObject { putJsonObject("other") { put("reference", "RelatedPerson/$it") } })
       }
-    )
+    }
+    putJsonArray("identifier") {
+      add(
+        buildJsonObject {
+          put("system", "http://smart.who.int/trust-demo/sid/onesa-national-id")
+          put("value", "ID-$id")
+        }
+      )
+    }
+    putJsonArray("name") {
+      add(
+        buildJsonObject {
+          put("family", family)
+          putJsonArray("given") { add(JsonPrimitive(given)) }
+        }
+      )
+    }
   }
-  putJsonArray("name") {
-    add(
-      buildJsonObject {
-        put("family", family)
-        putJsonArray("given") { add(JsonPrimitive(given)) }
-      }
-    )
-  }
-}
 
 fun immunization(id: String, patientId: String): JsonObject = buildJsonObject {
   put("resourceType", "Immunization")
@@ -145,44 +155,53 @@ fun immunization(id: String, patientId: String): JsonObject = buildJsonObject {
   putJsonObject("patient") { put("reference", "Patient/$patientId") }
 }
 
-fun group(vararg memberIds: String): JsonObject = buildJsonObject {
-  put("resourceType", "Group")
-  put("id", "household")
-  putJsonArray("member") {
-    memberIds.forEach { id ->
-      add(buildJsonObject { putJsonObject("entity") { put("reference", "Patient/$id") } })
+fun group(vararg memberIds: String, inactive: Set<String> = emptySet()): JsonObject =
+  buildJsonObject {
+    put("resourceType", "Group")
+    put("id", "household")
+    putJsonArray("member") {
+      memberIds.forEach { id ->
+        add(
+          buildJsonObject {
+            putJsonObject("entity") { put("reference", "Patient/$id") }
+            if (id in inactive) put("inactive", true)
+          }
+        )
+      }
     }
   }
-}
 
-/** The gateway as a household member sees it; records every request it receives. */
+/**
+ * The gateway as a household member sees it, one resource to a page; records every request. A
+ * gateway that [overReturns] ignores the patient filter.
+ */
 class FakeGateway(
-  private val groups: Map<String, JsonObject>,
+  val groups: Map<String, JsonObject>,
   private val patients: List<JsonObject>,
   private val immunizations: List<JsonObject> = emptyList(),
+  private val overReturns: Boolean = false,
 ) {
   val requests = mutableListOf<RecordedRequest>()
 
   val engine = MockEngine { request ->
     val path = request.url.encodedPath
+    val params = request.url.parameters
     requests += RecordedRequest(request.url.toString(), request.headers[HttpHeaders.Authorization])
     val reply: JsonObject? =
       when {
         path == "/fhir/Group" ->
-          searchset(
-            *groups
-              .filterKeys { "Patient/$it" == request.url.parameters["member"] }
-              .values
-              .toTypedArray()
+          page(
+            groups.filterKeys { "RelatedPerson/$it" == params["managing-entity"] }.values.toList(),
+            params,
           )
-        path == "/fhir/Immunization" ->
-          searchset(
-            *immunizations
-              .filter {
+        path == "/fhir" || path == "/fhir/Immunization" ->
+          page(
+            immunizations.filter {
+              overReturns ||
                 it.getValue("patient").jsonObject.getValue("reference").jsonPrimitive.content ==
-                  "Patient/${request.url.parameters["patient"]}"
-              }
-              .toTypedArray()
+                  "Patient/${params["patient"]}"
+            },
+            params,
           )
         path.startsWith("/fhir/Patient/") ->
           patients.firstOrNull {
@@ -192,17 +211,42 @@ class FakeGateway(
       }
     if (reply == null) respond("", HttpStatusCode.NotFound) else respondFhir(reply)
   }
+
+  private fun page(all: List<JsonObject>, params: Parameters): JsonObject {
+    val offset = params["_offset"]?.toInt() ?: 0
+    val result = searchset(*all.drop(offset).take(1).toTypedArray())
+    if (offset + 1 >= all.size) return result
+    val next =
+      "http://gateway.onesa.test:8480/fhir?_getpages=x&patient=${params["patient"]}&_offset=${offset + 1}"
+    return JsonObject(
+      result +
+        ("link" to
+          buildJsonArray {
+            add(
+              buildJsonObject {
+                put("relation", "next")
+                put("url", next)
+              }
+            )
+          })
+    )
+  }
 }
 
 data class RecordedRequest(val url: String, val authorization: String?)
 
 /** HAPI as the trusted backend: accepts every transaction and keeps what it was sent. */
 class FakeHapi {
+  var failWith: HttpStatusCode? = null
+
   val transactions = mutableListOf<JsonObject>()
 
   val engine = MockEngine { request ->
     check(request.method == HttpMethod.Post && request.url.encodedPath == "/fhir") {
       "unexpected ${request.method} ${request.url}"
+    }
+    failWith?.let {
+      return@MockEngine respond("", it)
     }
     transactions += Json.parseToJsonElement((request.body as TextContent).text).jsonObject
     respondFhir(

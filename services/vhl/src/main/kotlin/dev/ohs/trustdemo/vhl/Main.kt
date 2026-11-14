@@ -35,13 +35,14 @@ fun main() {
     VhlDeps(
       publicUrl = "https://vhl.onesa.${required("STACK_HOST")}:${required("VHL_TLS_PORT")}",
       issuer = required("TOKEN_ISSUER"),
+      allowedClients = required("VHL_ALLOWED_CLIENTS").split(",").map { it.trim() }.toSet(),
       jwks =
         JwkProviderBuilder(URI(required("JWKS_URL")).toURL())
           .cached(10, 1, TimeUnit.HOURS)
           .rateLimited(10, 1, TimeUnit.MINUTES)
           .build(),
       hapi = FhirBackend(required("HAPI_URL"), CIO.create()),
-      gateway = FhirBackend(required("GATEWAY_URL"), CIO.create()),
+      gateway = FhirBackend(required("GATEWAY_URL"), CIO.create(), relaysCaller = true),
       signer =
         LinkSigner.fromPem(
           File(required("LINK_KEY_FILE")).readText(),

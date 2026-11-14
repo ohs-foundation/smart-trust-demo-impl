@@ -53,6 +53,7 @@ import who.smart.trust.payloads.Payload
 import who.smart.trust.verifier.VerificationResult
 import who.smart.trust.verifier.VerifierOptions
 import who.smart.trust.vhl.Decrypted
+import who.smart.trust.vhl.VhlPayload
 
 private val TESTKIT = File("../../testkit")
 
@@ -63,18 +64,24 @@ class GenerateVhlTest {
   private val household = group("bounmy", "khamla", "somsak")
   private val patients =
     listOf(
-      patient("bounmy", "SENGMANY", "Bounmy"),
+      patient("bounmy", "SENGMANY", "Bounmy", managedBy = "rp-bounmy"),
       patient("khamla", "SENGMANY", "Khamla"),
       patient("somsak", "SENGMANY", "Somsak"),
       patient("stranger", "OTHER", "Person"),
     )
-  private val gateway =
+  private var gateway =
     FakeGateway(
-      groups = mapOf("bounmy" to household, "khamla" to household),
+      groups = mapOf("rp-bounmy" to household),
       patients = patients,
       immunizations = listOf(immunization("hepb", "somsak"), immunization("bcg", "somsak")),
     )
   private val hapi = FakeHapi()
+  private var signer =
+    LinkSigner.fromPem(
+      File(TESTKIT, "XXK_LINK.key.pem").readText(),
+      File(TESTKIT, "XXK_LINK.crt.pem").readText(),
+      "XK",
+    )
   private val kept = mutableListOf<Pair<String, String>>()
 
   private fun withService(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
@@ -83,15 +90,11 @@ class GenerateVhlTest {
         VhlDeps(
           publicUrl = PUBLIC_URL,
           issuer = ISSUER,
+          allowedClients = setOf(CLIENT, "trust-demo-cli"),
           jwks = idp.provider,
           hapi = FhirBackend("http://hapi:8080/fhir", hapi.engine),
-          gateway = FhirBackend("http://gateway:8080/fhir", gateway.engine),
-          signer =
-            LinkSigner.fromPem(
-              File(TESTKIT, "XXK_LINK.key.pem").readText(),
-              File(TESTKIT, "XXK_LINK.crt.pem").readText(),
-              "XK",
-            ),
+          gateway = FhirBackend("http://gateway:8080/fhir", gateway.engine, relaysCaller = true),
+          signer = signer,
           passcodes = PasscodeStore { consentId, passcode -> kept += consentId to passcode },
           clock = Clock.fixed(now, ZoneOffset.UTC),
         )
@@ -100,7 +103,13 @@ class GenerateVhlTest {
     block()
   }
 
-  private fun parameters(vararg people: String, passcode: String = "482913"): String =
+  private fun parameters(
+    vararg people: String,
+    passcode: String = "482913",
+    purpose: String = "TREAT",
+    start: String = now.toString(),
+    end: String = periodEnd.toString(),
+  ): String =
     buildJsonObject {
         put("resourceType", "Parameters")
         putJsonArray("parameter") {
@@ -115,15 +124,15 @@ class GenerateVhlTest {
           add(
             buildJsonObject {
               put("name", "purpose")
-              put("valueCode", "TREAT")
+              put("valueCode", purpose)
             }
           )
           add(
             buildJsonObject {
               put("name", "period")
               putJsonObject("valuePeriod") {
-                put("start", now.toString())
-                put("end", periodEnd.toString())
+                put("start", start)
+                put("end", end)
               }
             }
           )
@@ -248,7 +257,7 @@ class GenerateVhlTest {
     assertEquals(HttpStatusCode.OK, response.status)
     val issued = links(response.bodyAsText())
     assertEquals(listOf("Patient/bounmy", "Patient/somsak"), issued.map { it.person })
-    assertEquals(2, hapi.transactions.size)
+    assertEquals(1, hapi.transactions.size)
     assertEquals(2, issued.map { it.hc1 }.toSet().size)
     assertEquals(2, issued.map { linkPayload(it.hc1).key }.toSet().size)
 
@@ -316,5 +325,98 @@ class GenerateVhlTest {
 
     assertEquals(emptyList(), hapi.transactions)
     assertNotEquals(HttpStatusCode.Unauthorized, generate(bounmyToken(), body).status)
+  }
+
+  @Test
+  fun aTokenForAnotherClientIsRefused() = withService {
+    val other = idp.token("Patient/bounmy", azp = "some-other-client")
+
+    assertEquals(HttpStatusCode.Unauthorized, generate(other, parameters("bounmy")).status)
+    assertEquals(emptyList(), hapi.transactions)
+  }
+
+  @Test
+  fun anyPurposeButTreatmentIsRefused() = withService {
+    val response = generate(bounmyToken(), parameters("bounmy", purpose = "HMARKT"))
+
+    assertEquals(HttpStatusCode.BadRequest, response.status)
+    assertEquals(emptyList(), hapi.transactions)
+  }
+
+  @Test
+  fun anInvertedMalformedOrOverlongPeriodIsRefused() = withService {
+    val periods =
+      listOf(
+        periodEnd.toString() to now.toString(),
+        "next week" to periodEnd.toString(),
+        now.toString() to now.plusSeconds(366 * 86_400L).toString(),
+      )
+
+    periods.forEach { (start, end) ->
+      val response = generate(bounmyToken(), parameters("bounmy", start = start, end = end))
+      assertEquals(HttpStatusCode.BadRequest, response.status, "$start to $end")
+    }
+    assertEquals(emptyList(), hapi.transactions)
+  }
+
+  @Test
+  fun aFailureForTheSecondPersonWritesNothing() = withService {
+    val real = signer
+    var signed = 0
+    signer =
+      object : LinkSigner {
+        override fun sign(link: VhlPayload, issuedAt: Instant, expires: Instant): String {
+          check(++signed < 2) { "the second signature fails" }
+          return real.sign(link, issuedAt, expires)
+        }
+      }
+
+    val response = generate(bounmyToken(), parameters("bounmy", "somsak"))
+
+    assertEquals(HttpStatusCode.InternalServerError, response.status)
+    assertEquals(emptyList(), hapi.transactions)
+    assertEquals(emptyList(), kept)
+  }
+
+  @Test
+  fun aRefusedWriteIsABadGatewayAndAllPeopleShareOneTransaction() = withService {
+    val ok = generate(bounmyToken(), parameters("bounmy", "somsak"))
+    assertEquals(HttpStatusCode.OK, ok.status)
+    assertEquals(1, hapi.transactions.size)
+    assertEquals(10, hapi.transactions.single().resources().size)
+
+    hapi.transactions.clear()
+    hapi.failWith = HttpStatusCode.Forbidden
+    val refused = generate(bounmyToken(), parameters("bounmy", "somsak"))
+
+    assertEquals(HttpStatusCode.BadGateway, refused.status)
+    assertEquals(emptyList(), hapi.transactions)
+  }
+
+  @Test
+  fun anOverReturningGatewayLeaksNoOtherPersonsImmunizations() = withService {
+    gateway =
+      FakeGateway(
+        gateway.groups,
+        patients,
+        listOf(immunization("hepb", "somsak")),
+        overReturns = true,
+      )
+
+    val link = links(generate(bounmyToken(), parameters("bounmy")).bodyAsText()).single()
+
+    assertEquals(0, decryptedIps(link).resources().count { it.type() == "Immunization" })
+  }
+
+  @Test
+  fun anInactiveMemberCannotBePicked() = withService {
+    gateway =
+      FakeGateway(
+        mapOf("rp-bounmy" to group("bounmy", "khamla", "somsak", inactive = setOf("somsak"))),
+        patients,
+      )
+
+    assertEquals(HttpStatusCode.Forbidden, generate(bounmyToken(), parameters("somsak")).status)
+    assertEquals(emptyList(), hapi.transactions)
   }
 }

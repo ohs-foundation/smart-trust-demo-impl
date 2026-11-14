@@ -63,25 +63,29 @@ class Records(private val publicUrl: String, private val now: Instant) {
     immunizations: List<JsonObject>,
     request: ShareRequest,
   ): Share {
+    val ownImmunizations =
+      immunizations.filter {
+        it["patient"]?.jsonObject?.text("reference") == "Patient/${patient.id()}"
+      }
     val bundleId = newId()
     val consent = consent(newId(), caller, patient.id(), bundleId, request)
     return Share(
       patient = patient,
       consent = consent,
-      ips = ips(bundleId, patient, immunizations, consent),
+      ips = ips(bundleId, patient, ownImmunizations, consent),
       binaryId = newId(),
       documentReferenceId = newId(),
       listId = newId(),
     )
   }
 
-  /** The one HAPI transaction for [share], with its IPS encrypted to [jwe]. */
-  fun transaction(share: Share, jwe: String): JsonObject {
-    val patientId = share.patient.id()
-    return buildJsonObject {
-      put("resourceType", "Bundle")
-      put("type", "transaction")
-      putJsonArray("entry") {
+  /** The one HAPI transaction for every share, each with its IPS encrypted to its JWE. */
+  fun transaction(shares: List<Pair<Share, String>>): JsonObject = buildJsonObject {
+    put("resourceType", "Bundle")
+    put("type", "transaction")
+    putJsonArray("entry") {
+      shares.forEach { (share, jwe) ->
+        val patientId = share.patient.id()
         add(entry(share.consent))
         add(entry(share.ips))
         add(entry(binary(share.binaryId, jwe)))
@@ -159,11 +163,11 @@ class Records(private val publicUrl: String, private val now: Instant) {
     putJsonObject("provision") {
       put("type", "permit")
       putJsonObject("period") {
-        request.periodStart?.let { put("start", it) }
+        put("start", request.periodStart)
         put("end", request.periodEnd)
       }
       putJsonArray("purpose") {
-        add(coding("http://terminology.hl7.org/CodeSystem/v3-ActReason", request.purpose, null))
+        add(coding("http://terminology.hl7.org/CodeSystem/v3-ActReason", "TREAT", "treatment"))
       }
       putJsonArray("data") {
         add(

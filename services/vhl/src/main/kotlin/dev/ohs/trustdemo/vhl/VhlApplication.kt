@@ -28,15 +28,18 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.auth.principal
 import io.ktor.server.request.header
+import io.ktor.server.request.path
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import org.slf4j.LoggerFactory
 
 private const val AUTH = "keycloak"
 private val FHIR_JSON = ContentType.parse("application/fhir+json")
@@ -52,7 +55,10 @@ fun Application.vhlModule(deps: VhlDeps) {
     jwt(AUTH) {
       verifier(deps.jwks, deps.issuer)
       validate { credential ->
-        fhirUser(credential.payload.getClaim("fhirUser"))?.let { JWTPrincipal(credential.payload) }
+        val fromAllowedClient = credential.payload.getClaim("azp").asString() in deps.allowedClients
+        fhirUser(credential.payload.getClaim("fhirUser"))
+          ?.takeIf { fromAllowedClient }
+          ?.let { JWTPrincipal(credential.payload) }
       }
     }
   }
@@ -71,17 +77,24 @@ fun Application.vhlModule(deps: VhlDeps) {
         } catch (e: NotYourHousehold) {
           call.respondOutcome(HttpStatusCode.Forbidden, "forbidden", e)
         } catch (e: BackendRefused) {
-          val denied =
-            e.status == HttpStatusCode.Forbidden || e.status == HttpStatusCode.Unauthorized
-          call.respondOutcome(
-            if (denied) HttpStatusCode.Forbidden else HttpStatusCode.BadGateway,
-            if (denied) "forbidden" else "transient",
-            e,
-          )
+          if (e.deniedCaller) call.respondOutcome(HttpStatusCode.Forbidden, "forbidden", e)
+          else call.respondFailure(HttpStatusCode.BadGateway, e)
+        } catch (e: CancellationException) {
+          throw e
+        } catch (e: Exception) {
+          call.respondFailure(HttpStatusCode.InternalServerError, e)
         }
       }
     }
   }
+}
+
+private val log = LoggerFactory.getLogger("dev.ohs.trustdemo.vhl")
+
+/** Logs only what the failure was and where; nothing of the request itself. */
+private suspend fun ApplicationCall.respondFailure(status: HttpStatusCode, cause: Exception) {
+  log.error("{} on {}", cause::class.simpleName, request.path())
+  respondOutcome(status, "exception", Exception("the service could not complete the request"))
 }
 
 private suspend fun ApplicationCall.respondOutcome(

@@ -32,7 +32,7 @@ dependencies {
   implementation(libs.ktor.server.auth.jwt)
   implementation(libs.ktor.server.cio)
   implementation(libs.ktor.server.core)
-  runtimeOnly(libs.slf4j.nop)
+  runtimeOnly(libs.slf4j.simple)
 
   testImplementation(libs.kotlin.testJunit)
   testImplementation(libs.ktor.client.mock)
