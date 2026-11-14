@@ -21,3 +21,20 @@ plugins {
 kotlin { jvmToolchain(21) }
 
 sourceSets.test { resources.srcDir(rootProject.file("ig/resources")) }
+
+dependencies {
+  implementation(libs.bouncycastle.bcpkix)
+  implementation(libs.bouncycastle.bcprov)
+  implementation(libs.kotlinx.serialization.json)
+
+  testImplementation(libs.hcert.core)
+  testImplementation(libs.kotlin.testJunit)
+}
+
+sourceSets.main { resources.srcDir(rootProject.file("testkit")) }
+
+tasks.register<JavaExec>("generateTestKit") {
+  classpath = sourceSets.main.get().runtimeClasspath
+  mainClass = "dev.ohs.trustdemo.trustkit.GenerateTestKitKt"
+  args(rootProject.file("testkit").absolutePath)
+}

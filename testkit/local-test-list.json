@@ -1,0 +1,91 @@
+{
+    "@context": [
+        "https://www.w3.org/ns/did/v1",
+        "https://w3id.org/security/suites/jws-2020/v1",
+        "https://smart.who.int/trust/tng-context/v1-DEV.jsonld"
+    ],
+    "id": "did:web:trust.gdhcn.example:v2:trustlist",
+    "controller": "did:web:trust.gdhcn.example:v2:trustlist",
+    "verificationMethod": [
+        {
+            "id": "did:web:trust.gdhcn.example:v2:trustlist:DEMO-DVC:XXR:DSC#aglK4ad3COE=",
+            "type": "JsonWebKey2020",
+            "controller": "did:web:trust.gdhcn.example:v2:trustlist",
+            "publicKeyJwk": {
+                "kty": "EC",
+                "kid": "aglK4ad3COE=",
+                "x5c": [
+                    "MIIBoDCCAUagAwIBAgIGAaHXeYgrMAoGCCqGSM49BAMCMEYxCzAJBgNVBAYTAlhSMR0wGwYDVQQKDBRUcnVzdCBEZW1vIFRlc3QgT25seTEYMBYGA1UEAwwPWFhSIENhcmQgSXNzdWVyMB4XDTI2MDEwMTAwMDAwMFoXDTQ1MTIyNzAwMDAwMFowRjELMAkGA1UEBhMCWFIxHTAbBgNVBAoMFFRydXN0IERlbW8gVGVzdCBPbmx5MRgwFgYDVQQDDA9YWFIgQ2FyZCBJc3N1ZXIwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQq4SntcWoLas4YBA+fs0PYZbCyBdvHKZGwbVBcrmt9BDnOSMSYHQ4lE6qlITnQNtBxbtwkRCpOMk4qF3eiB62HoyAwHjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAKBggqhkjOPQQDAgNIADBFAiEAgWLoJnMpQAVSNpkjUIIwhZkQKKhqkgZFngCRKoPWFGkCIHBZ5AMGE8bSO4JAkoYARXy/ajjdwy1CIlQ1wU1EG9YM"
+                ],
+                "crv": "P-256",
+                "x": "KuEp7XFqC2rOGAQPn7ND2GWwsgXbxymRsG1QXK5rfQQ",
+                "y": "Oc5IxJgdDiUTqqUhOdA20HFu3CREKk4yTioXd6IHrYc"
+            },
+            "domain": {
+                "code": "#DEMO-DVC"
+            },
+            "participant": {
+                "code": "#XXR"
+            },
+            "keyusage": {
+                "code": "#DSC"
+            }
+        },
+        {
+            "id": "did:web:trust.gdhcn.example:v2:trustlist:DEMO-VHL:XXK:DSC#p+0sgULYTlY=",
+            "type": "JsonWebKey2020",
+            "controller": "did:web:trust.gdhcn.example:v2:trustlist",
+            "publicKeyJwk": {
+                "kty": "EC",
+                "kid": "p+0sgULYTlY=",
+                "x5c": [
+                    "MIIBoDCCAUagAwIBAgIGAaHXeYijMAoGCCqGSM49BAMCMEYxCzAJBgNVBAYTAlhLMR0wGwYDVQQKDBRUcnVzdCBEZW1vIFRlc3QgT25seTEYMBYGA1UEAwwPWFhLIExpbmsgSXNzdWVyMB4XDTI2MDEwMTAwMDAwMFoXDTQ1MTIyNzAwMDAwMFowRjELMAkGA1UEBhMCWEsxHTAbBgNVBAoMFFRydXN0IERlbW8gVGVzdCBPbmx5MRgwFgYDVQQDDA9YWEsgTGluayBJc3N1ZXIwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASpIq1VErK96Riec1+7EV34Q8KCfOKH1vg798HHbY0DTT63Nw7jYlUB01o8QN1OI9g00eyWm2KX2/Yh+icG5M5ToyAwHjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAKBggqhkjOPQQDAgNIADBFAiAAkKj4q2csoH2gLxqd1qSOPb0u08ji3TOnrIrGO8ZPAgIhAJHY0Ug821pP2V3RZYUGupyzT5kB/6/JaWLgCAej1Z6I"
+                ],
+                "crv": "P-256",
+                "x": "qSKtVRKyvekYnnNfuxFd-EPCgnzih9b4O_fBx22NA00",
+                "y": "Prc3DuNiVQHTWjxA3U4j2DTR7JabYpfb9iH6JwbkzlM"
+            },
+            "domain": {
+                "code": "#DEMO-VHL"
+            },
+            "participant": {
+                "code": "#XXK"
+            },
+            "keyusage": {
+                "code": "#DSC"
+            }
+        },
+        {
+            "id": "did:web:trust.gdhcn.example:v2:trustlist:DEMO-VHL:XXR:CSCA#cCjIT0p6yY8=",
+            "type": "JsonWebKey2020",
+            "controller": "did:web:trust.gdhcn.example:v2:trustlist",
+            "publicKeyJwk": {
+                "kty": "EC",
+                "kid": "cCjIT0p6yY8=",
+                "x5c": [
+                    "MIIBpjCCAU2gAwIBAgIGAaHXeYioMAoGCCqGSM49BAMCMEgxCzAJBgNVBAYTAlhSMR0wGwYDVQQKDBRUcnVzdCBEZW1vIFRlc3QgT25seTEaMBgGA1UEAwwRWFhSIENsaW5pYyBBbmNob3IwHhcNMjYwMTAxMDAwMDAwWhcNNDUxMjI3MDAwMDAwWjBIMQswCQYDVQQGEwJYUjEdMBsGA1UECgwUVHJ1c3QgRGVtbyBUZXN0IE9ubHkxGjAYBgNVBAMMEVhYUiBDbGluaWMgQW5jaG9yMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEv+SvCNgiXz714zkS6ezFCtnXugeMbFrq7ItFX7p4rIB0pZN3CT0yTEEdFPrGFKKxWT7c49b2jzvqB8yUb48fqKMjMCEwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAgQwCgYIKoZIzj0EAwIDRwAwRAIgWePxU/0Tz6nl9RTEI27GtMDiS6c/gwxz2rtkzUCeSysCIHJTWv+JRJFTsFtGEsrZw6HqPfg6C/6Ue+AMZkboRdYH"
+                ],
+                "crv": "P-256",
+                "x": "v-SvCNgiXz714zkS6ezFCtnXugeMbFrq7ItFX7p4rIA",
+                "y": "dKWTdwk9MkxBHRT6xhSisVk-3OPW9o876gfMlG-PH6g"
+            },
+            "domain": {
+                "code": "#DEMO-VHL"
+            },
+            "participant": {
+                "code": "#XXR"
+            },
+            "keyusage": {
+                "code": "#CSCA"
+            }
+        }
+    ],
+    "proof": {
+        "type": "JsonWebSignature2020",
+        "created": "2026-11-14T00:00:00Z",
+        "nonce": "tRuStDeMoLoCaLtEsTlIsTnOnCe00001",
+        "proofPurpose": "assertionMethod",
+        "verificationMethod": "did:web:trust.gdhcn.example:signing",
+        "jws": "eyJiNjQiOmZhbHNlLCJjcml0IjpbImI2NCJdLCJhbGciOiJFUzI1NiJ9..gG0YsGCW78FMruooJiXWsx_nMUAe0DC-hFwqooq59IexyBPBSF8YBG5IdEbf_IULVGcKv8-buMTEfbm9h8hogQ"
+    }
+}
