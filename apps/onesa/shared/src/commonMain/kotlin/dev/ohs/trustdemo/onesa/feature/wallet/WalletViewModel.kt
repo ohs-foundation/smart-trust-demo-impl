@@ -17,7 +17,6 @@ package dev.ohs.trustdemo.onesa.feature.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.ohs.trustdemo.onesa.auth.SessionStore
 import dev.ohs.trustdemo.onesa.data.sharing.Person
 import dev.ohs.trustdemo.onesa.data.sharing.ShareService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,15 +25,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /** S6's household: who the signed-in family member can share for. */
-internal class WalletViewModel(service: ShareService, store: SessionStore) : ViewModel() {
+internal class WalletViewModel(service: ShareService, selfId: () -> String?) : ViewModel() {
   private val _members = MutableStateFlow<List<Person>?>(null)
   val members: StateFlow<List<Person>?> = _members.asStateFlow()
 
   init {
-    viewModelScope.launch {
-      service.observeHousehold(store.session.value?.context?.patientId).collect {
-        _members.value = it
-      }
-    }
+    viewModelScope.launch { service.purgeExpired() }
+    viewModelScope.launch { service.observeHousehold(selfId()).collect { _members.value = it } }
   }
 }

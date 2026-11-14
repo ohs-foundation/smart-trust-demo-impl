@@ -32,6 +32,8 @@ data class ShareEntry(
   val passcode: String,
   val again: String,
 ) {
+  override fun toString(): String = "ShareEntry(people=$people, end=$end)"
+
   fun problem(today: LocalDate): ShareProblem? =
     when {
       people.isEmpty() -> ShareProblem.NoOne

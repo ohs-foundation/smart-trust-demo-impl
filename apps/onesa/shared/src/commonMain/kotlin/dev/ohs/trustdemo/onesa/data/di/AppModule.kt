@@ -240,9 +240,9 @@ internal val viewModelModule = module {
   viewModel { TrustListViewModel(get()) }
   viewModel { ScanCardViewModel(get(), get()) }
   viewModel { ReferralInboxViewModel(get()) }
-  viewModel { WalletViewModel(get(), get()) }
+  viewModel { WalletViewModel(get()) { SessionRepository.session.value?.context?.patientId } }
   viewModel { ShareViewModel(get(), get()) }
-  viewModel { (consentIds: List<String>) -> IssuedLinksViewModel(consentIds, get()) }
+  viewModel { (consentIds: List<String>) -> IssuedLinksViewModel(consentIds, get<ShareService>()) }
   viewModel { (referralId: String) -> VerifyCardsViewModel(referralId, get(), get(), get()) }
   viewModel { (referralId: String) -> ScheduleViewModel(referralId, get(), get(), get()) }
 }

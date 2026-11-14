@@ -74,6 +74,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.share_purpose_value
 import dev.ohs.trustdemo.onesa.generated.resources.share_sharing
 import dev.ohs.trustdemo.onesa.generated.resources.share_terms
 import dev.ohs.trustdemo.onesa.generated.resources.share_title
+import dev.ohs.trustdemo.onesa.generated.resources.wallet_not_synced
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -121,8 +122,9 @@ fun ShareScreen(onBack: () -> Unit, onIssued: (List<String>) -> Unit) {
           Checkbox(
             checked = person.id in state.selected,
             onCheckedChange = { viewModel.toggle(person.id) },
+            enabled = person.name != null,
           )
-          Text(person.name)
+          Text(person.name ?: stringResource(Res.string.wallet_not_synced))
         }
       }
 

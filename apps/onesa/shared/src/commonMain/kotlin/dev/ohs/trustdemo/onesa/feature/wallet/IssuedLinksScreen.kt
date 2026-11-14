@@ -57,6 +57,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.issued_close
 import dev.ohs.trustdemo.onesa.generated.resources.issued_expires
 import dev.ohs.trustdemo.onesa.generated.resources.issued_next
+import dev.ohs.trustdemo.onesa.generated.resources.issued_not_saved
 import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_hint
 import dev.ohs.trustdemo.onesa.generated.resources.issued_previous
 import dev.ohs.trustdemo.onesa.generated.resources.issued_qr_of
@@ -64,6 +65,9 @@ import dev.ohs.trustdemo.onesa.generated.resources.issued_show_full_screen
 import dev.ohs.trustdemo.onesa.generated.resources.issued_title
 import dev.ohs.trustdemo.onesa.generated.resources.share_back
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
+import kotlin.time.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -76,6 +80,8 @@ fun IssuedLinksScreen(consentIds: List<String>, onBack: () -> Unit) {
   val links by viewModel.links.collectAsStateWithLifecycle()
   var fullScreen by remember { mutableStateOf<Int?>(null) }
 
+  val unsaved by viewModel.unsaved.collectAsStateWithLifecycle()
+  KeepOffScreenshots()
   val issued = links
   val shown = fullScreen
   if (issued != null && shown != null) {
@@ -119,6 +125,13 @@ fun IssuedLinksScreen(consentIds: List<String>, onBack: () -> Unit) {
             stringResource(Res.string.issued_passcode_hint),
             style = MaterialTheme.typography.bodyMedium,
           )
+          if (unsaved) {
+            Text(
+              stringResource(Res.string.issued_not_saved),
+              color = MaterialTheme.colorScheme.error,
+              style = MaterialTheme.typography.bodyMedium,
+            )
+          }
           Button(
             onClick = { fullScreen = 0 },
             enabled = issued.isNotEmpty(),
@@ -136,7 +149,7 @@ fun IssuedLinksScreen(consentIds: List<String>, onBack: () -> Unit) {
           QrImage(link, Modifier.size(140.dp))
           Column {
             Text(link.name, style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(Res.string.issued_expires, link.expires))
+            Text(stringResource(Res.string.issued_expires, link.expiresOn()))
           }
         }
       }
@@ -169,7 +182,7 @@ private fun FullScreenQr(
         color = Color.Black,
         textAlign = TextAlign.Center,
       )
-      Text(stringResource(Res.string.issued_expires, link.expires), color = Color.Black)
+      Text(stringResource(Res.string.issued_expires, link.expiresOn()), color = Color.Black)
       QrImage(link, Modifier.weight(1f).aspectRatio(1f, matchHeightConstraintsFirst = true))
       Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedButton(onClick = { onIndex(index - 1) }, enabled = index > 0) {
@@ -192,3 +205,6 @@ private fun QrImage(link: IssuedLink, modifier: Modifier) {
     modifier = modifier.background(Color.White).padding(8.dp),
   )
 }
+
+private fun IssuedLink.expiresOn(): String =
+  Instant.fromEpochSeconds(exp - 1).toLocalDateTime(TimeZone.UTC).date.toString() + " (UTC)"

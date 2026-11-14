@@ -15,9 +15,9 @@
  */
 package dev.ohs.trustdemo.onesa.data.sharing
 
+import dev.ohs.trustdemo.onesa.auth.SessionRepository
 import dev.ohs.trustdemo.onesa.auth.createKSafe
 import eu.anifantakis.lib.ksafe.KSafe
-import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
 /**
@@ -30,8 +30,8 @@ data class IssuedLink(
   val personId: String,
   val name: String,
   val link: String,
-  /** The last day the link works, as `yyyy-MM-dd`. */
-  val expires: String,
+  /** When the link stops working, in epoch seconds, as the link itself says. */
+  val exp: Long = 0,
 ) {
   override fun toString(): String = "IssuedLink(consent=$consentId, person=$personId)"
 }
@@ -45,8 +45,8 @@ interface LinkStore {
   /** Drops the link of a consent that was withdrawn. */
   suspend fun remove(consentId: String)
 
-  /** Drops every link whose last day is before [today]. */
-  suspend fun purgeExpired(today: LocalDate)
+  /** Drops every link that has expired by [nowEpochSeconds]. */
+  suspend fun purgeExpired(nowEpochSeconds: Long)
 
   /** Drops every link, on sign-out. */
   suspend fun clear()
@@ -63,6 +63,7 @@ internal object SecureLinkStore : LinkStore {
   private val ksafe: KSafe by lazy { createKSafe() }
 
   override suspend fun keep(links: List<IssuedLink>) {
+    if (SessionRepository.session.value == null) return
     val kept = read().links.filterNot { old -> links.any { it.consentId == old.consentId } }
     ksafe.put(KEY, KeptLinks(kept + links))
   }
@@ -74,15 +75,20 @@ internal object SecureLinkStore : LinkStore {
     ksafe.put(KEY, KeptLinks(read().links.filterNot { it.consentId == consentId }))
   }
 
-  override suspend fun purgeExpired(today: LocalDate) {
-    ksafe.put(KEY, KeptLinks(read().links.filter { LocalDate.parse(it.expires) >= today }))
+  override suspend fun purgeExpired(nowEpochSeconds: Long) {
+    if (ksafe.get(CLEARING, false)) clear()
+    ksafe.put(KEY, KeptLinks(read().links.filter { it.exp > nowEpochSeconds }))
   }
 
+  /** A clear that fails is marked, and [purgeExpired] finishes it at the next start. */
   override suspend fun clear() {
+    ksafe.put(CLEARING, true)
     ksafe.put(KEY, KeptLinks())
+    ksafe.put(CLEARING, false)
   }
 
   private suspend fun read(): KeptLinks = ksafe.get(KEY, KeptLinks())
 
   private const val KEY = "vhl.issued"
+  private const val CLEARING = "vhl.clearing"
 }

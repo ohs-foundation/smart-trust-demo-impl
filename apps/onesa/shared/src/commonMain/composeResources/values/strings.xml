@@ -222,4 +222,6 @@
     <string name="issued_previous">Previous</string>
     <string name="issued_next">Next</string>
     <string name="issued_close">Close</string>
+    <string name="issued_not_saved">These links could not be saved on this phone. Show them now; they are lost when you leave.</string>
+    <string name="wallet_not_synced">Not synced yet</string>
 </resources>

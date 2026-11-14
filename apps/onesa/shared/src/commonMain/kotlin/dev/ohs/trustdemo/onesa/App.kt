@@ -37,6 +37,7 @@ import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.auth.AuthState
 import dev.ohs.trustdemo.onesa.auth.AuthViewModel
 import dev.ohs.trustdemo.onesa.auth.rememberAuthorizationLauncher
+import dev.ohs.trustdemo.onesa.data.sharing.ShareService
 import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileScreen
 import dev.ohs.trustdemo.onesa.feature.home.HomeDestination
 import dev.ohs.trustdemo.onesa.feature.home.HomeScreen
@@ -57,6 +58,7 @@ import dev.ohs.trustdemo.onesa.feature.wallet.IssuedLinksScreen
 import dev.ohs.trustdemo.onesa.feature.wallet.ShareScreen
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -71,7 +73,11 @@ fun App() {
       val signingIn by authViewModel.signingIn.collectAsStateWithLifecycle()
       val authError by authViewModel.error.collectAsStateWithLifecycle()
 
-      LaunchedEffect(Unit) { authViewModel.bootstrap() }
+      val shares: ShareService = koinInject()
+      LaunchedEffect(Unit) {
+        authViewModel.bootstrap()
+        shares.purgeExpired()
+      }
 
       when (authState) {
         is AuthState.Loading ->

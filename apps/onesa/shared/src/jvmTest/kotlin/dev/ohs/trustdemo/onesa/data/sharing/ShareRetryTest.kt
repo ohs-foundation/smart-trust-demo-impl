@@ -62,8 +62,7 @@ class ShareRetryTest {
         now = { 0 },
       )
 
-    val outcome =
-      service.share(ShareEntry(listOf("bounmy"), today, "0482", "0482"), today, "key-1")
+    val outcome = service.share(ShareEntry(listOf("bounmy"), today, "0482", "0482"), today, "key-1")
 
     assertEquals(listOf<String?>("key-1", "key-1"), keys)
     assertEquals(listOf("c-bounmy"), assertIs<ShareOutcome.Issued>(outcome).consentIds)

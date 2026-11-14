@@ -17,6 +17,7 @@ package dev.ohs.trustdemo.onesa.auth
 
 import dev.ohs.trustdemo.onesa.data.sharing.SecureLinkStore
 import eu.anifantakis.lib.ksafe.KSafe
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,8 +67,14 @@ internal object SessionRepository : SessionStore {
 
   override suspend fun clear() {
     ksafe.put(KEY_SESSION, EMPTY_SESSION)
-    SecureLinkStore.clear()
     _session.value = null
+    try {
+      SecureLinkStore.clear()
+    } catch (e: CancellationException) {
+      throw e
+    } catch (_: Exception) {
+      // the links are cleared again by the next start's purge
+    }
   }
 
   override suspend fun savePending(pending: PendingAuth) = ksafe.put(KEY_PENDING, pending)

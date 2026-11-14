@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import java.net.URI
 import java.util.Properties
 
 plugins {
@@ -122,37 +123,88 @@ android {
 }
 
 /**
- * Writes the demo stack's CA, from `stack/tls/ca.crt`, to `raw/demo_ca` in a generated resource
- * directory of the debug variant. Without the CA it writes an empty file and warns: the build
- * succeeds and the CA is not trusted until the app is built again after `make stack-up`.
+ * The debug variant's network security config: cleartext to the demo's sslip.io names as in main,
+ * and the demo stack's CA, from `stack/tls/ca.crt`, trusted for the exact host of `VHL_BASE_URL`
+ * alone. Without the CA no trust anchor is generated: the build succeeds, warns, and the VHL
+ * service stays unreachable until the app is built again after `make stack-up`.
  */
-abstract class GenerateDemoCa : DefaultTask() {
+abstract class GenerateDebugNetworkConfig : DefaultTask() {
   @get:Input @get:Optional abstract val ca: Property<String>
+
+  @get:Input abstract val vhlHost: Property<String>
 
   @get:OutputDirectory abstract val outputDir: DirectoryProperty
 
   @TaskAction
   fun write() {
-    val raw = outputDir.get().asFile.resolve("raw").apply { mkdirs() }
-    val text = ca.orNull
-    if (text == null) {
-      logger.warn("stack/tls/ca.crt is missing: the debug build does not trust the demo CA.")
-    }
-    raw.resolve("demo_ca.pem").writeText(text.orEmpty())
+    val res = outputDir.get().asFile
+    res.resolve("raw").deleteRecursively()
+    val certificate = ca.orNull
+    val trusted =
+      if (certificate == null) {
+        logger.warn("stack/tls/ca.crt is missing: the debug build does not trust the demo CA.")
+        ""
+      } else {
+        res.resolve("raw").apply { mkdirs() }.resolve("demo_ca.pem").writeText(certificate)
+        """
+        |  <domain-config>
+        |    <domain includeSubdomains="false">${vhlHost.get()}</domain>
+        |    <trust-anchors>
+        |      <certificates src="system" />
+        |      <certificates src="@raw/demo_ca" />
+        |    </trust-anchors>
+        |  </domain-config>
+        """
+          .trimMargin()
+      }
+    res
+      .resolve("xml")
+      .apply { mkdirs() }
+      .resolve("network_security_config.xml")
+      .writeText(
+        """
+      |<?xml version="1.0" encoding="utf-8"?>
+      |<network-security-config>
+      |  <domain-config cleartextTrafficPermitted="true">
+      |    <domain includeSubdomains="true">sslip.io</domain>
+      |  </domain-config>
+      |$trusted
+      |</network-security-config>
+      |
+      """
+          .trimMargin()
+      )
   }
 }
 
 val demoCa =
   providers.fileContents(rootProject.layout.projectDirectory.file("stack/tls/ca.crt")).asText
 
+val vhlHostProvider: Provider<String> =
+  providers
+    .environmentVariable("VHL_BASE_URL")
+    .filter { it.isNotBlank() }
+    .orElse(
+      providers
+        .fileContents(rootProject.layout.projectDirectory.file("local.properties"))
+        .asText
+        .map { text ->
+          Properties().apply { load(text.reader()) }.getProperty("VHL_BASE_URL").orEmpty()
+        }
+        .filter { it.isNotBlank() }
+    )
+    .orElse("https://vhl.onesa.example.org:8443")
+    .map { URI(it).host }
+
 androidComponents.onVariants(androidComponents.selector().withBuildType("debug")) { variant ->
   val generate =
-    tasks.register<GenerateDemoCa>(
-      "generate${variant.name.replaceFirstChar(Char::uppercase)}DemoCa"
+    tasks.register<GenerateDebugNetworkConfig>(
+      "generate${variant.name.replaceFirstChar(Char::uppercase)}NetworkConfig"
     ) {
       ca.set(demoCa)
+      vhlHost.set(vhlHostProvider)
     }
-  variant.sources.res?.addGeneratedSourceDirectory(generate, GenerateDemoCa::outputDir)
+  variant.sources.res?.addGeneratedSourceDirectory(generate, GenerateDebugNetworkConfig::outputDir)
 }
 
 dependencies {

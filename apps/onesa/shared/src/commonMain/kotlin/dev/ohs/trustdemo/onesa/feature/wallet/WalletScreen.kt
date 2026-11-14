@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_empty
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_household
+import dev.ohs.trustdemo.onesa.generated.resources.wallet_not_synced
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_share
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -55,7 +56,12 @@ fun WalletScreen(onShare: () -> Unit) {
   ) {
     Text(stringResource(Res.string.wallet_household), style = MaterialTheme.typography.titleMedium)
     if (household.isEmpty()) Text(stringResource(Res.string.wallet_empty))
-    household.forEach { Text(it.name, style = MaterialTheme.typography.bodyLarge) }
+    household.forEach {
+      Text(
+        it.name ?: stringResource(Res.string.wallet_not_synced),
+        style = MaterialTheme.typography.bodyLarge,
+      )
+    }
     Button(
       onClick = onShare,
       enabled = household.isNotEmpty(),

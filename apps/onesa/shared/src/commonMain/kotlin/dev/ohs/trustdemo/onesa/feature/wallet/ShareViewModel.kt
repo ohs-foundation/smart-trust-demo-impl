@@ -26,6 +26,8 @@ import dev.ohs.trustdemo.onesa.data.sharing.ShareOutcome
 import dev.ohs.trustdemo.onesa.data.sharing.ShareProblem
 import dev.ohs.trustdemo.onesa.data.sharing.ShareService
 import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +41,8 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 
 private const val DEFAULT_DAYS = 14
+
+private fun utcToday(): LocalDate = Clock.System.todayIn(TimeZone.UTC)
 
 /** Everything the share and consent screen shows and what the holder has entered so far. */
 internal data class ShareUiState(
@@ -62,12 +66,15 @@ internal data class ShareUiState(
 
   val canShare: Boolean
     get() = problem == null && agreed && !sharing
+
+  override fun toString(): String = "ShareUiState(selected=$selected, end=$end)"
 }
 
 /** S6's share and consent: who, the terms, the last day, the passcode, and the call. */
 internal class ShareViewModel(private val service: ShareService, store: SessionStore) :
   ViewModel() {
-  private val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+  private val today = utcToday()
+  private var pending: Pair<ShareEntry, String>? = null
   private val _state =
     MutableStateFlow(ShareUiState(today = today, end = today.plus(DatePeriod(days = DEFAULT_DAYS))))
   val state: StateFlow<ShareUiState> = _state.asStateFlow()
@@ -75,7 +82,12 @@ internal class ShareViewModel(private val service: ShareService, store: SessionS
   init {
     viewModelScope.launch {
       val members = service.household(store.session.value?.context?.patientId)
-      _state.update { it.copy(members = members, selected = members.map(Person::id).toSet()) }
+      _state.update {
+        it.copy(
+          members = members,
+          selected = members.filter { m -> m.name != null }.map(Person::id).toSet(),
+        )
+      }
     }
     viewModelScope.launch { _state.update { it.copy(terms = ConsentTerms.load()) } }
   }
@@ -95,17 +107,32 @@ internal class ShareViewModel(private val service: ShareService, store: SessionS
 
   fun agree(agreed: Boolean) = _state.update { it.copy(agreed = agreed) }
 
+  @OptIn(ExperimentalUuidApi::class)
   fun share() {
-    val current = _state.value
+    val today = utcToday()
+    if (_state.value.end < today) {
+      _state.update { it.copy(today = today, end = today) }
+      return
+    }
+    val current = _state.value.copy(today = today)
     if (!current.canShare) return
-    _state.update { it.copy(sharing = true, refusal = null) }
+    _state.update { it.copy(today = today, sharing = true, refusal = null) }
+    val entry = current.entry
+    val key = pending?.takeIf { it.first == entry }?.second ?: Uuid.random().toString()
+    pending = entry to key
     viewModelScope.launch {
       val next =
         try {
-          when (val outcome = service.share(current.entry)) {
-            is ShareOutcome.Issued ->
+          when (val outcome = service.share(entry, today, key)) {
+            is ShareOutcome.Issued -> {
+              pending = null
               current.copy(sharing = false, passcode = "", again = "", issued = outcome.consentIds)
-            is ShareOutcome.Refused -> current.copy(sharing = false, refusal = outcome.message)
+            }
+            is ShareOutcome.Refused -> {
+              pending = null
+              current.copy(sharing = false, refusal = outcome.message)
+            }
+            is ShareOutcome.Unknown -> current.copy(sharing = false, refusal = outcome.message)
           }
         } catch (e: CancellationException) {
           throw e
