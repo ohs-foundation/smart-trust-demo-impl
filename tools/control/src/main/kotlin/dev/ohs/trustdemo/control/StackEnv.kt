@@ -25,7 +25,14 @@ class StackEnv(private val values: Map<String, String>, private val source: Path
     values[name]
       ?: throw CliktError("$source is missing $name — run stack/init-env.sh, or pass --stack-env")
 
+  fun optional(name: String): String? = values[name]?.let(::expand)
+
+  private fun expand(text: String): String =
+    VARIABLE.replace(text) { values[it.groupValues[1]]?.let(::expand) ?: it.value }
+
   companion object {
+    private val VARIABLE = Regex("""\$\{(\w+)}""")
+
     fun load(path: Path): StackEnv =
       StackEnv(
         Files.readAllLines(path)

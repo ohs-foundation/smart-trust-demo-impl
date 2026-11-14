@@ -127,6 +127,7 @@ android {
  * demo's sslip.io names, and the demo stack's CA, from `stack/tls/ca.crt`, trusted for the exact
  * host of `VHL_BASE_URL` alone. Without the CA no trust anchor is generated: the build succeeds,
  * warns, and the VHL service stays unreachable until the app is built again after `make stack-up`.
+ * A VHL host outside sslip.io (a live server, on a public certificate) gets no demo CA.
  */
 abstract class GenerateDebugNetworkConfig : DefaultTask() {
   @get:Input @get:Optional abstract val ca: Property<String>
@@ -141,7 +142,9 @@ abstract class GenerateDebugNetworkConfig : DefaultTask() {
     res.resolve("raw").deleteRecursively()
     val certificate = ca.orNull
     val trusted =
-      if (certificate == null) {
+      if (!vhlHost.get().endsWith(".sslip.io")) {
+        ""
+      } else if (certificate == null) {
         logger.warn("stack/tls/ca.crt is missing: the debug build does not trust the demo CA.")
         ""
       } else {

@@ -65,7 +65,7 @@ function onesa(answer: (seen: Seen) => Response | undefined = () => undefined) {
   return { seen, send: send as typeof fetch };
 }
 
-function setup(answer?: (seen: Seen) => Response | undefined, link: { url?: string; flag?: string } = {}) {
+function setup(answer?: (seen: Seen) => Response | undefined, link: { url?: string; flag?: string; host?: string } = {}) {
   const fake = onesa(answer);
   const handles = new LinkHandles(() => NOW);
   const handle = handles.keep({ url: link.url ?? LINK_URL, key: KEY, flag: link.flag ?? "LP", exp: NOW + 86400 }, OWNER);
@@ -76,7 +76,7 @@ function setup(answer?: (seen: Seen) => Response | undefined, link: { url?: stri
       if (token !== "anan-token") throw new NoSession();
       return OWNER;
     },
-    clinic: { hosts: [HOST], identity: () => identity, send: fake.send },
+    clinic: { hosts: [link.host ?? HOST], identity: () => identity, send: fake.send },
   };
   const call = (passcode = PASSCODE, token = "anan-token", use = handle) => fetchSummary(viewer, { token, handle: use, passcode });
   return { ...fake, handle, handles, viewer, call };
@@ -120,6 +120,24 @@ describe("aLinkOffTheAllowListIsRefused", () => {
     const { call, seen } = setup((request) => (request.method === "POST" ? new Response(manifest("https://vhl.evil.example:8443/vhl/Binary/doc-1")) : undefined));
     expect(await call()).toMatchObject({ kind: "refused" });
     expect(seen.map((request) => request.method)).toEqual(["POST"]);
+  });
+});
+
+describe("aLiveHostWithoutAPort", () => {
+  const LIVE = "vhl.onesa.demo.example.org";
+  const live = (url: string) => `https://${LIVE}${url}`;
+
+  it.each([["no port", `https://${LIVE}`], ["an explicit default port", `https://${LIVE}:443`]])("signs and fetches for %s", async (_name, origin) => {
+    const url = `${origin}/vhl/List/_search?${SEARCH}`;
+    const { call, seen } = setup((request) => (request.method === "POST" ? new Response(manifest(live("/vhl/Binary/doc-1"))) : undefined), { url, host: LIVE });
+    expect(await call()).toMatchObject({ kind: "released" });
+    expect(seen.map((request) => new URL(request.url).host)).toEqual([LIVE, LIVE]);
+  });
+
+  it("still refuses a demo port", async () => {
+    const { call, seen } = setup(undefined, { url: `https://${LIVE}:8443/vhl/List/_search?${SEARCH}`, host: LIVE });
+    expect(await call()).toMatchObject({ kind: "refused" });
+    expect(seen).toEqual([]);
   });
 });
 

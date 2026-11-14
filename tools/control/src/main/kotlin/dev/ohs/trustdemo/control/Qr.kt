@@ -79,7 +79,7 @@ class QrCommand : CliktCommand(name = "qr") {
     val env = StackEnv.load(stackEnv)
     val kesaro =
       MedplumAdmin(
-        "http://medplum.kesaro.${env.require("STACK_HOST")}:${env.require("PROXY_PORT")}",
+        StackUrls.from(env, stackEnv).medplum,
         env.require("MEDPLUM_SUPER_ADMIN_CLIENT_ID"),
         env.require("MEDPLUM_SUPER_ADMIN_CLIENT_SECRET"),
         CIO.create(),

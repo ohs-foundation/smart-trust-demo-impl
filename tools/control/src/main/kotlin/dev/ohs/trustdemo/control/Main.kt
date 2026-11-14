@@ -33,6 +33,7 @@ import com.github.ajalt.clikt.parameters.types.path
 import com.github.ajalt.mordant.input.interactiveSelectList
 import com.github.ajalt.mordant.terminal.YesNoPrompt
 import io.ktor.client.engine.cio.CIO
+import java.nio.file.Path
 import java.time.LocalDate
 import kotlin.io.path.Path
 import kotlinx.coroutines.runBlocking
@@ -67,12 +68,13 @@ class TrustDemo : CliktCommand(name = "trust-demo") {
   }
 }
 
-private class Stack(env: StackEnv) {
-  val hapiUrl = "http://127.0.0.1:${env.require("HAPI_HOST_PORT")}/fhir"
-  val medplumUrl = "http://medplum.kesaro.${env.require("STACK_HOST")}:${env.require("PROXY_PORT")}"
-  val clientOrigin =
-    "https://client.kesaro.${env.require("STACK_HOST")}:${env.require("VHL_TLS_PORT")}"
-  val watchPort = env.require("WATCH_PORT").toInt()
+private class Stack(env: StackEnv, envFile: Path) {
+  private val urls = StackUrls.from(env, envFile)
+  val hapiUrl = urls.hapi
+  val medplumUrl = urls.medplum
+  val clientOrigin = urls.clientOrigin
+  val secretsDir = urls.secretsDir
+  val watchPort = urls.watchPort
   val onesa = FhirServer(hapiUrl, { null }, CIO.create())
   val kesaro =
     MedplumAdmin(
@@ -97,8 +99,8 @@ class ResetCommand : StackCommand("reset") {
 
   override fun run() = runBlocking {
     val env = StackEnv.load(stackEnv)
-    val stack = Stack(env)
-    val secrets = checkNotNull(stackEnv.toAbsolutePath().parent).resolve("taifafeki/secrets")
+    val stack = Stack(env, stackEnv)
+    val secrets = stack.secretsDir
     Reset(
         stack.onesa,
         stack.kesaro,
@@ -120,7 +122,7 @@ class StatusCommand : StackCommand("status") {
   override fun help(context: Context) = "Show the current story step, worked out from the records."
 
   override fun run() = runBlocking {
-    val stack = Stack(StackEnv.load(stackEnv))
+    val stack = Stack(StackEnv.load(stackEnv), stackEnv)
     val state = StepEngine(stack.onesa, stack.kesaro).state()
     if (current) echo(currentStep(state))
     else {
@@ -136,7 +138,7 @@ class JourneysCommand : StackCommand("journeys") {
     "Draw the journeys by app, with their standing from the records."
 
   override fun run() = runBlocking {
-    val stack = Stack(StackEnv.load(stackEnv))
+    val stack = Stack(StackEnv.load(stackEnv), stackEnv)
     echo(journeyMap(StepEngine(stack.onesa, stack.kesaro).state(), currentContext.terminal))
   }
 }
@@ -145,7 +147,7 @@ class WatchCommand : StackCommand("watch") {
   override fun help(context: Context) = "Follow the story live from HAPI's webhook and a poll."
 
   override fun run() {
-    val stack = Stack(StackEnv.load(stackEnv))
+    val stack = Stack(StackEnv.load(stackEnv), stackEnv)
     echo("Watching on port ${stack.watchPort}; Ctrl-C stops.")
     val terminal = currentContext.terminal
     Watch(
@@ -165,7 +167,7 @@ class InspectCommand : StackCommand("inspect") {
 
   override fun run() = runBlocking {
     val step = target?.let { stepNamed(it) ?: throw UsageError("no step named $it") }
-    val stack = Stack(StackEnv.load(stackEnv))
+    val stack = Stack(StackEnv.load(stackEnv), stackEnv)
     echo(inspect(StepEngine(stack.onesa, stack.kesaro).state(), step, json))
   }
 }
@@ -186,7 +188,7 @@ class MoveCommand : StackCommand("move") {
 
   override fun run() = runBlocking {
     if (target != "J4.0") throw UsageError("only the move to J4.0 is supported, not $target")
-    val stack = Stack(StackEnv.load(stackEnv))
+    val stack = Stack(StackEnv.load(stackEnv), stackEnv)
     val move = TimeMove(StepEngine(stack.onesa, stack.kesaro), stack.onesa, stack.kesaro)
     try {
       val plan = move.plan(withYearDoses)
@@ -206,7 +208,7 @@ class ExpireConsentsCommand : StackCommand("expire-consents") {
   override fun help(context: Context) = "End the current consents a minute ago."
 
   override fun run() = runBlocking {
-    val stack = Stack(StackEnv.load(stackEnv))
+    val stack = Stack(StackEnv.load(stackEnv), stackEnv)
     val move = TimeMove(StepEngine(stack.onesa, stack.kesaro), stack.onesa, stack.kesaro)
     val ended = move.expireConsents()
     echo(
