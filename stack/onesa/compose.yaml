@@ -96,7 +96,7 @@ services:
       IAM_PROVIDER_CLIENT_SECRET: ${FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET}
       ACCESS_CHECKER: org_scoped_access
       AUDIT_EVENT_ACTIONS_CONFIG: CUD
-      SUBSCRIPTION_ALLOWED_HOSTS: host.docker.internal
+      SUBSCRIPTION_ALLOWED_HOSTS: host.docker.internal:${WATCH_PORT}
       ALLOWED_QUERIES_FILE: resources/hapi_page_url_allowed_queries.json
       SYNC_FILTER_IGNORE_RESOURCES_FILE: resources/hapi_sync_filter_ignored_queries.json
       BACKEND_TYPE: HAPI
