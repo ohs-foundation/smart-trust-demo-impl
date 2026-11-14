@@ -17,6 +17,10 @@ package dev.ohs.trustdemo.onesa.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.ohs.fhir.model.r4.ConceptMap
@@ -44,6 +48,7 @@ import dev.ohs.trustdemo.onesa.data.repository.PatientContexts
 import dev.ohs.trustdemo.onesa.data.repository.PatientRepository
 import dev.ohs.trustdemo.onesa.data.schedule.BookedVisits
 import dev.ohs.trustdemo.onesa.data.schedule.BookingOutcome
+import dev.ohs.trustdemo.onesa.data.schedule.DisplayOnlyRows
 import dev.ohs.trustdemo.onesa.data.schedule.DoseRecording
 import dev.ohs.trustdemo.onesa.data.schedule.SchedulePlans
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
@@ -77,6 +82,7 @@ import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListContent
 import dev.ohs.trustdemo.onesa.feature.trustlist.toState
 import dev.ohs.trustdemo.onesa.ui.ScreenshotHarness.render
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
+import dev.ohs.trustdemo.onesa.ui.theme.OnesaTheme
 import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import dev.ohs.trustdemo.onesa.util.timeAgo
@@ -88,6 +94,7 @@ import java.io.File
 import java.util.zip.Deflater
 import java.util.zip.Inflater
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
@@ -96,6 +103,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
 /** The clinician's screens, drawn from the IG's records as each step of J3 leaves them. */
+@OptIn(ExperimentalTestApi::class)
 class ClinicianScreensRenderTest {
   private fun ig(name: String): Resource =
     FhirJson.instance.decodeFromString(
@@ -378,8 +386,30 @@ class ClinicianScreensRenderTest {
             schedule.items.count { it.standing is Standing.Due },
           ),
       )
+    val upcoming = DisplayOnlyRows.parse(File("$SCHEDULE/s5-display-only-rows.json").readText())
     clinic("0-04-s5-schedule", 1024.dp to 900.dp) {
-      ScheduleContent(state, visitDay, onBack = {}, onBook = {})
+      ScheduleContent(state, visitDay, upcoming, onBack = {}, onBook = {})
+    }
+    runComposeUiTest {
+      setContent {
+        OnesaTheme(OnesaColors.BrandClinic) {
+          Registry { ScheduleContent(state, visitDay, upcoming, onBack = {}, onBook = {}) }
+        }
+      }
+      listOf(
+          "10 Weeks" to "Penta-2, OPV-2, PCV-2",
+          "14 Weeks" to "Penta-3, OPV-3, PCV-3, IPV-1",
+          "9 Months" to "Measles-rubella 1, JE",
+        )
+        .forEach { (age, doses) ->
+          onNodeWithText(age).assertExists()
+          onNodeWithText(doses).assertExists()
+        }
+      assertEquals(
+        3,
+        onAllNodesWithText("Upcoming").fetchSemanticsNodes().size,
+        "10, 14 weeks and 9 months",
+      )
     }
   }
 
@@ -548,6 +578,7 @@ class ClinicianScreensRenderTest {
 
   private companion object {
     const val HEPB = "vp-hepb-peds-monovalent"
+    const val SCHEDULE = "src/commonMain/composeResources/files/schedule"
     const val BASE45 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
   }
 }

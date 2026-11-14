@@ -32,6 +32,7 @@ import dev.ohs.trustdemo.onesa.data.hcert.SignedCards
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSession
 import dev.ohs.trustdemo.onesa.data.repository.InMemorySampleFhirRepository
 import dev.ohs.trustdemo.onesa.data.schedule.BookingOutcome
+import dev.ohs.trustdemo.onesa.data.schedule.DisplayOnlyRows
 import dev.ohs.trustdemo.onesa.data.schedule.SchedulePlans
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
 import dev.ohs.trustdemo.onesa.data.schedule.VisitBooking
@@ -571,6 +572,40 @@ class CardVerificationTest {
   }
 
   private suspend fun book() = booking.book(booking.open(referral.id), patientId)
+
+  @Test
+  fun bookingLeavesTheDisplayOnlyRowsOut() = runTest {
+    withMappedDosesAndReferral()
+    val rows =
+      DisplayOnlyRows.parse(
+        File("src/commonMain/composeResources/files/schedule/s5-display-only-rows.json").readText()
+      )
+    val shown = rows.flatMap { it.doses }
+    assertTrue(shown.containsAll(listOf("Penta-2", "IPV-1", "JE")), "$shown")
+    val scheduleCodes =
+      igResource("CodeSystem-TrustDemoOnesaEpiSchedule.json").getValue("concept").jsonArray.map {
+        it.jsonObject.text("code")
+      }
+
+    val outcome = assertIs<BookingOutcome.Booked>(book())
+
+    assertEquals(3, outcome.doses)
+    val recommended =
+      gateway.recommendations.values.single().getValue("recommendation").jsonArray.map {
+        it.jsonObject
+          .getValue("vaccineCode")
+          .jsonArray
+          .single()
+          .jsonObject
+          .getValue("coding")
+          .jsonArray
+          .single()
+          .jsonObject
+      }
+    assertTrue(recommended.all { it.text("code") in scheduleCodes }, "$recommended")
+    val written = (gateway.recommendations.values + gateway.tasks.values).joinToString()
+    assertTrue(shown.none { it in written }, "a display-only dose reached the booking")
+  }
 
   @Test
   fun bookingWaitsForASyncAfterAFailedRefresh() = runTest {

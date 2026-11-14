@@ -1,0 +1,9 @@
+{
+  "source": "IG device screen S5, Calculated National Schedule (PlanDefinition), as the build map renders it",
+  "note": "Display-only (decision 8): not in TrustDemoOnesaEpiSchedule, never evaluated or booked",
+  "rows": [
+    { "label": "10 Weeks", "value": 10, "unit": "wk", "doses": ["Penta-2", "OPV-2", "PCV-2"] },
+    { "label": "14 Weeks", "value": 14, "unit": "wk", "doses": ["Penta-3", "OPV-3", "PCV-3", "IPV-1"] },
+    { "label": "9 Months", "value": 9, "unit": "mo", "doses": ["JE"] }
+  ]
+}

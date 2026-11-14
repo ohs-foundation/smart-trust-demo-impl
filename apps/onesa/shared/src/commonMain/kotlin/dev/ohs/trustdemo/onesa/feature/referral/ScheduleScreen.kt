@@ -17,9 +17,12 @@ package dev.ohs.trustdemo.onesa.feature.referral
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
+import dev.ohs.trustdemo.onesa.data.schedule.DisplayOnlyRow
+import dev.ohs.trustdemo.onesa.data.schedule.DisplayOnlyRows
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleDose
 import dev.ohs.trustdemo.onesa.data.schedule.Standing
 import dev.ohs.trustdemo.onesa.data.verification.ForeignDose
@@ -98,13 +101,16 @@ fun ScheduleScreen(referralId: String, onBack: () -> Unit) {
   val viewModel = koinViewModel<ScheduleViewModel>(key = referralId) { parametersOf(referralId) }
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-  ScheduleContent(state, today, onBack, viewModel::book)
+  val upcoming by produceState(emptyList<DisplayOnlyRow>()) { value = DisplayOnlyRows.load() }
+  ScheduleContent(state, today, upcoming, onBack, viewModel::book)
 }
 
+/** S5 for [state]; the [upcoming] display-only rows join the schedule card, never the booking. */
 @Composable
 fun ScheduleContent(
   state: ScheduleUiState,
   today: LocalDate,
+  upcoming: List<DisplayOnlyRow>,
   onBack: () -> Unit,
   onBook: () -> Unit,
 ) {
@@ -123,7 +129,7 @@ fun ScheduleContent(
     },
     sideWide = true,
     side = {
-      schedule?.let { ScheduleCard(it) }
+      schedule?.let { ScheduleCard(it, upcoming) }
       SectionCard(title = stringResource(Res.string.booking_title), icon = OnesaIcons.Clock) {
         FieldGrid(
           listOfNotNull(

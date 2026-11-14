@@ -19,7 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import dev.ohs.trustdemo.onesa.data.repository.PatientContext
 import dev.ohs.trustdemo.onesa.data.repository.displayAge
+import dev.ohs.trustdemo.onesa.data.schedule.DisplayOnlyRow
 import dev.ohs.trustdemo.onesa.data.schedule.Schedule
+import dev.ohs.trustdemo.onesa.data.schedule.ScheduleItem
 import dev.ohs.trustdemo.onesa.data.schedule.Standing
 import dev.ohs.trustdemo.onesa.data.verification.ForeignDose
 import dev.ohs.trustdemo.onesa.data.verification.shortName
@@ -92,35 +94,51 @@ fun auditChip(child: PatientContext?): Status? =
 
 /**
  * The national schedule as evaluated for the child, one row per age: its doses, and whether they
- * are verified, due, upcoming or could not be evaluated.
+ * are verified, due, upcoming or could not be evaluated. The [upcoming] display-only doses join the
+ * row of their age, or make one of their own, in age order; they are never evaluated.
  */
 @Composable
-fun ScheduleCard(schedule: Schedule) {
+fun ScheduleCard(schedule: Schedule, upcoming: List<DisplayOnlyRow> = emptyList()) {
+  val evaluated = schedule.items.groupBy { it.age }.map { (age, items) -> Age(age, items) }
+  val headings = evaluated.associateBy { it.heading }
+  val extra = upcoming.groupBy { it.label }
+  val rows =
+    (evaluated.map { it.heading to it.items.mapNotNull(ScheduleItem::dueDate).minOrNull() } +
+        upcoming.filter { it.label !in headings }.map { it.label to it.due(schedule.birthDate) })
+      .distinctBy { it.first }
+      .sortedBy { it.second }
   SectionCard(
     title = stringResource(Res.string.schedule_card_title),
     icon = OnesaIcons.Calendar,
     footnote = stringResource(Res.string.schedule_card_footnote),
   ) {
-    schedule.items
-      .groupBy { it.age }
-      .forEach { (age, items) ->
-        val due = items.mapNotNull { (it.standing as? Standing.Due)?.date }.minOrNull()
-        RecordRow(
-          label = ageHeading(age).ifEmpty { items.first().title },
-          code = items.filter { it.dose.code.isNotEmpty() }.joinToString { it.dose.shortName },
-          status =
-            when {
-              items.any { it.standing is Standing.CouldNotEvaluate } ->
-                Status(stringResource(Res.string.schedule_could_not), Tone.Danger)
-              items.all { it.standing == Standing.Complete } ->
-                Status(stringResource(Res.string.schedule_verified), Tone.Success, OnesaIcons.Check)
-              due != null ->
-                Status(stringResource(Res.string.schedule_due_day, dayMonth(due)), Tone.Warning)
-              else -> Status(stringResource(Res.string.schedule_upcoming))
-            },
-        )
-      }
+    rows.forEach { (heading, _) ->
+      val items = headings[heading]?.items.orEmpty()
+      val due = items.mapNotNull { (it.standing as? Standing.Due)?.date }.minOrNull()
+      RecordRow(
+        label = heading.ifEmpty { items.first().title },
+        code =
+          (items.filter { it.dose.code.isNotEmpty() }.map { it.dose.shortName } +
+              extra[heading].orEmpty().flatMap { it.doses })
+            .joinToString(),
+        status =
+          when {
+            items.isEmpty() -> Status(stringResource(Res.string.schedule_upcoming))
+            items.any { it.standing is Standing.CouldNotEvaluate } ->
+              Status(stringResource(Res.string.schedule_could_not), Tone.Danger)
+            items.all { it.standing == Standing.Complete } ->
+              Status(stringResource(Res.string.schedule_verified), Tone.Success, OnesaIcons.Check)
+            due != null ->
+              Status(stringResource(Res.string.schedule_due_day, dayMonth(due)), Tone.Warning)
+            else -> Status(stringResource(Res.string.schedule_upcoming))
+          },
+      )
+    }
   }
+}
+
+private class Age(age: String, val items: List<ScheduleItem>) {
+  val heading = ageHeading(age)
 }
 
 /** A schedule age as a row heading: `Birth`, `6-week` as `6 Weeks`, `9-month` as `9 Months`. */
