@@ -68,7 +68,7 @@ class Reset(
       throw failure
     } catch (failure: Exception) {
       throw CliktError(
-        "HAPI was reset but Medplum was not — run reset again (${failure.message})",
+        "The reset stopped after emptying HAPI — run it again (${failure.message})",
         failure,
       )
     }

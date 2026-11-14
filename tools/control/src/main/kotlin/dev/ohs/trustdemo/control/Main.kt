@@ -75,15 +75,18 @@ private class Stack(env: StackEnv, envFile: Path) {
   val clientOrigin = urls.clientOrigin
   val secretsDir = urls.secretsDir
   val watchPort = urls.watchPort
-  val onesa = FhirServer(hapiUrl, { null }, CIO.create())
+  val onesa = FhirServer(hapiUrl, { null }, serverEngine())
   val kesaro =
     MedplumAdmin(
       medplumUrl,
       env.require("MEDPLUM_SUPER_ADMIN_CLIENT_ID"),
       env.require("MEDPLUM_SUPER_ADMIN_CLIENT_SECRET"),
-      CIO.create(),
+      serverEngine(),
     )
 }
+
+// Seeding a freshly started server takes longer than CIO's 15-second default request timeout.
+internal fun serverEngine() = CIO.create { requestTimeout = 300_000 }
 
 abstract class StackCommand(name: String) : CliktCommand(name = name) {
   protected val stackEnv by

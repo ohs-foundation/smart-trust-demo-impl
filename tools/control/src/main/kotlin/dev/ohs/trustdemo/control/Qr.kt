@@ -26,7 +26,6 @@ import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.path
 import dev.ohs.trustdemo.trustkit.StandIn
 import dev.ohs.trustdemo.trustkit.TestKeys
-import io.ktor.client.engine.cio.CIO
 import java.security.Signature
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -82,7 +81,7 @@ class QrCommand : CliktCommand(name = "qr") {
         StackUrls.from(env, stackEnv).medplum,
         env.require("MEDPLUM_SUPER_ADMIN_CLIENT_ID"),
         env.require("MEDPLUM_SUPER_ADMIN_CLIENT_SECRET"),
-        CIO.create(),
+        serverEngine(),
       )
     kesaro
       .searchResources("DocumentReference", mapOf("identifier" to HOSPITAL_NUMBER))
