@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Viewer } from "../clinic/Viewer";
 
 export const Route = createFileRoute("/clinic")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -7,6 +8,7 @@ export const Route = createFileRoute("/clinic")({
   component: () => (
     <main>
       <h1>VHL Viewer (J4.1)</h1>
+      <Viewer />
     </main>
   ),
 });

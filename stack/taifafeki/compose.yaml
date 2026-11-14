@@ -89,6 +89,8 @@ services:
       MEDPLUM_CLIENT_ID_FILE: /run/secrets/medplum-client-id
       NODE_EXTRA_CA_CERTS: /run/secrets/tls/ca.crt
       ONESA_VHL_HOSTS: vhl.onesa.${STACK_HOST}:${VHL_TLS_PORT}
+      TRUST_LIST_URL: http://gdhcn/local-test-list.json
+      DEV_TRUST_LIST_URL: http://gdhcn/dev/v2/trustlist/did.json
     volumes:
       - ./secrets/medplum-client-id:/run/secrets/medplum-client-id:ro
       - ../tls/ca.crt:/run/secrets/tls/ca.crt:ro

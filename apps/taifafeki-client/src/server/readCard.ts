@@ -1,7 +1,7 @@
 import { WitRegistry, WitVerifier } from "smart-trust-kotlin-hcert-core";
 import type { Card } from "../hospital/cards";
 
-const LIMITS = { maxInputChars: 20000, maxInflatedBytes: 1 << 20, maxDepth: 16, maxItems: 1000, maxStringBytes: 1 << 20 };
+export const LIMITS = { maxInputChars: 20000, maxInflatedBytes: 1 << 20, maxDepth: 16, maxItems: 1000, maxStringBytes: 1 << 20 };
 
 interface Dvc {
   n: string;
