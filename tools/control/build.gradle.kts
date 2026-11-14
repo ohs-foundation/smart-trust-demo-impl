@@ -49,6 +49,7 @@ val igIndex =
 sourceSets.main { resources.srcDirs(igDir, files(igIndexDir).builtBy(igIndex)) }
 
 dependencies {
+  implementation(projects.libs.trustkit)
   implementation(libs.clikt)
   implementation(libs.ktor.client.cio)
   implementation(libs.ktor.client.core)

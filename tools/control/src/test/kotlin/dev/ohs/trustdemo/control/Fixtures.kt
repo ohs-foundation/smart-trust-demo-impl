@@ -49,7 +49,7 @@ fun Bundle.allReferences(): Set<String> =
     .flatMap { json.encodeToJsonElement(Resource.serializer(), it).references() }
     .toSet()
 
-private fun JsonElement.references(): List<String> =
+fun JsonElement.references(): List<String> =
   when (this) {
     is JsonObject ->
       entries.flatMap { (key, value) ->

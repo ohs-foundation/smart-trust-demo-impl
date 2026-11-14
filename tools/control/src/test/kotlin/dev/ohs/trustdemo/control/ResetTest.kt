@@ -24,6 +24,9 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import java.time.LocalDate
+import kotlin.io.path.createTempDirectory
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.name
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.coroutines.test.runTest
@@ -67,9 +70,16 @@ class ResetTest {
   @Test
   fun resetTwiceLeavesOnlyBaseData() = runTest {
     val hapi = FakeHapi()
-    Reset(hapi.server).run(today)
-    Reset(hapi.server).run(today)
+    val medplum = FakeMedplum()
+    val secrets = createTempDirectory()
+    repeat(2) { Reset(hapi.server, medplum.admin, "password", secrets).run(today) }
     assertEquals(2, hapi.expunges)
     assertEquals(Seed.onesaBase(ig).entry.size, hapi.stored.size)
+    assertEquals(2, medplum.stored.values.count { it.hasIdentifier("CRH-HN-68-104377") })
+    assertEquals(1, medplum.invites)
+    assertEquals(
+      setOf("clinic-viewer.crt", "clinic-viewer.key"),
+      secrets.listDirectoryEntries().map { it.name }.toSet(),
+    )
   }
 }

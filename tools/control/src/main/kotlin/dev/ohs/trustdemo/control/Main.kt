@@ -21,8 +21,10 @@ import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.path
 import io.ktor.client.engine.cio.CIO
 import java.time.LocalDate
+import kotlin.io.path.Path
 import kotlinx.coroutines.runBlocking
 
 class TrustDemo : CliktCommand(name = "trust-demo") {
@@ -32,15 +34,34 @@ class TrustDemo : CliktCommand(name = "trust-demo") {
 }
 
 class ResetCommand : CliktCommand(name = "reset") {
-  private val hapi by
-    option("--hapi", envvar = "TRUST_DEMO_HAPI", help = "Onesa HAPI base URL")
-      .default("http://127.0.0.1:18082/fhir")
+  private val stackEnv by
+    option("--stack-env", help = "The stack's .env file")
+      .path(mustExist = true)
+      .default(Path("stack/.env"))
 
-  override fun help(context: Context) = "Put Onesa's HAPI server into the story's starting state."
+  override fun help(context: Context) =
+    "Put both countries' servers into the story's starting state."
 
   override fun run() = runBlocking {
-    Reset(FhirServer(hapi, { null }, CIO.create())).run(LocalDate.now())
-    echo("HAPI reset to the base data at $hapi")
+    val env = StackEnv.load(stackEnv)
+    val hapi = "http://127.0.0.1:${env.require("HAPI_HOST_PORT")}/fhir"
+    val medplum = "http://medplum.kesaro.${env.require("STACK_HOST")}:${env.require("PROXY_PORT")}"
+    val kesaro =
+      MedplumAdmin(
+        medplum,
+        env.require("MEDPLUM_SUPER_ADMIN_CLIENT_ID"),
+        env.require("MEDPLUM_SUPER_ADMIN_CLIENT_SECRET"),
+        CIO.create(),
+      )
+    val secrets = checkNotNull(stackEnv.toAbsolutePath().parent).resolve("taifafeki/secrets")
+    Reset(
+        FhirServer(hapi, { null }, CIO.create()),
+        kesaro,
+        env.require("TRUSTDEMO_USER_PASSWORD"),
+        secrets,
+      )
+      .run(LocalDate.now())
+    echo("Reset HAPI at $hapi and Medplum at $medplum; clinic certificate in $secrets")
   }
 }
 

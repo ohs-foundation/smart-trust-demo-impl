@@ -60,3 +60,4 @@ CLAUDE.MD
 ig-codegen/bin/
 build-logic/bin/
 stack/.env
+stack/taifafeki/secrets/
