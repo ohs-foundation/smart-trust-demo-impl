@@ -12,3 +12,5 @@ disk_gb: 100
 base_domain: demo.example.org
 repository: trust-demo
 server_name: trust-demo
+# owner/repo allowed to push images from CI (Workload Identity Federation); leave out for no CI access.
+github_repository: my-org/my-trust-demo

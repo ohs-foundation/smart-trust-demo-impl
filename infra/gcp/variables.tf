@@ -19,4 +19,5 @@ locals {
   base_domain     = local.config.base_domain
   repository      = try(local.config.repository, "trust-demo")
   server_name     = try(local.config.server_name, "trust-demo")
+  github_repo     = try(local.config.github_repository, "")
 }

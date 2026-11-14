@@ -11,6 +11,8 @@ resource "google_project_service" "apis" {
     "compute.googleapis.com",
     "artifactregistry.googleapis.com",
     "iap.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "sts.googleapis.com",
   ])
   project            = google_project.demo.project_id
   service            = each.value
@@ -129,4 +131,53 @@ resource "google_compute_instance" "server" {
   }
 
   depends_on = [google_artifact_registry_repository_iam_member.server_pull]
+}
+
+# CI pushes images keylessly: GitHub's OIDC token for this repository alone is exchanged for the CI account.
+resource "google_iam_workload_identity_pool" "github" {
+  count                     = local.github_repo == "" ? 0 : 1
+  project                   = google_project.demo.project_id
+  workload_identity_pool_id = "trust-demo-github"
+  display_name              = "GitHub Actions"
+  depends_on                = [google_project_service.apis]
+}
+
+resource "google_iam_workload_identity_pool_provider" "github" {
+  count                              = local.github_repo == "" ? 0 : 1
+  project                            = google_project.demo.project_id
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github[0].workload_identity_pool_id
+  workload_identity_pool_provider_id = "github"
+  display_name                       = "GitHub OIDC"
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.repository" = "assertion.repository"
+    "attribute.ref"        = "assertion.ref"
+  }
+  attribute_condition = "assertion.repository == \"${local.github_repo}\""
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+}
+
+resource "google_service_account" "ci" {
+  count        = local.github_repo == "" ? 0 : 1
+  project      = google_project.demo.project_id
+  account_id   = "trust-demo-ci"
+  display_name = "SMART Trust demo CI"
+}
+
+resource "google_artifact_registry_repository_iam_member" "ci_push" {
+  count      = local.github_repo == "" ? 0 : 1
+  project    = google_project.demo.project_id
+  location   = google_artifact_registry_repository.images.location
+  repository = google_artifact_registry_repository.images.repository_id
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${google_service_account.ci[0].email}"
+}
+
+resource "google_service_account_iam_member" "ci_github" {
+  count              = local.github_repo == "" ? 0 : 1
+  service_account_id = google_service_account.ci[0].name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github[0].name}/attribute.repository/${local.github_repo}"
 }

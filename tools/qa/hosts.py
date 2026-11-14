@@ -13,6 +13,7 @@ ALLOWED = {
     "smartregister.org": "extension URL in the infra's FHIR Data Pipes views, an identifier never fetched",
     "stackoverflow.com": "explanatory link in a comment of the infra's flink-conf.yaml, never called",
     "localhost": "loopback",
+    "token.actions.githubusercontent.com": "GitHub Actions OIDC issuer the GCP config trusts for keyless CI, an identifier",
     "quay.io": "container registry the stack pulls the Keycloak image from, pinned by tag",
     ".googleapis.com": "Google Cloud APIs the GCP OpenTofu config enables",
     "-docker.pkg.dev": "Artifact Registry's <region>-docker.pkg.dev, interpolated in the GCP OpenTofu config",
