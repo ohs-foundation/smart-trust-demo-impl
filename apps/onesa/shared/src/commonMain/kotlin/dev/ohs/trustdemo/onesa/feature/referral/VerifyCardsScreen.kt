@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.ohs.trustdemo.onesa.data.hcert.ListFreshness
 import dev.ohs.trustdemo.onesa.data.verification.EpiDose
 import dev.ohs.trustdemo.onesa.data.verification.ScanOutcome
 import dev.ohs.trustdemo.onesa.data.verification.UnmatchedDose
@@ -81,6 +82,8 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_failed
 import dev.ohs.trustdemo.onesa.generated.resources.verify_failed_reason
 import dev.ohs.trustdemo.onesa.generated.resources.verify_imported
 import dev.ohs.trustdemo.onesa.generated.resources.verify_imported_elsewhere
+import dev.ohs.trustdemo.onesa.generated.resources.verify_list_fetched
+import dev.ohs.trustdemo.onesa.generated.resources.verify_list_stale
 import dev.ohs.trustdemo.onesa.generated.resources.verify_nothing_imported
 import dev.ohs.trustdemo.onesa.generated.resources.verify_open_schedule
 import dev.ohs.trustdemo.onesa.generated.resources.verify_other_child
@@ -88,6 +91,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_replaced
 import dev.ohs.trustdemo.onesa.generated.resources.verify_results
 import dev.ohs.trustdemo.onesa.generated.resources.verify_title
 import dev.ohs.trustdemo.onesa.generated.resources.verify_use_text
+import dev.ohs.trustdemo.onesa.util.displayTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -188,6 +192,7 @@ fun VerifyCardsScreen(referralId: String, onBack: () -> Unit, onOpenSchedule: ()
             )
             Text(stringResource(Res.string.verify_confirm_child, pending.childName))
             Text(pending.dose)
+            ListFetched(pending.list)
             Button(
               onClick = viewModel::confirm,
               enabled = !state.busy,
@@ -242,6 +247,16 @@ fun VerifyCardsScreen(referralId: String, onBack: () -> Unit, onOpenSchedule: ()
 }
 
 @Composable
+private fun ListFetched(list: ListFreshness) {
+  list.fetchedAtEpochSeconds?.let {
+    Text(stringResource(Res.string.verify_list_fetched, displayTime(it)))
+  }
+  if (list.stale) {
+    Text(stringResource(Res.string.verify_list_stale), color = MaterialTheme.colorScheme.error)
+  }
+}
+
+@Composable
 private fun Outcome(outcome: ScanOutcome) {
   Card(Modifier.fillMaxWidth()) {
     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -252,6 +267,7 @@ private fun Outcome(outcome: ScanOutcome) {
             style = MaterialTheme.typography.labelLarge,
           )
           Text(outcome.dose)
+          outcome.list?.let { ListFetched(it) }
           if (outcome.replacedReported) Text(stringResource(Res.string.verify_replaced))
           if (outcome.listStale) Text(stringResource(Res.string.list_stale))
         }

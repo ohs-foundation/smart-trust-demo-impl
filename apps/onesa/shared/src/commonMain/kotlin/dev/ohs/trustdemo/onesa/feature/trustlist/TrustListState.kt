@@ -26,4 +26,7 @@ data class TrustListState(
   val fetchedAt: String? = null,
   val entryCount: String? = null,
   val domains: String? = null,
+  val stale: Boolean = false,
+  val refreshFailedAt: String? = null,
+  val refreshFailure: String? = null,
 )

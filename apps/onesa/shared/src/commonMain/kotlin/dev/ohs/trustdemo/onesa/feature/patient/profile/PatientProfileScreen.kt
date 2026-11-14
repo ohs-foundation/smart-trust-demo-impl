@@ -49,7 +49,10 @@ import dev.ohs.player.client.registry.LocalViewRegistry
 import dev.ohs.player.client.registry.componentRenderer
 import dev.ohs.player.client.registry.layoutRenderer
 import dev.ohs.player.client.renderer.RenderOptions
+import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.data.schedule.BookedVisit
+import dev.ohs.trustdemo.onesa.feature.role.ScreenAction
+import dev.ohs.trustdemo.onesa.feature.role.actions
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.list_stale
 import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_add_clinical_data
@@ -75,13 +78,19 @@ import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatientProfileScreen(patientId: String, onBack: () -> Unit, onAddClinicalData: () -> Unit) {
+fun PatientProfileScreen(
+  patientId: String,
+  role: AppRole,
+  onBack: () -> Unit,
+  onAddClinicalData: () -> Unit,
+) {
   val viewModel =
     koinViewModel<PatientProfileViewModel>(key = patientId) { parametersOf(patientId) }
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   val form by viewModel.form.collectAsStateWithLifecycle()
   val recordedStale by viewModel.recordedStale.collectAsStateWithLifecycle()
   val registry = LocalViewRegistry.current
+  val canRecordDose = ScreenAction.RecordDose in role.actions()
 
   val headerRenderer =
     remember(registry) { registry.componentRenderer<PatientSummaryState>(ViewTypeCS.PatientHeader) }
@@ -152,11 +161,13 @@ fun PatientProfileScreen(patientId: String, onBack: () -> Unit, onAddClinicalDat
       )
     },
     floatingActionButton = {
-      FloatingActionButton(onClick = onAddClinicalData) {
-        Icon(
-          Icons.Filled.Add,
-          contentDescription = stringResource(Res.string.patient_profile_add_clinical_data),
-        )
+      if (canRecordDose) {
+        FloatingActionButton(onClick = onAddClinicalData) {
+          Icon(
+            Icons.Filled.Add,
+            contentDescription = stringResource(Res.string.patient_profile_add_clinical_data),
+          )
+        }
       }
     },
   ) { padding ->
@@ -230,9 +241,11 @@ fun PatientProfileScreen(patientId: String, onBack: () -> Unit, onAddClinicalDat
         }
       }
       s.visit?.let { visit -> item(key = "visit") { BookedVisitCard(visit) } }
-      item(key = "record_dose") {
-        OutlinedButton(onClick = viewModel::openForm, modifier = Modifier.fillMaxWidth()) {
-          Text(stringResource(Res.string.record_dose))
+      if (canRecordDose) {
+        item(key = "record_dose") {
+          OutlinedButton(onClick = viewModel::openForm, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(Res.string.record_dose))
+          }
         }
       }
       if (s.contacts.isNotEmpty()) {

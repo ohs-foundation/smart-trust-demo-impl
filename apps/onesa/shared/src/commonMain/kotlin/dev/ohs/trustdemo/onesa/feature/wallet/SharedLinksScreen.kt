@@ -22,7 +22,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -74,6 +75,8 @@ import dev.ohs.trustdemo.onesa.generated.resources.shared_refusal_expired
 import dev.ohs.trustdemo.onesa.generated.resources.shared_refusal_other
 import dev.ohs.trustdemo.onesa.generated.resources.shared_refusal_withdrawn
 import dev.ohs.trustdemo.onesa.generated.resources.shared_refusal_wrong_passcode
+import dev.ohs.trustdemo.onesa.generated.resources.shared_show_all
+import dev.ohs.trustdemo.onesa.generated.resources.shared_show_latest
 import dev.ohs.trustdemo.onesa.generated.resources.shared_show_qr
 import dev.ohs.trustdemo.onesa.generated.resources.shared_status_expired
 import dev.ohs.trustdemo.onesa.generated.resources.shared_status_withdrawn
@@ -97,6 +100,7 @@ fun SharedLinksScreen(onBack: () -> Unit, onShowQr: (String) -> Unit) {
   val links by viewModel.links.collectAsStateWithLifecycle()
   val notice by viewModel.notice.collectAsStateWithLifecycle()
   var confirming by remember { mutableStateOf<String?>(null) }
+  var showingAll by remember { mutableStateOf(emptySet<String>()) }
 
   Scaffold(
     topBar = {
@@ -138,9 +142,11 @@ fun SharedLinksScreen(onBack: () -> Unit, onShowQr: (String) -> Unit) {
         item {
           Text(stringResource(Res.string.shared_open), style = MaterialTheme.typography.titleMedium)
         }
-        items(open, key = { it.consentId }) {
-          ShareCard(
+        open.forEach {
+          shareCard(
             it,
+            showAll = it.consentId in showingAll,
+            onToggleAll = { showingAll = showingAll.toggled(it.consentId) },
             onShowQr = { onShowQr(it.consentId) },
             onWithdraw = { confirming = it.consentId },
           )
@@ -153,7 +159,15 @@ fun SharedLinksScreen(onBack: () -> Unit, onShowQr: (String) -> Unit) {
             style = MaterialTheme.typography.titleMedium,
           )
         }
-        items(closed, key = { it.consentId }) { ShareCard(it, onShowQr = {}, onWithdraw = {}) }
+        closed.forEach {
+          shareCard(
+            it,
+            showAll = it.consentId in showingAll,
+            onToggleAll = { showingAll = showingAll.toggled(it.consentId) },
+            onShowQr = {},
+            onWithdraw = {},
+          )
+        }
       }
     }
   }
@@ -183,31 +197,62 @@ fun SharedLinksScreen(onBack: () -> Unit, onShowQr: (String) -> Unit) {
   }
 }
 
-@Composable
-private fun ShareCard(share: SharedLink, onShowQr: () -> Unit, onWithdraw: () -> Unit) {
-  Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-    Text(share.name ?: share.personId, style = MaterialTheme.typography.titleMedium)
-    Text(
-      when (share.status) {
-        ShareStatus.Active -> stringResource(Res.string.shared_until, share.end.toString())
-        ShareStatus.Withdrawn -> stringResource(Res.string.shared_status_withdrawn)
-        ShareStatus.Expired -> stringResource(Res.string.shared_status_expired)
-      },
-      style = MaterialTheme.typography.bodyMedium,
-    )
-    Text(stringResource(Res.string.shared_looks), style = MaterialTheme.typography.labelLarge)
-    if (share.looks.isEmpty()) Text(stringResource(Res.string.shared_no_looks))
-    share.looks.forEach { Text(lookText(it), style = MaterialTheme.typography.bodySmall) }
-    if (share.status == ShareStatus.Active) {
-      if (!share.kept) Text(stringResource(Res.string.shared_from_other_device))
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(onClick = onShowQr, enabled = share.kept) {
-          Text(stringResource(Res.string.shared_show_qr))
-        }
-        OutlinedButton(onClick = onWithdraw) { Text(stringResource(Res.string.shared_withdraw)) }
+/** How many of a share's latest looks show before the family asks for all of them. */
+internal const val LATEST_LOOKS = 5
+
+private fun Set<String>.toggled(id: String) = if (id in this) this - id else this + id
+
+/** A share as rows of the list, so a long run of looks is composed only as it scrolls in. */
+private fun LazyListScope.shareCard(
+  share: SharedLink,
+  showAll: Boolean,
+  onToggleAll: () -> Unit,
+  onShowQr: () -> Unit,
+  onWithdraw: () -> Unit,
+) {
+  val id = share.consentId
+  item(key = "$id/head") {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+      Text(share.name ?: share.personId, style = MaterialTheme.typography.titleMedium)
+      Text(
+        when (share.status) {
+          ShareStatus.Active -> stringResource(Res.string.shared_until, share.end.toString())
+          ShareStatus.Withdrawn -> stringResource(Res.string.shared_status_withdrawn)
+          ShareStatus.Expired -> stringResource(Res.string.shared_status_expired)
+        },
+        style = MaterialTheme.typography.bodyMedium,
+      )
+      Text(stringResource(Res.string.shared_looks), style = MaterialTheme.typography.labelLarge)
+      if (share.looks.isEmpty()) Text(stringResource(Res.string.shared_no_looks))
+    }
+  }
+  val shown = if (showAll) share.looks else share.looks.take(LATEST_LOOKS)
+  itemsIndexed(shown, key = { index, _ -> "$id/look/$index" }) { _, look ->
+    Text(lookText(look), style = MaterialTheme.typography.bodySmall)
+  }
+  if (share.looks.size > LATEST_LOOKS) {
+    item(key = "$id/toggle") {
+      TextButton(onClick = onToggleAll) {
+        Text(
+          if (showAll) stringResource(Res.string.shared_show_latest, LATEST_LOOKS)
+          else stringResource(Res.string.shared_show_all, share.looks.size)
+        )
       }
     }
-    HorizontalDivider()
+  }
+  item(key = "$id/actions") {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+      if (share.status == ShareStatus.Active) {
+        if (!share.kept) Text(stringResource(Res.string.shared_from_other_device))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+          OutlinedButton(onClick = onShowQr, enabled = share.kept) {
+            Text(stringResource(Res.string.shared_show_qr))
+          }
+          OutlinedButton(onClick = onWithdraw) { Text(stringResource(Res.string.shared_withdraw)) }
+        }
+      }
+      HorizontalDivider()
+    }
   }
 }
 

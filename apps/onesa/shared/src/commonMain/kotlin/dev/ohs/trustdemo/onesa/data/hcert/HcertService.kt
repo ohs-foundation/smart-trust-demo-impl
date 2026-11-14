@@ -27,6 +27,8 @@ import dev.ohs.trustdemo.hcert.TrustListSnapshot
 import dev.ohs.trustdemo.hcert.TrustedDscInfo
 import dev.ohs.trustdemo.hcert.VerificationResult
 import dev.ohs.trustdemo.hcert.loadHcertEngine
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -45,6 +47,22 @@ class PinnedTrustList(
   val cache: TrustListCache,
 )
 
+/** A list older than this is shown as stale; verification still runs against it. */
+const val TRUST_LIST_STALE_AFTER_SECONDS = 24 * 60 * 60L
+
+/** When the latest refresh of a list failed, and why; the last good list stays in use. */
+data class RefreshFailure(val atEpochSeconds: Long, val reason: String)
+
+/** When the list behind a verification was last fetched, and whether that is over a day ago. */
+data class ListFreshness(val fetchedAtEpochSeconds: Long?, val stale: Boolean)
+
+private fun freshnessOf(fetchedAtEpochSeconds: Long?, now: Long) =
+  ListFreshness(
+    fetchedAtEpochSeconds,
+    stale =
+      fetchedAtEpochSeconds != null && now - fetchedAtEpochSeconds > TRUST_LIST_STALE_AFTER_SECONDS,
+  )
+
 /** What the trust list status screen shows about one list. */
 data class TrustListStatus(
   val name: String,
@@ -53,6 +71,8 @@ data class TrustListStatus(
   val fetchedAtEpochSeconds: Long?,
   val entryCount: Int,
   val domains: List<String>,
+  val stale: Boolean = false,
+  val lastFailure: RefreshFailure? = null,
 )
 
 /**
@@ -68,6 +88,7 @@ class HcertService(private val local: PinnedTrustList, private val gdhcnDev: Pin
   private val lock = Mutex()
   private var engine: HcertEngine? = null
   private val built = mutableMapOf<TrustDomain, Built>()
+  private val failures = MutableStateFlow<Map<String, RefreshFailure>>(emptyMap())
 
   suspend fun verifyCard(
     hc1: String,
@@ -89,13 +110,38 @@ class HcertService(private val local: PinnedTrustList, private val gdhcnDev: Pin
    */
   suspend fun read(hc1: String): ReadResult = engine().readUnverified(hc1)
 
-  /** Fetches the local list; the copy already held stays when the fetch or its proof fails. */
+  /** How fresh the list that vouched for [dsc] is. */
+  suspend fun freshness(
+    dsc: TrustedDscInfo,
+    now: Long = HcertClock.nowEpochSeconds(),
+  ): ListFreshness =
+    freshnessOf(
+      (if (dsc.domain == TrustDomain.Dvc.code) local else gdhcnDev)
+        .cache
+        .current()
+        ?.fetchedAtEpochSeconds,
+      now,
+    )
+
+  /**
+   * Fetches the local list; the copy already held stays when the fetch or its proof fails, and the
+   * failure is kept for [statuses] until a fetch succeeds.
+   */
   suspend fun refreshLocalList(
     now: Long = HcertClock.nowEpochSeconds()
   ): Result<TrustListSnapshot> {
     val engine = engine()
     val signer = local.signer()
-    return local.cache.refresh(now) { engine.newTrustStore().addVerifiedDidDocument(it, signer) }
+    return local.cache
+      .refresh(now) { engine.newTrustStore().addVerifiedDidDocument(it, signer) }
+      .also { result ->
+        failures.update { current ->
+          result.exceptionOrNull()?.let {
+            current +
+              (local.name to RefreshFailure(now, it.message ?: it::class.simpleName.orEmpty()))
+          } ?: (current - local.name)
+        }
+      }
   }
 
   /** The sync hook: a failed refresh is logged, never surfaced as a sync failure. */
@@ -105,9 +151,10 @@ class HcertService(private val local: PinnedTrustList, private val gdhcnDev: Pin
     }
   }
 
-  suspend fun statuses(): List<TrustListStatus> = listOf(local, gdhcnDev).map { it.status() }
+  suspend fun statuses(now: Long = HcertClock.nowEpochSeconds()): List<TrustListStatus> =
+    listOf(local, gdhcnDev).map { it.status(now) }
 
-  private suspend fun PinnedTrustList.status(): TrustListStatus {
+  private suspend fun PinnedTrustList.status(now: Long): TrustListStatus {
     val snapshot = cache.current()
     return TrustListStatus(
       name = name,
@@ -116,6 +163,8 @@ class HcertService(private val local: PinnedTrustList, private val gdhcnDev: Pin
       fetchedAtEpochSeconds = snapshot?.fetchedAtEpochSeconds,
       entryCount = snapshot?.let { DidDocuments.entryCount(it.json) } ?: 0,
       domains = snapshot?.let { DidDocuments.domains(it.json) }.orEmpty(),
+      stale = freshnessOf(snapshot?.fetchedAtEpochSeconds, now).stale,
+      lastFailure = failures.value[name],
     )
   }
 

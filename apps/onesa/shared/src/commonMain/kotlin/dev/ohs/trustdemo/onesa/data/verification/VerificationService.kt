@@ -23,6 +23,7 @@ import dev.ohs.trustdemo.hcert.VerificationFailure
 import dev.ohs.trustdemo.hcert.VerificationResult
 import dev.ohs.trustdemo.hcert.VerifyStep
 import dev.ohs.trustdemo.onesa.data.hcert.HcertService
+import dev.ohs.trustdemo.onesa.data.hcert.ListFreshness
 import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSession
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
@@ -56,6 +57,8 @@ sealed interface ScanOutcome {
     val replacedReported: Boolean,
     /** True when the dose is in but the local copy could not be refreshed. */
     val listStale: Boolean = false,
+    /** The card list this dose was verified against. */
+    val list: ListFreshness? = null,
   ) : ScanOutcome
 
   /** The card verified, but its dose was imported by an earlier scan. */
@@ -80,6 +83,8 @@ internal constructor(
   val holderBirthDate: String,
   val childName: String,
   val dose: String,
+  /** The card list the verification ran against: when it was fetched, and whether it is stale. */
+  val list: ListFreshness,
 )
 
 /** What checking a scanned card found: an outcome already settled, or a card to confirm. */
@@ -144,7 +149,10 @@ class VerificationService(
     }
     val card = VerifiedCard(dvc, verified, hcert.trustListSource(verified.dsc))
     val holder = DvcFhirMapper.humanName(dvc.n).text?.value ?: dvc.n
-    return ScanCheck.Pending(PendingImport(referral, hc1, card, holder, dvc.dob, child.name, dose))
+    val list = hcert.freshness(verified.dsc, request.now.epochSeconds)
+    return ScanCheck.Pending(
+      PendingImport(referral, hc1, card, holder, dvc.dob, child.name, dose, list)
+    )
   }
 
   suspend fun import(pending: PendingImport): ScanOutcome {
@@ -168,6 +176,7 @@ class VerificationService(
       pending.dose,
       replacedReported = replaced.isNotEmpty(),
       listStale = !synced,
+      list = pending.list,
     )
   }
 

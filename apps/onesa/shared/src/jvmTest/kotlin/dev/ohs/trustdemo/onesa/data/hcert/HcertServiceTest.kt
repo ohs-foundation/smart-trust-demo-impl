@@ -21,10 +21,16 @@ import dev.ohs.trustdemo.hcert.TrustListCache
 import dev.ohs.trustdemo.hcert.VerificationResult
 import dev.ohs.trustdemo.hcert.VerifyStep
 import dev.ohs.trustdemo.trustkit.StandIn
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpStatusCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -73,6 +79,59 @@ class HcertServiceTest {
     )
     val link = service.verifyLink(hc1, now)
     assertNotEquals(VerifyStep.TRUST_LOOKUP, (link as? VerificationResult.Failed)?.failure?.step)
+  }
+
+  @Test
+  fun aFailedRefreshKeepsTheLastGoodListAndSaysSo() = runTest {
+    var up = true
+    val localList = resource("/local-test-list.json")
+    val local =
+      PinnedTrustList(
+        name = "Local test list",
+        signer = BundledTrustLists::localSigner,
+        cache =
+          TrustListCache(
+            InMemoryTrustListStorage(),
+            url = "http://trust.gdhcn.example/local-test-list.json",
+            httpClient =
+              HttpClient(
+                MockEngine {
+                  if (up) respond(localList, HttpStatusCode.OK)
+                  else respond("", HttpStatusCode.ServiceUnavailable)
+                }
+              ),
+          ),
+      )
+    val service = HcertService(local, BundledTrustLists.gdhcnDev(InMemoryTrustListStorage()))
+    val fetchedAt = 1_800_000_000L
+    assertTrue(service.refreshLocalList(fetchedAt).isSuccess)
+    val good = service.statuses(now = fetchedAt).first()
+    assertEquals(null, good.lastFailure)
+
+    up = false
+    assertTrue(service.refreshLocalList(fetchedAt + 600).isFailure)
+
+    val kept = service.statuses(now = fetchedAt + 600).first()
+    assertEquals(fetchedAt, kept.fetchedAtEpochSeconds)
+    assertEquals(good.entryCount, kept.entryCount)
+    assertEquals(
+      RefreshFailure(fetchedAt + 600, "Trust list fetch failed: HTTP 503"),
+      kept.lastFailure,
+    )
+    assertFalse(kept.stale)
+    assertTrue(service.statuses(now = fetchedAt + 25 * 3600).first().stale)
+    val card =
+      assertIs<VerificationResult.Verified>(
+        service.verifyCard(SignedCards.dvc(StandIn.XXR_CARD, fetchedAt), fetchedAt)
+      )
+    assertEquals(
+      ListFreshness(fetchedAt, stale = true),
+      service.freshness(card.hcert.dsc, now = fetchedAt + 25 * 3600),
+    )
+
+    up = true
+    assertTrue(service.refreshLocalList(fetchedAt + 900).isSuccess)
+    assertEquals(null, service.statuses(now = fetchedAt + 900).first().lastFailure)
   }
 
   private fun resource(path: String): String =

@@ -123,10 +123,10 @@ android {
 }
 
 /**
- * The debug variant's network security config: cleartext to the demo's sslip.io names as in main,
- * and the demo stack's CA, from `stack/tls/ca.crt`, trusted for the exact host of `VHL_BASE_URL`
- * alone. Without the CA no trust anchor is generated: the build succeeds, warns, and the VHL
- * service stays unreachable until the app is built again after `make stack-up`.
+ * The debug variant's network security config, which replaces main's strict one: cleartext to the
+ * demo's sslip.io names, and the demo stack's CA, from `stack/tls/ca.crt`, trusted for the exact
+ * host of `VHL_BASE_URL` alone. Without the CA no trust anchor is generated: the build succeeds,
+ * warns, and the VHL service stays unreachable until the app is built again after `make stack-up`.
  */
 abstract class GenerateDebugNetworkConfig : DefaultTask() {
   @get:Input @get:Optional abstract val ca: Property<String>

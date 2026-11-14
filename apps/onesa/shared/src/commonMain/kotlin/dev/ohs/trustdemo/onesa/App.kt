@@ -36,10 +36,11 @@ import dev.ohs.player.client.registry.LocalViewRegistry
 import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.auth.AuthState
 import dev.ohs.trustdemo.onesa.auth.AuthViewModel
+import dev.ohs.trustdemo.onesa.auth.Permission
+import dev.ohs.trustdemo.onesa.auth.can
 import dev.ohs.trustdemo.onesa.auth.rememberAuthorizationLauncher
 import dev.ohs.trustdemo.onesa.data.sharing.ShareService
 import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileScreen
-import dev.ohs.trustdemo.onesa.feature.home.HomeDestination
 import dev.ohs.trustdemo.onesa.feature.home.HomeScreen
 import dev.ohs.trustdemo.onesa.feature.login.LoginScreen
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileScreen
@@ -149,6 +150,7 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
         composable("home") {
           HomeScreen(
             userName = userName,
+            role = role,
             onGroupClick = { id -> navController.navigate("groupProfile/$id") },
             onDataCaptureClick = {
               navController.navigate(
@@ -168,7 +170,6 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
             onOpenReferral = { id -> navController.navigate("verifyCards/$id") },
             onShareRecords = { navController.navigate("share") },
             onSharedLinks = { navController.navigate("shared") },
-            destinations = role.destinations(),
           )
         }
 
@@ -193,12 +194,14 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
             back.arguments?.read { getStringOrNull("questionnaireId") }.orEmpty()
           val patientId = back.arguments?.read { getStringOrNull("patientId") }
           val groupId = back.arguments?.read { getStringOrNull("groupId") }
-          QuestionnaireHostScreen(
-            questionnaireId = questionnaireId,
-            patientId = patientId,
-            groupId = groupId,
-            onBack = { navController.popBackStack() },
-          )
+          RouteGuard(role, questionnairePermission(questionnaireId), onSignOut) {
+            QuestionnaireHostScreen(
+              questionnaireId = questionnaireId,
+              patientId = patientId,
+              groupId = groupId,
+              onBack = { navController.popBackStack() },
+            )
+          }
         }
 
         // Screen 2: Household profile (head + members)
@@ -207,30 +210,37 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
           arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
         ) { back ->
           val groupId = back.arguments?.read { getStringOrNull("groupId") }.orEmpty()
-          GroupProfileScreen(
-            groupId = groupId,
-            onBack = { navController.popBackStack() },
-            onMemberClick = { id -> navController.navigate("patientProfile/$id") },
-            onAddMembers = { navController.navigate("scanCard/$groupId") },
-          )
+          RouteGuard(role, Permission.Households, onSignOut) {
+            GroupProfileScreen(
+              groupId = groupId,
+              role = role,
+              onBack = { navController.popBackStack() },
+              onMemberClick = { id -> navController.navigate("patientProfile/$id") },
+              onAddMembers = { navController.navigate("scanCard/$groupId") },
+            )
+          }
         }
 
         composable("share") {
-          ShareScreen(
-            onBack = { navController.popBackStack() },
-            onIssued = { ids ->
-              navController.navigate("issued/${ids.joinToString(",")}") {
-                popUpTo("share") { inclusive = true }
-              }
-            },
-          )
+          RouteGuard(role, Permission.Wallet, onSignOut) {
+            ShareScreen(
+              onBack = { navController.popBackStack() },
+              onIssued = { ids ->
+                navController.navigate("issued/${ids.joinToString(",")}") {
+                  popUpTo("share") { inclusive = true }
+                }
+              },
+            )
+          }
         }
 
         composable("shared") {
-          SharedLinksScreen(
-            onBack = { navController.popBackStack() },
-            onShowQr = { id -> navController.navigate("issued/$id") },
-          )
+          RouteGuard(role, Permission.Wallet, onSignOut) {
+            SharedLinksScreen(
+              onBack = { navController.popBackStack() },
+              onShowQr = { id -> navController.navigate("issued/$id") },
+            )
+          }
         }
 
         composable(
@@ -243,7 +253,9 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
               .orEmpty()
               .split(',')
               .filter { it.isNotBlank() }
-          IssuedLinksScreen(consentIds = ids, onBack = { navController.popBackStack() })
+          RouteGuard(role, Permission.Wallet, onSignOut) {
+            IssuedLinksScreen(consentIds = ids, onBack = { navController.popBackStack() })
+          }
         }
 
         composable(
@@ -251,11 +263,13 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
           arguments = listOf(navArgument("referralId") { type = NavType.StringType }),
         ) { back ->
           val referralId = back.arguments?.read { getStringOrNull("referralId") }.orEmpty()
-          VerifyCardsScreen(
-            referralId = referralId,
-            onBack = { navController.popBackStack() },
-            onOpenSchedule = { navController.navigate("schedule/$referralId") },
-          )
+          RouteGuard(role, Permission.Referrals, onSignOut) {
+            VerifyCardsScreen(
+              referralId = referralId,
+              onBack = { navController.popBackStack() },
+              onOpenSchedule = { navController.navigate("schedule/$referralId") },
+            )
+          }
         }
 
         composable(
@@ -263,7 +277,9 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
           arguments = listOf(navArgument("referralId") { type = NavType.StringType }),
         ) { back ->
           val referralId = back.arguments?.read { getStringOrNull("referralId") }.orEmpty()
-          ScheduleScreen(referralId = referralId, onBack = { navController.popBackStack() })
+          RouteGuard(role, Permission.Referrals, onSignOut) {
+            ScheduleScreen(referralId = referralId, onBack = { navController.popBackStack() })
+          }
         }
 
         composable(
@@ -271,17 +287,19 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
           arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
         ) { back ->
           val groupId = back.arguments?.read { getStringOrNull("groupId") }.orEmpty()
-          ScanCardScreen(
-            onBack = { navController.popBackStack() },
-            onContinue = {
-              navController.navigate(
-                questionnaireHostRoute(
-                  questionnaireId = QuestionnaireIds.NEWBORN_REGISTRATION,
-                  groupId = groupId,
+          RouteGuard(role, Permission.Register, onSignOut) {
+            ScanCardScreen(
+              onBack = { navController.popBackStack() },
+              onContinue = {
+                navController.navigate(
+                  questionnaireHostRoute(
+                    questionnaireId = QuestionnaireIds.NEWBORN_REGISTRATION,
+                    groupId = groupId,
+                  )
                 )
-              )
-            },
-          )
+              },
+            )
+          }
         }
 
         // Screen 3: Patient IPS summary
@@ -290,31 +308,51 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
           arguments = listOf(navArgument("patientId") { type = NavType.StringType }),
         ) { back ->
           val patientId = back.arguments?.read { getStringOrNull("patientId") }.orEmpty()
-          PatientProfileScreen(
-            patientId = patientId,
-            onBack = { navController.popBackStack() },
-            onAddClinicalData = {
-              navController.navigate(
-                questionnaireHostRoute(
-                  questionnaireId = QuestionnaireIds.PATIENT_CLINICAL_DATA,
-                  patientId = patientId,
+          RouteGuard(role, Permission.PatientProfile, onSignOut) {
+            PatientProfileScreen(
+              patientId = patientId,
+              role = role,
+              onBack = { navController.popBackStack() },
+              onAddClinicalData = {
+                navController.navigate(
+                  questionnaireHostRoute(
+                    questionnaireId = QuestionnaireIds.PATIENT_CLINICAL_DATA,
+                    patientId = patientId,
+                  )
                 )
-              )
-            },
-          )
+              },
+            )
+          }
         }
       }
     }
   }
 }
 
-private fun AppRole.destinations(): List<HomeDestination> =
-  when (this) {
-    AppRole.FAMILY -> listOf(HomeDestination.Wallet)
-    AppRole.CHW -> listOf(HomeDestination.Households, HomeDestination.TrustLists)
-    AppRole.CLINICIAN ->
-      listOf(HomeDestination.Referrals, HomeDestination.Households, HomeDestination.TrustLists)
+/** The permission that opens a form; a form the app does not know opens for no one. */
+private fun questionnairePermission(questionnaireId: String): Permission? =
+  when (questionnaireId) {
+    QuestionnaireIds.HOUSEHOLD_REGISTRATION,
+    QuestionnaireIds.HOUSEHOLD_MEMBERS,
+    QuestionnaireIds.NEWBORN_REGISTRATION -> Permission.Register
+    QuestionnaireIds.PATIENT_CLINICAL_DATA -> Permission.RecordDose
+    else -> null
   }
+
+/** Opens [content] for a role holding [permission]; any other role gets the no-role screen. */
+@Composable
+private fun RouteGuard(
+  role: AppRole,
+  permission: Permission?,
+  onSignOut: () -> Unit,
+  content: @Composable () -> Unit,
+) {
+  if (permission != null && role.can(permission)) {
+    content()
+  } else {
+    NoRoleScreen(message = null, onRetry = null, onSignOut = onSignOut)
+  }
+}
 
 private fun questionnaireHostRoute(
   questionnaireId: String,

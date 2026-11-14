@@ -54,6 +54,10 @@
     <string name="trust_list_source">Source: %1$s</string>
     <string name="trust_list_signer">Signed by: %1$s</string>
     <string name="trust_list_fetched_at">Fetched: %1$s</string>
+    <string name="trust_list_stale">Stale: fetched over 24 hours ago. Cards are still checked against it.</string>
+    <string name="trust_list_refresh_failed">Last refresh failed at %1$s: %2$s</string>
+    <string name="verify_list_fetched">Checked against the card list fetched %1$s</string>
+    <string name="verify_list_stale">That list is over 24 hours old. Sync to refresh it.</string>
     <string name="trust_list_entries">Entries: %1$s</string>
     <string name="trust_list_domains">Domains: %1$s</string>
 
@@ -234,6 +238,8 @@
     <string name="shared_status_expired">Expired</string>
     <string name="shared_no_looks">No clinic has looked yet.</string>
     <string name="shared_looks">Who looked</string>
+    <string name="shared_show_all">Show all %1$d</string>
+    <string name="shared_show_latest">Show only the latest %1$d</string>
     <string name="shared_look_released">%1$s: %2$s opened the summary</string>
     <string name="shared_look_document_released">%1$s: %2$s fetched the summary</string>
     <string name="shared_look_refused">%1$s: %2$s was refused. %3$s</string>

@@ -34,6 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.player.client.layout.VerticalListRenderer
 import dev.ohs.player.client.scaffold.ListScaffold
+import dev.ohs.trustdemo.onesa.auth.AppRole
+import dev.ohs.trustdemo.onesa.feature.role.ScreenAction
+import dev.ohs.trustdemo.onesa.feature.role.actions
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.group_list_empty
 import dev.ohs.trustdemo.onesa.generated.resources.group_list_register_household
@@ -44,7 +47,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GroupListScreen(onGroupClick: (String) -> Unit, onDataCaptureClick: () -> Unit) {
+fun GroupListScreen(role: AppRole, onGroupClick: (String) -> Unit, onDataCaptureClick: () -> Unit) {
   val viewModel: GroupListViewModel = koinViewModel()
   val groups by viewModel.groups.collectAsStateWithLifecycle()
 
@@ -58,11 +61,13 @@ fun GroupListScreen(onGroupClick: (String) -> Unit, onDataCaptureClick: () -> Un
   Scaffold(
     contentWindowInsets = WindowInsets(0, 0, 0, 0),
     floatingActionButton = {
-      ExtendedFloatingActionButton(
-        onClick = onDataCaptureClick,
-        icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-        text = { Text(stringResource(Res.string.group_list_register_household)) },
-      )
+      if (ScreenAction.RegisterHousehold in role.actions()) {
+        ExtendedFloatingActionButton(
+          onClick = onDataCaptureClick,
+          icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+          text = { Text(stringResource(Res.string.group_list_register_household)) },
+        )
+      }
     },
   ) { padding ->
     Box(modifier = Modifier.fillMaxSize().padding(padding)) {

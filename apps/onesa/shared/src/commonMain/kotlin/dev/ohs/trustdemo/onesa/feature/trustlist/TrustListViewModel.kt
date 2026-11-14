@@ -19,13 +19,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.ohs.trustdemo.onesa.data.hcert.HcertService
 import dev.ohs.trustdemo.onesa.data.hcert.TrustListStatus
-import kotlin.time.Instant
+import dev.ohs.trustdemo.onesa.util.displayTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 class TrustListViewModel(private val hcert: HcertService) : ViewModel() {
   private val _lists = MutableStateFlow<List<TrustListState>?>(null)
@@ -45,13 +43,10 @@ private fun TrustListStatus.toState() =
     name = name,
     source = source.ifBlank { null },
     signer = signer.ifBlank { null },
-    fetchedAt = fetchedAtEpochSeconds?.let { Instant.fromEpochSeconds(it).toDisplayString() },
+    fetchedAt = fetchedAtEpochSeconds?.let(::displayTime),
     entryCount = entryCount.toString(),
     domains = domains.joinToString().ifBlank { null },
+    stale = stale,
+    refreshFailedAt = lastFailure?.let { displayTime(it.atEpochSeconds) },
+    refreshFailure = lastFailure?.reason,
   )
-
-private fun Instant.toDisplayString(): String {
-  val local = toLocalDateTime(TimeZone.currentSystemDefault())
-  return "${local.date} ${local.hour.toString().padStart(2, '0')}:" +
-    local.minute.toString().padStart(2, '0')
-}

@@ -45,6 +45,9 @@ import dev.ohs.player.client.registry.LocalViewRegistry
 import dev.ohs.player.client.registry.componentRenderer
 import dev.ohs.player.client.registry.layoutRenderer
 import dev.ohs.player.client.renderer.RenderOptions
+import dev.ohs.trustdemo.onesa.auth.AppRole
+import dev.ohs.trustdemo.onesa.feature.role.ScreenAction
+import dev.ohs.trustdemo.onesa.feature.role.actions
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.group_profile_add_members
 import dev.ohs.trustdemo.onesa.generated.resources.group_profile_add_members_description
@@ -61,6 +64,7 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun GroupProfileScreen(
   groupId: String,
+  role: AppRole,
   onBack: () -> Unit,
   onMemberClick: (String) -> Unit,
   onAddMembers: () -> Unit,
@@ -100,16 +104,18 @@ fun GroupProfileScreen(
       )
     },
     floatingActionButton = {
-      ExtendedFloatingActionButton(
-        onClick = onAddMembers,
-        text = { Text(stringResource(Res.string.group_profile_add_members)) },
-        icon = {
-          Icon(
-            Icons.Filled.Add,
-            contentDescription = stringResource(Res.string.group_profile_add_members_description),
-          )
-        },
-      )
+      if (ScreenAction.AddNewborn in role.actions()) {
+        ExtendedFloatingActionButton(
+          onClick = onAddMembers,
+          text = { Text(stringResource(Res.string.group_profile_add_members)) },
+          icon = {
+            Icon(
+              Icons.Filled.Add,
+              contentDescription = stringResource(Res.string.group_profile_add_members_description),
+            )
+          },
+        )
+      }
     },
   ) { padding ->
     val s = state

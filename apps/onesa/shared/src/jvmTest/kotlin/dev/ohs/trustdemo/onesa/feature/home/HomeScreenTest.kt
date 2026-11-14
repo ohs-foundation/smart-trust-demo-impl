@@ -27,6 +27,7 @@ import dev.ohs.fhir.engine.sync.FhirDataStore
 import dev.ohs.fhir.engine.sync.SyncJobStatus
 import dev.ohs.fhir.engine.sync.createDataStore
 import dev.ohs.player.client.registry.LocalViewRegistry
+import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.buildAppViewRegistry
 import dev.ohs.trustdemo.onesa.data.di.repositoryModule
 import dev.ohs.trustdemo.onesa.data.di.viewModelModule
@@ -78,6 +79,7 @@ class HomeScreenTest {
         MaterialTheme {
           HomeScreen(
             userName = "Test User",
+            role = AppRole.CHW,
             onGroupClick = {},
             onDataCaptureClick = {},
             onAddMembers = {},
@@ -112,6 +114,7 @@ class HomeScreenTest {
         MaterialTheme {
           HomeScreen(
             userName = "Test User",
+            role = AppRole.CHW,
             onGroupClick = {},
             onDataCaptureClick = {},
             onAddMembers = {},
@@ -154,6 +157,7 @@ class HomeScreenTest {
         MaterialTheme {
           HomeScreen(
             userName = "Test User",
+            role = AppRole.CHW,
             onGroupClick = {},
             onDataCaptureClick = {},
             onAddMembers = {},
@@ -191,6 +195,7 @@ class HomeScreenTest {
         MaterialTheme {
           HomeScreen(
             userName = "Test User",
+            role = AppRole.CHW,
             onGroupClick = {},
             onDataCaptureClick = {},
             onAddMembers = {},

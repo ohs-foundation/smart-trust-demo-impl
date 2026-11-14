@@ -76,6 +76,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass
+import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.feature.group.list.GroupListScreen
 import dev.ohs.trustdemo.onesa.feature.group.list.LocalSelectedGroupId
 import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileScreen
@@ -103,12 +104,12 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun HomeScreen(
   userName: String,
+  role: AppRole,
   onGroupClick: (String) -> Unit,
   onDataCaptureClick: () -> Unit,
   onAddMembers: (String) -> Unit,
   onAddClinicalData: (String) -> Unit,
   onSignOut: () -> Unit,
-  destinations: List<HomeDestination> = HomeDestination.entries,
   onOpenReferral: (String) -> Unit = {},
   onShareRecords: () -> Unit = {},
   onSharedLinks: () -> Unit = {},
@@ -116,6 +117,7 @@ fun HomeScreen(
   val homeViewModel: HomeViewModel = koinViewModel()
   val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
+  val destinations = remember(role) { role.destinations() }
   var selectedDestination by remember { mutableStateOf(destinations.first()) }
   var selectedGroupId by rememberSaveable { mutableStateOf<String?>(null) }
   var selectedPatientId by rememberSaveable(selectedGroupId) { mutableStateOf<String?>(null) }
@@ -270,6 +272,7 @@ fun HomeScreen(
               Box(modifier = Modifier.weight(1f).fillMaxSize()) {
                 CompositionLocalProvider(LocalSelectedGroupId provides selectedGroupId) {
                   GroupListScreen(
+                    role = role,
                     onGroupClick = { selectedGroupId = it },
                     onDataCaptureClick = onDataCaptureClick,
                   )
@@ -283,12 +286,14 @@ fun HomeScreen(
                   patientId != null ->
                     PatientProfileScreen(
                       patientId = patientId,
+                      role = role,
                       onBack = { selectedPatientId = null },
                       onAddClinicalData = { onAddClinicalData(patientId) },
                     )
                   groupId != null ->
                     GroupProfileScreen(
                       groupId = groupId,
+                      role = role,
                       onBack = { selectedGroupId = null },
                       onMemberClick = { selectedPatientId = it },
                       onAddMembers = { onAddMembers(groupId) },
@@ -298,7 +303,11 @@ fun HomeScreen(
               }
             }
           } else {
-            GroupListScreen(onGroupClick = onGroupClick, onDataCaptureClick = onDataCaptureClick)
+            GroupListScreen(
+              role = role,
+              onGroupClick = onGroupClick,
+              onDataCaptureClick = onDataCaptureClick,
+            )
           }
         HomeDestination.Referrals -> ReferralInboxScreen(onOpen = onOpenReferral)
         HomeDestination.TrustLists -> TrustListScreen()

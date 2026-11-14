@@ -24,6 +24,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.runComposeUiTest
 import dev.ohs.player.client.registry.LocalViewRegistry
+import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.buildAppViewRegistry
 import dev.ohs.trustdemo.onesa.data.di.repositoryModule
 import dev.ohs.trustdemo.onesa.data.di.viewModelModule
@@ -79,7 +80,12 @@ class PatientProfileScreenTest {
     setContent {
       CompositionLocalProvider(LocalViewRegistry provides registry) {
         MaterialTheme {
-          PatientProfileScreen(patientId = "p1", onBack = {}, onAddClinicalData = {})
+          PatientProfileScreen(
+            patientId = "p1",
+            role = AppRole.CLINICIAN,
+            onBack = {},
+            onAddClinicalData = {},
+          )
         }
       }
     }

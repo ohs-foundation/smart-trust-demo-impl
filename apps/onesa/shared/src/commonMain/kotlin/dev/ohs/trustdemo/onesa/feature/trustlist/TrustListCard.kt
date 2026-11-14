@@ -31,8 +31,10 @@ import dev.ohs.trustdemo.onesa.generated.resources.trust_list_domains
 import dev.ohs.trustdemo.onesa.generated.resources.trust_list_entries
 import dev.ohs.trustdemo.onesa.generated.resources.trust_list_fetched_at
 import dev.ohs.trustdemo.onesa.generated.resources.trust_list_not_fetched
+import dev.ohs.trustdemo.onesa.generated.resources.trust_list_refresh_failed
 import dev.ohs.trustdemo.onesa.generated.resources.trust_list_signer
 import dev.ohs.trustdemo.onesa.generated.resources.trust_list_source
+import dev.ohs.trustdemo.onesa.generated.resources.trust_list_stale
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -52,6 +54,12 @@ fun TrustListCard(list: TrustListState, config: TrustListCardConfig = TrustListC
         list.fetchedAt?.let { stringResource(Res.string.trust_list_fetched_at, it) }
           ?: stringResource(Res.string.trust_list_not_fetched)
       )
+      if (list.stale) Detail(stringResource(Res.string.trust_list_stale))
+      list.refreshFailedAt?.let {
+        Detail(
+          stringResource(Res.string.trust_list_refresh_failed, it, list.refreshFailure.orEmpty())
+        )
+      }
       list.entryCount?.let { Detail(stringResource(Res.string.trust_list_entries, it)) }
       if (config.showDomains != false) {
         list.domains?.let { Detail(stringResource(Res.string.trust_list_domains, it)) }

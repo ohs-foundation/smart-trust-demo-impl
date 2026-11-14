@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The demo stack serves Keycloak, the gateway and the trust host over plain HTTP on its LAN
-     sslip.io names; nothing else may be reached in cleartext. -->
+<!-- Release builds allow no cleartext and trust the system CAs only; the debug variant replaces
+     this file with a generated one for the demo stack. -->
 <network-security-config>
-  <domain-config cleartextTrafficPermitted="true">
-    <domain includeSubdomains="true">sslip.io</domain>
-  </domain-config>
+  <base-config cleartextTrafficPermitted="false">
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </base-config>
 </network-security-config>
