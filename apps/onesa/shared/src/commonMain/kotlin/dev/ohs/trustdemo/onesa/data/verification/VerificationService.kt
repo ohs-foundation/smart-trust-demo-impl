@@ -39,11 +39,14 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlin.time.Clock
 import kotlin.time.Instant
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
+private val FULL_DATE = Regex("""\d{4}-\d{2}-\d{2}""")
 
 /** What a scan came to, for S4 to show. */
 sealed interface ScanOutcome {
@@ -88,9 +91,9 @@ sealed interface ScanCheck {
  * Every other scan writes only its audit.
  *
  * The Immunization and its Provenance take their ids from the card, so importing a card twice, or
- * from two devices, rewrites one record; the id is read before the card is offered for import. Like
- * [dev.ohs.trustdemo.onesa.data.registration.RegistrationService] it posts straight to the gateway:
- * the delete and the writes must be judged, and land, together.
+ * from two devices, rewrites one record; the id is read before the card is offered for import and
+ * again before it is written. Like the registration service it posts straight to the gateway: the
+ * delete and the writes must be judged, and land, together.
  */
 class VerificationService(
   private val repository: FhirRepository,
@@ -125,20 +128,12 @@ class VerificationService(
         )
     val dose = "${NewbornRegistration.PRODUCTS[dvc.vx.vp] ?: dvc.vx.vp}, ${dvc.vx.dv}"
 
-    val existing = readImmunization(current, ScanTransactions.immunizationId(hc1))
-    if (existing != null) {
-      return if (existing.reference("patient") == "Patient/${referral.patientId}") {
-        purgeReplacedLocally(current, referral, dvc)
-        post(current, ScanTransactions.alreadyImported(request))
-        settled(ScanOutcome.AlreadyImported(dose))
-      } else {
-        post(current, ScanTransactions.refused(request, Refusal.ImportedForAnotherChild))
-        settled(ScanOutcome.ImportedForAnotherChild(dose))
-      }
+    existing(current, request, referral, dvc, dose)?.let {
+      return settled(it)
     }
 
     val child = inbox.child(referral.patientId)
-    if (child.birthDate != dvc.dob) {
+    if (!FULL_DATE.matches(dvc.dob) || child.birthDate != dvc.dob) {
       post(current, ScanTransactions.refused(request, Refusal.HolderMismatch))
       return settled(ScanOutcome.HolderMismatch(dvc.dob, child.birthDate))
     }
@@ -150,9 +145,18 @@ class VerificationService(
   suspend fun import(pending: PendingImport): ScanOutcome {
     val current = session() ?: error("Sign in again to verify a card.")
     val request = request(current, pending.referral, pending.hc1)
-    val replaced =
-      inbox.reportedDoses(pending.referral.patientId).filter { it.isDoseOf(pending.card.dvc) }
-    post(current, ScanTransactions.imported(request, pending.card, replaced, epiCodes()))
+    val dvc = pending.card.dvc
+    existing(current, request, pending.referral, dvc, pending.dose)?.let {
+      return it
+    }
+    val replaced = inbox.reportedDoses(pending.referral.patientId).filter { it.isDoseOf(dvc) }
+    try {
+      post(current, ScanTransactions.imported(request, pending.card, replaced, epiCodes()))
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      return existing(current, request, pending.referral, dvc, pending.dose) ?: throw e
+    }
     replaced.forEach { repository.remove("Immunization", it.id) }
     refresh()
     return ScanOutcome.Imported(pending.dose, replacedReported = replaced.isNotEmpty())
@@ -170,6 +174,26 @@ class VerificationService(
   ): ScanOutcome {
     post(current, ScanTransactions.refused(request, failure))
     return ScanOutcome.Failed(failure.step, failure.reason)
+  }
+
+  /** How a scan settles when the card's dose is already on the server, or null when it is not. */
+  private suspend fun existing(
+    current: RegistrationSession,
+    request: ScanRequest,
+    referral: Referral,
+    dvc: DvcMin,
+    dose: String,
+  ): ScanOutcome? {
+    val found =
+      readImmunization(current, ScanTransactions.immunizationId(request.hc1)) ?: return null
+    return if (found.reference("patient") == "Patient/${referral.patientId}") {
+      purgeReplacedLocally(current, referral, dvc)
+      post(current, ScanTransactions.alreadyImported(request))
+      ScanOutcome.AlreadyImported(dose)
+    } else {
+      post(current, ScanTransactions.refused(request, Refusal.ImportedForAnotherChild))
+      ScanOutcome.ImportedForAnotherChild(dose)
+    }
   }
 
   /** The Immunization under [id], or null when the gateway has none in this clinic's scope. */

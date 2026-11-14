@@ -31,10 +31,15 @@ import who.smart.trust.types.CoseAlgorithm
  * DVC cards signed with a chosen stand-in key, for checking which trust store accepts which key.
  */
 object SignedCards {
-  fun dvc(signer: StandIn, nowEpochSeconds: Long, product: String = "a3K3X000006MiiXUAS"): String {
+  fun dvc(
+    signer: StandIn,
+    nowEpochSeconds: Long,
+    product: String = "a3K3X000006MiiXUAS",
+    dob: String = "2026-01-01",
+  ): String {
     val request =
       IssueRequest(
-        payloads = listOf(Payload.DvcMin(dvcMin(product))),
+        payloads = listOf(Payload.DvcMin(dvcMin(product, dob))),
         iss = "XR",
         validity = Validity(iat = nowEpochSeconds, exp = nowEpochSeconds + 86_400),
         dscDer = TestKeys.certificate(signer).encoded,
@@ -51,10 +56,10 @@ object SignedCards {
     return ok(Hcert.issuer.finish(pending, signature)).hc1
   }
 
-  private fun dvcMin(product: String) =
+  private fun dvcMin(product: String, dob: String) =
     DvcMin(
       n = "Test Child",
-      dob = "2026-01-01",
+      dob = dob,
       s = "female",
       nt = "XXR",
       vx = DvcMinVaccineDetails(vp = product, dv = "2026-03-01", `is` = "XXR", bo = "LOT1"),

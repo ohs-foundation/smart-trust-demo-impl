@@ -43,7 +43,6 @@ import io.ktor.http.headersOf
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -134,7 +133,7 @@ class CardVerificationTest {
     )
 
     gateway.loseNextResponse = true
-    assertFailsWith<IllegalStateException> { scan(bcg) }
+    assertIs<ScanOutcome.AlreadyImported>(scan(bcg))
     assertIs<ScanOutcome.AlreadyImported>(scan(bcg))
     assertEquals(2, gateway.immunizations.values.count { it.flag("primarySource") == true })
     assertEquals(2, gateway.provenances.size)
@@ -229,6 +228,38 @@ class CardVerificationTest {
     assertEquals("Somsak Sengmany", pending.childName)
     assertIs<ScanOutcome.Imported>(service.import(pending))
     assertEquals(1, gateway.transactions.size)
+  }
+
+  @Test
+  fun anImportFromAnotherDeviceWhileWaitingIsNotRewritten() = runTest {
+    withReportedDoses()
+    val first = assertIs<ScanCheck.Pending>(service.check(referral, hepB)).pending
+    val second = assertIs<ScanCheck.Pending>(service.check(referral, hepB)).pending
+
+    assertIs<ScanOutcome.Imported>(service.import(first))
+    assertIs<ScanOutcome.AlreadyImported>(service.import(second))
+
+    assertEquals(setOf("AuditEvent"), gateway.transactions.last().map { it.type }.toSet())
+    assertEquals(1, gateway.immunizations.values.count { it.flag("primarySource") == true })
+    assertEquals(1, gateway.provenances.size)
+  }
+
+  @Test
+  fun aPartialBirthDateIsNotAMatch() = runTest {
+    withReportedDoses()
+    repository.upsert(
+      decode(
+        FhirJson.instance
+          .parseToJsonElement(
+            """{"resourceType":"Patient","id":"$patientId","birthDate":"2026-01"}"""
+          )
+          .jsonObject
+      )
+    )
+    val card = SignedCards.dvc(StandIn.XXR_CARD, nowSeconds, "vp-hepb-peds-monovalent", "2026-01")
+
+    assertIs<ScanOutcome.HolderMismatch>(scan(card))
+    assertEquals(0, gateway.immunizations.values.count { it.flag("primarySource") == true })
   }
 
   @Test
