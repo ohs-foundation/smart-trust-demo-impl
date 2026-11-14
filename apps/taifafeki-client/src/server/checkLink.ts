@@ -1,5 +1,5 @@
 import { WitRegistry, WitVerifier } from "smart-trust-kotlin-hcert-core";
-import { LIMITS } from "./readCard";
+import { hex, LIMITS } from "./readCard";
 import type { LinkStore } from "./trustLists";
 
 const OPTIONS = { limits: LIMITS, clockSkewSeconds: 300 };
@@ -13,9 +13,9 @@ export interface Link {
 }
 
 export type Checked =
-  | { kind: "notVerified"; step: string; reason: string }
+  | { kind: "notVerified"; step: string; reason: string; kid?: string }
   | { kind: "expired"; exp: number }
-  | { kind: "fetch"; link: Link };
+  | { kind: "fetch"; link: Link; issuer: string };
 
 const notVerified = (step: string, reason: string): Checked => ({ kind: "notVerified", step, reason });
 
@@ -31,7 +31,7 @@ export function checkLink(hc1: string, links: LinkStore | undefined, now: number
     const issuedAt = verifier.readUnverified(hc1, registry, LIMITS).iat;
     if (issuedAt !== undefined) result = verifier.verify(hc1, links.store, registry, issuedAt, OPTIONS);
   }
-  if (result.tag === "failed") return notVerified(result.val.step, result.val.reason);
+  if (result.tag === "failed") return { ...notVerified(result.val.step, result.val.reason), ...kidOf(hc1, registry) };
 
   const signer = Buffer.from(result.val.dsc.der).toString("base64");
   if (links.anchors.has(signer)) return notVerified("key-usage", "the signer is the clinic anchor, which certifies keys and does not sign links");
@@ -42,5 +42,14 @@ export function checkLink(hc1: string, links: LinkStore | undefined, now: number
   const vhl = entry.payload.val;
   const exp = Math.min(Number(result.val.exp), vhl.exp === undefined ? Infinity : Number(vhl.exp));
   if (lapsed) return { kind: "expired", exp };
-  return { kind: "fetch", link: { url: vhl.url, key: vhl.key, flag: vhl.flag, label: vhl.label, exp } };
+  return { kind: "fetch", link: { url: vhl.url, key: vhl.key, flag: vhl.flag, label: vhl.label, exp }, issuer: result.val.dsc.participant ?? result.val.iss };
+}
+
+function kidOf(hc1: string, registry: WitRegistry): { kid?: string } {
+  try {
+    const { kid } = WitVerifier.getInstance().readUnverified(hc1, registry, LIMITS);
+    return kid ? { kid: hex(kid) } : {};
+  } catch {
+    return {};
+  }
 }

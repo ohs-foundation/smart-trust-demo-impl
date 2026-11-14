@@ -1,4 +1,4 @@
-import { createPrivateKey, sign, X509Certificate } from "node:crypto";
+import { createHash, createPrivateKey, sign, X509Certificate } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { WitIssuer, WitRegistry, WitTrust } from "smart-trust-kotlin-hcert-core";
@@ -96,6 +96,7 @@ describe("aVerifiedLinkIsFetched", () => {
       label: "Somsak's health summary",
       exp: NOW + 86400,
       needsPasscode: true,
+      issuer: "XXK",
     });
     expect(JSON.stringify(outcome)).not.toContain(KEY);
     if (outcome.kind !== "fetch") throw new Error("not fetched");
@@ -142,8 +143,9 @@ describe("aLinkSignedByTheClinicAnchorIsRefused", () => {
 });
 
 describe("aLinkFromAnUnlistedKeyIsRefused", () => {
-  it("fails at the trust lookup", async () => {
-    expect(await scan(await viewer(), link({ signedBy: "UNKNOWN_LINK" }))).toMatchObject({ kind: "notVerified", step: "trust-lookup", reason: "kid-not-found" });
+  it("fails at the trust lookup and names the kid it looked for", async () => {
+    const kid = createHash("sha256").update(new X509Certificate(read("UNKNOWN_LINK.crt.pem")).raw).digest().subarray(0, 8).toString("hex");
+    expect(await scan(await viewer(), link({ signedBy: "UNKNOWN_LINK" }))).toEqual({ kind: "notVerified", step: "trust-lookup", reason: "kid-not-found", kid });
   });
 });
 

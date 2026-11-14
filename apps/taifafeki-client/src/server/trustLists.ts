@@ -20,6 +20,7 @@ export interface ListStatus {
   signer: string;
   fetchedAt?: number;
   entryCount: number;
+  participants: string[];
   stale: boolean;
   lastFailure?: { at: number; reason: string };
 }
@@ -41,15 +42,20 @@ interface Loaded {
   entryCount: number;
   store: WitTrustStore;
   anchors: Set<string>;
+  everyKey: WitTrustStore;
+  participants: string[];
 }
 
 type Name = ListStatus["name"];
 
-function domainOf(method: Method): string | undefined {
+function segmentOf(method: Method, offset: number): string | undefined {
   const path = method.id.split("#")[0]?.split(":") ?? [];
   const at = path.indexOf("trustlist");
-  return at < 0 ? undefined : path[at + 1];
+  return at < 0 ? undefined : path[at + offset];
 }
+
+const domainOf = (method: Method) => segmentOf(method, 1);
+const participantsOf = (methods: Method[]) => [...new Set(methods.flatMap((method) => segmentOf(method, 2) ?? []))].sort();
 
 export class TrustLists {
   private readonly loaded = new Map<Name, Loaded>();
@@ -69,6 +75,14 @@ export class TrustLists {
     return this.loaded.get("local");
   }
 
+  signerOf(kid: Uint8Array): string | undefined {
+    for (const loaded of this.loaded.values()) {
+      const participant = loaded.everyKey.candidates(kid)[0]?.participant;
+      if (participant) return participant;
+    }
+    return undefined;
+  }
+
   statuses(): ListStatus[] {
     return (["local", "dev"] as const).map((name) => {
       const loaded = this.loaded.get(name);
@@ -78,6 +92,7 @@ export class TrustLists {
         signer: (JSON.parse(this.sources[name].signer) as { id: string }).id,
         fetchedAt: loaded?.fetchedAt,
         entryCount: loaded?.entryCount ?? 0,
+        participants: loaded?.participants ?? [],
         stale: loaded !== undefined && this.now() - loaded.fetchedAt > STALE_SECONDS,
         lastFailure: this.failures.get(name),
       };
@@ -106,11 +121,15 @@ export class TrustLists {
     const entryCount = store.addDidDocument(JSON.stringify({ ...list, verificationMethod: methods }));
     if (entryCount === 0) throw new Error(`the list has no ${VHL_DOMAIN} entries`);
     const anchors = new Set(methods.filter((method) => method.keyusage?.code === CSCA_USAGE).flatMap((method) => method.publicKeyJwk?.x5c?.slice(0, 1) ?? []));
-    return { fetchedAt: this.now(), createdAt, entryCount, store, anchors };
+    const everyKey = new WitTrustStore();
+    everyKey.addDidDocument(text);
+    return { fetchedAt: this.now(), createdAt, entryCount, store, anchors, everyKey, participants: participantsOf(list.verificationMethod) };
   }
 
   private wholeList(text: string, createdAt: number): Loaded {
     const store = new WitTrustStore();
-    return { fetchedAt: this.now(), createdAt, entryCount: store.addDidDocument(text), store, anchors: new Set() };
+    const entryCount = store.addDidDocument(text);
+    const { verificationMethod } = JSON.parse(text) as { verificationMethod: Method[] };
+    return { fetchedAt: this.now(), createdAt, entryCount, store, anchors: new Set(), everyKey: store, participants: participantsOf(verificationMethod) };
   }
 }

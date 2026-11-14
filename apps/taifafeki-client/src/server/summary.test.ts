@@ -34,8 +34,9 @@ const manifest = (documentUrl: string) =>
     ],
   });
 
-const outcome = (system: string, code?: string) =>
-  JSON.stringify({ resourceType: "OperationOutcome", issue: [{ severity: "error", code: "forbidden", ...(code && { details: { coding: [{ system, code }] } }) }] });
+const ATTEMPTS_LEFT = "http://ohs.dev/fhir/trust-demo/StructureDefinition/passcode-attempts-left";
+const outcome = (system: string, code?: string, extension?: object[]) =>
+  JSON.stringify({ resourceType: "OperationOutcome", issue: [{ extension, severity: "error", code: "forbidden", ...(code && { details: { coding: [{ system, code }] } }) }] });
 
 interface Seen {
   url: string;
@@ -217,21 +218,32 @@ describe("aRefusalFromOnesaIsAPlainMessage", () => {
     ["expired", "The share has expired."],
     ["wrong-passcode", "Wrong passcode."],
   ])("says %s", async (code, message) => {
-    expect(await setup(refusal(403, outcome(REASONS, code))).call()).toEqual({ kind: "refused", message });
+    expect(await setup(refusal(403, outcome(REASONS, code))).call()).toEqual({ kind: "refused", message, status: 403, reason: code });
   });
 
   it("says the link is locked after three wrong passcodes", async () => {
     const body = outcome("http://ohs.dev/fhir/trust-demo/CodeSystem/vhl-refusal-reason", "attempts-exhausted");
-    expect(await setup(refusal(403, body)).call()).toEqual({ kind: "refused", message: "Three wrong passcodes; the link is locked." });
+    expect(await setup(refusal(403, body)).call()).toEqual({ kind: "refused", message: "Three wrong passcodes; the link is locked.", status: 403, reason: "attempts-exhausted" });
+  });
+
+  it("says how many passcode attempts Onesa has left", async () => {
+    const body = outcome(REASONS, "wrong-passcode", [{ url: ATTEMPTS_LEFT, valueUnsignedInt: 2 }]);
+    expect(await setup(refusal(403, body)).call()).toEqual({ kind: "refused", message: "Wrong passcode.", status: 403, reason: "wrong-passcode", attemptsLeft: 2 });
+  });
+
+  it.each([["a string", "2"], ["a negative number", -1], ["a fraction", 1.5], ["another extension's value", undefined]])("ignores attempts left given as %s", async (_, value) => {
+    const extension = value === undefined ? [{ url: `${ATTEMPTS_LEFT}-other`, valueUnsignedInt: 2 }] : [{ url: ATTEMPTS_LEFT, valueUnsignedInt: value }];
+    const result = await setup(refusal(403, outcome(REASONS, "wrong-passcode", extension))).call();
+    expect(result).toEqual({ kind: "refused", message: "Wrong passcode.", status: 403, reason: "wrong-passcode" });
   });
 
   it("says there is nothing to release for a bare 403", async () => {
-    expect(await setup(refusal(403, outcome(REASONS))).call()).toEqual({ kind: "refused", message: "Nothing to release." });
-    expect(await setup(refusal(403, "")).call()).toEqual({ kind: "refused", message: "Nothing to release." });
+    expect(await setup(refusal(403, outcome(REASONS))).call()).toEqual({ kind: "refused", message: "Nothing to release.", status: 403 });
+    expect(await setup(refusal(403, "")).call()).toEqual({ kind: "refused", message: "Nothing to release.", status: 403 });
   });
 
   it("treats a reason named like an object property as no reason", async () => {
-    expect(await setup(refusal(403, outcome(REASONS, "constructor"))).call()).toEqual({ kind: "refused", message: "Nothing to release." });
+    expect(await setup(refusal(403, outcome(REASONS, "constructor"))).call()).toEqual({ kind: "refused", message: "Nothing to release.", status: 403 });
   });
 
   it("refuses a reply larger than the client accepts", async () => {
@@ -251,19 +263,19 @@ describe("aRefusalFromOnesaIsAPlainMessage", () => {
   });
 
   it("names the status for anything else", async () => {
-    expect(await setup(refusal(401, outcome(REASONS))).call()).toEqual({ kind: "refused", message: "Onesa refused the request (HTTP 401)." });
-    expect(await setup(refusal(503, "down")).call()).toEqual({ kind: "refused", message: "Onesa refused the request (HTTP 503)." });
+    expect(await setup(refusal(401, outcome(REASONS))).call()).toEqual({ kind: "refused", message: "Onesa refused the request (HTTP 401).", status: 401 });
+    expect(await setup(refusal(503, "down")).call()).toEqual({ kind: "refused", message: "Onesa refused the request (HTTP 503).", status: 503 });
   });
 
   it("explains a refused document the same way", async () => {
     const result = await setup((request) => (request.method === "GET" ? new Response(outcome(REASONS, "withdrawn"), { status: 403 }) : undefined)).call();
-    expect(result).toEqual({ kind: "refused", message: "The family withdrew this share." });
+    expect(result).toEqual({ kind: "refused", message: "The family withdrew this share.", status: 403, reason: "withdrawn" });
   });
 
   it("lets a wrong passcode be retried with the same handle", async () => {
     let wrong = true;
     const { call } = setup((request) => (request.method === "POST" && wrong ? new Response(outcome(REASONS, "wrong-passcode"), { status: 403 }) : undefined));
-    expect(await call("1111")).toEqual({ kind: "refused", message: "Wrong passcode." });
+    expect(await call("1111")).toMatchObject({ kind: "refused", message: "Wrong passcode." });
     wrong = false;
     expect(await call(PASSCODE)).toMatchObject({ kind: "released" });
   });

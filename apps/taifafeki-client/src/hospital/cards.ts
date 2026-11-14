@@ -9,6 +9,11 @@ export interface Card {
   product: string;
   date: string;
   lot: string;
+  kid: string;
+  issuer: string;
+  alg: string;
+  /** The participant whose trust-list entry holds [kid]. */
+  signer?: string;
 }
 
 // The lot is never compared: the cards' lots need not match the entered ones.

@@ -9,6 +9,7 @@ import { Loading, Notice, Problem } from "@/components/Feedback";
 import { Page } from "@/components/Page";
 import { Note } from "@/components/Panel";
 import { QrCard } from "@/components/QrCard";
+import { StatusChip } from "@/components/StatusChip";
 import { readCards, readChart } from "./api";
 import { compareDoses, type Card } from "./cards";
 import { PRODUCT_SYSTEM, hospitalNumberOf } from "./records";
@@ -28,6 +29,8 @@ export function usePrintCards(patientId: string) {
       const { patient, doses } = await readChart(medplum, patientId);
       const hospitalNumber = hospitalNumberOf(patient);
       const cards = await readCards(medplum, hospitalNumber, medplum.getAccessToken() ?? "");
+      const given = (card: Card) => doses.findIndex((dose) => dose.vaccineCode?.coding?.some((it) => it.system === PRODUCT_SYSTEM && it.code === card.product));
+      cards.sort((a, b) => given(a) - given(b));
       return { hospitalNumber, cards, warnings: compareDoses(cards, doses), doses };
     },
   });
@@ -87,7 +90,8 @@ export function PrintCards({ hospitalNumber, cards, warnings, doses }: Printing)
               holder={card.holder}
               holderNote={`Born ${card.birth}`}
               label={`Vaccine: ${productName(card.product, doses)}`}
-              caption={`Card ${at + 1} of ${cards.length} • Lot ${card.lot} • Given ${card.date}`}
+              badge={card.signer ? <StatusChip tone="info">Signed by {card.signer}</StatusChip> : <StatusChip tone="warning">Signer not on a trust list</StatusChip>}
+              caption={`Card ${at + 1} of ${cards.length} • Key ID: ${card.kid} • Issuer ${card.issuer} • ${card.alg}`}
               alt={`Vaccination card QR for ${card.product}`}
             />
           ))}

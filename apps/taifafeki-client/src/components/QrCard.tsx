@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import QRCode from "qrcode";
+import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 
 interface Props {
@@ -7,11 +8,12 @@ interface Props {
   holder: string;
   holderNote?: string;
   label: string;
+  badge?: ReactNode;
   caption?: string;
   alt: string;
 }
 
-export function QrCard({ text, holder, holderNote, label, caption, alt }: Props) {
+export function QrCard({ text, holder, holderNote, label, badge, caption, alt }: Props) {
   const qr = useQuery({ queryKey: ["qr", text], queryFn: () => QRCode.toDataURL(text, { margin: 2, width: 320 }) });
   return (
     <Card className="items-center gap-2 rounded-xl px-3.5 py-3 text-center shadow-xs print:break-after-page print:shadow-none">
@@ -24,6 +26,7 @@ export function QrCard({ text, holder, holderNote, label, caption, alt }: Props)
       <div className="w-full max-w-44 rounded-control border border-line bg-surface p-1.5">
         {qr.data && <img src={qr.data} alt={alt} width={320} height={320} className="block h-auto w-full" />}
       </div>
+      {badge}
       {caption && <p className="text-2xs text-slate-500">{caption}</p>}
     </Card>
   );

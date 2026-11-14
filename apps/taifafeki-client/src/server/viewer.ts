@@ -7,9 +7,9 @@ const HANDLE_SECONDS = 600;
 const HANDLES_PER_OWNER = 20;
 
 export type LinkOutcome =
-  | { kind: "notVerified"; step: string; reason: string }
+  | { kind: "notVerified"; step: string; reason: string; kid?: string }
   | { kind: "expired"; exp: number }
-  | { kind: "fetch"; url: string; label?: string; exp: number; needsPasscode: boolean; handle: string };
+  | { kind: "fetch"; url: string; label?: string; exp: number; issuer: string; needsPasscode: boolean; handle: string };
 
 // The link's key never leaves the server: the browser holds only this handle, which names the link for the caller who scanned it.
 export class LinkHandles {
@@ -51,6 +51,7 @@ export async function scanLink(viewer: Viewer, input: { token: string | undefine
     url: link.url,
     label: link.label,
     exp: link.exp,
+    issuer: checked.issuer,
     needsPasscode: link.flag?.includes("P") ?? false,
     handle: viewer.handles.keep(link, owner),
   };

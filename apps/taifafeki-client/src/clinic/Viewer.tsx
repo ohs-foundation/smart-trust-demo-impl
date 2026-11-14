@@ -2,7 +2,7 @@ import { normalizeErrorString } from "@medplum/core";
 import type { HumanName } from "@medplum/fhirtypes";
 import { useMedplum } from "@medplum/react-hooks";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Camera, CameraOff, HousePlus } from "lucide-react";
+import { Camera, CameraOff, HousePlus, ShieldX } from "lucide-react";
 import { useCallback, useId, useState, type ReactNode } from "react";
 import { Action, ActionBar } from "@/components/ActionBar";
 import { AppHeader } from "@/components/AppHeader";
@@ -12,6 +12,7 @@ import { Notice, Problem } from "@/components/Feedback";
 import { Page, SplitView } from "@/components/Page";
 import { Panel } from "@/components/Panel";
 import { PasscodeCard } from "@/components/PasscodeCard";
+import { RecordCard, RecordRow } from "@/components/RecordCard";
 import { ResultPanel } from "@/components/ResultPanel";
 import { ScanFrame } from "@/components/ScanFrame";
 import { StatusChip } from "@/components/StatusChip";
@@ -20,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useWorkplaces, WorkplaceGate } from "../Workplaces";
 import { fetchSummary, scanVhl, trustListStatuses } from "../server/links";
+import type { SummaryOutcome } from "../server/summary";
 import type { ListStatus } from "../server/trustLists";
 import type { LinkOutcome } from "../server/viewer";
 import { writeReceipt } from "./receipt";
@@ -31,6 +33,18 @@ const WHEN = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", 
 const when = (epochSeconds: number) => WHEN.format(new Date(epochSeconds * 1000));
 
 const LIST_NAMES: Record<ListStatus["name"], string> = { local: "Local test list", dev: "GDHCN DEV" };
+const PASSCODE_TRIES = 3;
+
+type Refusal = Omit<Extract<SummaryOutcome, { kind: "refused" }>, "kind">;
+type Unverified = Exclude<LinkOutcome, { kind: "fetch" }>;
+
+const REFUSALS = [
+  { reason: "wrong-passcode", title: "Wrong Passcode", label: "Wrong passcode", status: 403, detail: "The passcode does not match", code: "wrong-passcode" },
+  { reason: "expired", title: "Link Expired", label: "Link expired", status: 403, detail: "Consent period ended", code: "expired" },
+  { reason: "withdrawn", title: "Consent Withdrawn", label: "Consent withdrawn", status: 403, detail: "The family withdrew the link", code: "withdrawn" },
+  { reason: "attempts-exhausted", title: "Link Locked", label: "Third wrong passcode", status: 403, detail: "The link is locked", code: "attempts-exhausted" },
+  { reason: undefined, title: "", label: "Request signature not recognised", status: 401, detail: "Onesa doesn't know this clinic's key", code: "no IG code" },
+];
 
 interface Opened {
   view: SummaryView;
@@ -50,7 +64,8 @@ function ViewerFor({ organization }: { organization: string }) {
   const [pasted, setPasted] = useState("");
   const [passcode, setPasscode] = useState("");
   const [opening, setOpening] = useState(false);
-  const [notice, setNotice] = useState<string>();
+  const [notice, setNotice] = useState<Refusal>();
+  const [paper, setPaper] = useState<Unverified>();
   const [opened, setOpened] = useState<Opened>();
   const token = () => medplum.getAccessToken() ?? "";
   const lists = useQuery({ queryKey: ["trust-lists"], queryFn: () => trustListStatuses({ data: { token: token() } }), refetchInterval: 60_000 });
@@ -59,6 +74,7 @@ function ViewerFor({ organization }: { organization: string }) {
     onMutate: () => {
       setPasscode("");
       setNotice(undefined);
+      setPaper(undefined);
     },
   });
   const { mutate } = scan;
@@ -77,9 +93,9 @@ function ViewerFor({ organization }: { organization: string }) {
     setNotice(undefined);
     try {
       const outcome = await fetchSummary({ data: { token: token(), handle, passcode } });
-      if (outcome.kind === "refused") return setNotice(outcome.message);
+      if (outcome.kind === "refused") return setNotice(outcome);
       const bundle = await openSummary(outcome.documents, outcome.key).catch(() => undefined);
-      if (!bundle) return setNotice("The summary could not be opened");
+      if (!bundle) return setNotice({ message: "The summary could not be opened" });
       const view = readSummary(bundle);
       setOpened({ view, receipt: { state: "pending" }, passcode: needsPasscode });
       const practitionerId = medplum.getProfile()?.id ?? "";
@@ -89,7 +105,7 @@ function ViewerFor({ organization }: { organization: string }) {
       );
       setOpened((current) => (current?.view === view ? { ...current, receipt } : current));
     } catch (error) {
-      setNotice(normalizeErrorString(error));
+      setNotice({ message: normalizeErrorString(error) });
     } finally {
       setPasscode("");
       setOpening(false);
@@ -101,7 +117,13 @@ function ViewerFor({ organization }: { organization: string }) {
     setPasted("");
     setPasscode("");
     setNotice(undefined);
+    setPaper(undefined);
     scan.reset();
+  };
+
+  const asPaper = (result: Unverified) => {
+    restart();
+    setPaper(result);
   };
 
   const clinic = workplaces.data?.find((it) => it.organization.id === organization)?.organization.name;
@@ -128,60 +150,79 @@ function ViewerFor({ organization }: { organization: string }) {
     );
   }
 
+  const retryPasscode = found && notice?.reason === "wrong-passcode" && notice.attemptsLeft !== 0;
   return (
     <Page
       header={header(lists.data && trustChip(lists.data))}
-      width={failed ? "narrow" : "wide"}
+      width={failed || notice ? "narrow" : "wide"}
       actions={
-        (found || failed) && (
-          <ActionBar caption={found && "Requests the manifest from Onesa (ITI-YY5, signed)"}>
-            <Action tone={failed ? "primary" : "secondary"} onClick={restart}>
+        failed ? (
+          <ActionBar>
+            <Action onClick={() => asPaper(failed)}>Record as Paper Card</Action>
+            <Action tone="primary" onClick={restart}>
               Scan Again
             </Action>
-            {found && (
+          </ActionBar>
+        ) : notice ? (
+          <ActionBar>
+            {retryPasscode ? (
+              <Action tone="primary" onClick={() => setNotice(undefined)}>
+                Enter Passcode Again
+              </Action>
+            ) : (
+              <>
+                {found && !notice.reason && <Action onClick={() => setNotice(undefined)}>Try Again</Action>}
+                <Action tone="primary" onClick={restart}>
+                  Scan Again
+                </Action>
+              </>
+            )}
+          </ActionBar>
+        ) : (
+          found && (
+            <ActionBar caption="Requests the manifest from Onesa (ITI-YY5, signed)">
+              <Action onClick={restart}>Scan Again</Action>
               <Action tone="primary" disabled={opening || (found.needsPasscode && !passcode)} onClick={() => void open(found.handle, found.needsPasscode)}>
                 Open Records
               </Action>
-            )}
-          </ActionBar>
+            </ActionBar>
+          )
         )
       }
     >
       {failed ? (
         <NotVerified result={failed} />
+      ) : notice ? (
+        <Refused refusal={notice} />
       ) : (
         <SplitView
           main={
-            notice ? (
-              <ResultPanel tone="refused" title="Records Not Opened" facts={<Facts columns={1} items={[{ label: "Reason", value: <span role="alert">{notice}</span> }]} />} />
-            ) : (
-              <>
-                <ScanFrame
-                  label="Scan the QR on the family's phone"
-                  action={
-                    <button
-                      type="button"
-                      onClick={() => setCamera(!camera)}
-                      className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 font-sans font-semibold text-slate-100 hover:bg-slate-700 focus-visible:ring-[3px] focus-visible:ring-sky-400/50 focus-visible:outline-none"
-                    >
-                      {camera ? <CameraOff className="size-3.5" aria-hidden /> : <Camera className="size-3.5" aria-hidden />}
-                      {camera ? "Stop camera" : "Scan with camera"}
-                    </button>
-                  }
-                >
-                  {camera && <Scanner onText={scanned} />}
-                </ScanFrame>
-                <Panel>
-                  <Field id={`${id}-paste`} label="Or paste the link text">
-                    <Textarea id={`${id}-paste`} value={pasted} onChange={(event) => setPasted(event.target.value)} rows={3} className={cn(CONTROL, "h-auto font-mono text-xs md:text-xs")} />
-                  </Field>
-                  <Action className="self-end" disabled={!pasted.trim() || scan.isPending} onClick={() => scanned(pasted)}>
-                    Check link
-                  </Action>
-                </Panel>
-                {scan.isError && <Problem>{normalizeErrorString(scan.error)}</Problem>}
-              </>
-            )
+            <>
+              <ScanFrame
+                label="Scan the QR on the family's phone"
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setCamera(!camera)}
+                    className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 font-sans font-semibold text-slate-100 hover:bg-slate-700 focus-visible:ring-[3px] focus-visible:ring-sky-400/50 focus-visible:outline-none"
+                  >
+                    {camera ? <CameraOff className="size-3.5" aria-hidden /> : <Camera className="size-3.5" aria-hidden />}
+                    {camera ? "Stop camera" : "Scan with camera"}
+                  </button>
+                }
+              >
+                {camera && <Scanner onText={scanned} />}
+              </ScanFrame>
+              <Panel>
+                <Field id={`${id}-paste`} label="Or paste the link text">
+                  <Textarea id={`${id}-paste`} value={pasted} onChange={(event) => setPasted(event.target.value)} rows={3} className={cn(CONTROL, "h-auto font-mono text-xs md:text-xs")} />
+                </Field>
+                <Action className="self-end" disabled={!pasted.trim() || scan.isPending} onClick={() => scanned(pasted)}>
+                  Check link
+                </Action>
+              </Panel>
+              {scan.isError && <Problem>{normalizeErrorString(scan.error)}</Problem>}
+            </>
           }
           side={
             found ? (
@@ -190,16 +231,28 @@ function ViewerFor({ organization }: { organization: string }) {
                   tone="pass"
                   title="Link Signature Valid"
                   verdict="PASS"
-                  facts={<Facts items={[{ label: "Link for", value: found.label ?? "Health summary" }, { label: "Link to", value: hostOf(found.url), mono: true }, { label: "Valid until", value: when(found.exp) }]} />}
+                  facts={
+                    <Facts
+                      items={[
+                        { label: "Issuer", value: found.issuer },
+                        { label: "Link for", value: found.label ?? "Health summary" },
+                        { label: "Valid until", value: when(found.exp) },
+                        { label: "Link to", value: hostOf(found.url), mono: true },
+                      ]}
+                    />
+                  }
                 >
                   Checked offline. The QR holds only a link and a key.
                 </ResultPanel>
                 {found.needsPasscode && <PasscodeCard value={passcode} onChange={setPasscode} />}
               </>
             ) : (
-              <Notice tone="info" title="Waiting for a link">
-                Scan the family's QR code, or paste the link text. It is checked here, against the trust lists, before anything is asked of Onesa.
-              </Notice>
+              <>
+                {paper && <PaperNote result={paper} />}
+                <Notice tone="info" title="Waiting for a link">
+                  Scan the family's QR code, or paste the link text. It is checked here, against the trust lists, before anything is asked of Onesa.
+                </Notice>
+              </>
             )
           }
         />
@@ -213,10 +266,14 @@ function ViewerFor({ organization }: { organization: string }) {
   );
 }
 
-function NotVerified({ result }: { result: Exclude<LinkOutcome, { kind: "fetch" }> }) {
+function NotVerified({ result }: { result: Unverified }) {
   const facts =
     result.kind === "notVerified"
-      ? [{ label: "Failed at step", value: result.step, mono: true }, { label: "Reason", value: result.reason, mono: true }]
+      ? [
+          { label: "Failed at step", value: result.step, mono: true },
+          { label: "Reason", value: result.reason, mono: true },
+          ...(result.kid ? [{ label: "Key ID (kid)", value: result.kid, mono: true }] : []),
+        ]
       : [{ label: "Reason", value: "expired", mono: true }, { label: "Ended", value: when(result.exp) }];
   return (
     <div role="alert" className="flex flex-col gap-3">
@@ -229,6 +286,43 @@ function NotVerified({ result }: { result: Exclude<LinkOutcome, { kind: "fetch" 
         </Notice>
       )}
     </div>
+  );
+}
+
+function PaperNote({ result }: { result: Unverified }) {
+  const why = result.kind === "notVerified" ? `Not verified at ${result.step}: ${result.reason}${result.kid ? `, key ID ${result.kid}` : ""}.` : `The link expired ${when(result.exp)}.`;
+  return (
+    <Notice role="status" title="Treat the family's records as paper">
+      {why} The link was not followed and nothing was saved here; note the reason with the paper record.
+    </Notice>
+  );
+}
+
+function Refused({ refusal }: { refusal: Refusal }) {
+  const kind = REFUSALS.find((it) => it.reason && it.reason === refusal.reason);
+  const fromOnesa = refusal.status !== undefined;
+  const facts = [
+    { label: fromOnesa ? "Onesa says" : "Reason", value: <span role="alert">{refusal.message}</span> },
+    ...(refusal.attemptsLeft !== undefined ? [{ label: "Attempts left", value: `${refusal.attemptsLeft} of ${PASSCODE_TRIES}` }] : []),
+  ];
+  return (
+    <>
+      <ResultPanel
+        tone="refused"
+        title={kind ? `${kind.title} — Records Not Released` : "Records Not Opened"}
+        verdict={fromOnesa ? String(refusal.status) : undefined}
+        facts={<Facts items={facts} />}
+      >
+        {kind?.reason === "wrong-passcode" && (refusal.attemptsLeft === 0 ? "That was the third wrong try; the link is now locked." : "Ask the family to repeat it. Three wrong tries lock the link.")}
+      </ResultPanel>
+      {fromOnesa && (
+        <RecordCard title="Other refusals" icon={ShieldX}>
+          {REFUSALS.filter((it) => it !== kind).map((it) => (
+            <RecordRow key={it.label} label={it.label} code={it.status} detail={it.detail} status={<StatusChip tone={it.reason ? "neutral" : "warning"}>{it.code}</StatusChip>} />
+          ))}
+        </RecordCard>
+      )}
+    </>
   );
 }
 

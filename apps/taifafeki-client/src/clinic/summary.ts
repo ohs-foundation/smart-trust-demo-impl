@@ -1,14 +1,33 @@
-import type { Bundle, Composition, HumanName, Immunization, Patient } from "@medplum/fhirtypes";
+import type { Bundle, CodeableConcept, Composition, CompositionSection, HumanName, Immunization, Patient, Practitioner, Reference, Resource } from "@medplum/fhirtypes";
 
 const MAX_DOCUMENT_BYTES = 64 * 1024 * 1024;
 const KEY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const BASE64URL = /^[A-Za-z0-9_-]*$/;
+const PRODUCT_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct";
+const SCHEDULE_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule";
+const CVX_SYSTEM = "http://hl7.org/fhir/sid/cvx";
+const LOINC = "http://loinc.org";
+const ALLERGIES_SECTION = "48765-2";
+const PROBLEMS_SECTION = "11450-4";
 
 export class Unreadable extends Error {}
 
 export interface SummaryView {
-  patient: { name: string; birthDate: string; sex: string };
-  immunizations: { vaccine: string; date: string; dose: string; performer: string }[];
+  patient: { name: string; birthDate: string; sex: string; contacts: string[] };
+  immunizations: {
+    vaccine: string;
+    date: string;
+    dose: string;
+    performer: string;
+    product: string;
+    schedule: string;
+    cvx: string;
+    lot: string;
+    location: string;
+    primarySource?: boolean;
+  }[];
+  allergies: string[];
+  problems: string[];
   date: string;
   source: string;
 }
@@ -98,21 +117,61 @@ function doseOf(immunization: Immunization): string {
   return String(applied?.doseNumberPositiveInt ?? applied?.doseNumberString ?? "");
 }
 
+const textOf = (concept: CodeableConcept | undefined) => concept?.text ?? concept?.coding?.[0]?.display ?? concept?.coding?.[0]?.code ?? "";
+const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+// A reference resolves only to an entry of this summary: by its fullUrl, or by type and id.
+function resolve(bundle: Bundle, reference: Reference | undefined): Resource | undefined {
+  const target = reference?.reference;
+  if (!target) return undefined;
+  return bundle.entry?.find((entry) => entry.fullUrl === target || (entry.resource && `${entry.resource.resourceType}/${entry.resource.id}` === target))?.resource;
+}
+
+function performerOf(bundle: Bundle, immunization: Immunization): string {
+  const actor = immunization.performer?.[0]?.actor;
+  const practitioner = resolve(bundle, actor);
+  return (practitioner?.resourceType === "Practitioner" ? nameOf((practitioner as Practitioner).name?.[0]) : "") || actor?.display || "";
+}
+
+function sectionOf(bundle: Bundle, composition: Composition | undefined, code: string): string[] {
+  const section: CompositionSection | undefined = composition?.section?.find((it) => it.code?.coding?.some((coding) => coding.system === LOINC && coding.code === code));
+  if (!section) return [];
+  const entries = (section.entry ?? []).flatMap((reference) => {
+    const resource = resolve(bundle, reference) as { code?: CodeableConcept } | undefined;
+    return resource ? [textOf(resource.code)] : [];
+  });
+  if (entries.length > 0) return entries;
+  return section.emptyReason ? [textOf(section.emptyReason)] : [];
+}
+
 export function readSummary(bundle: Bundle): SummaryView {
   const patient = resourcesOf<Patient>(bundle, "Patient")[0];
   const composition = resourcesOf<Composition>(bundle, "Composition")[0];
   return {
-    patient: { name: nameOf(patient?.name?.[0]), birthDate: patient?.birthDate ?? "", sex: patient?.gender ?? "" },
+    patient: {
+      name: nameOf(patient?.name?.[0]),
+      birthDate: patient?.birthDate ?? "",
+      sex: patient?.gender ?? "",
+      contacts: (patient?.contact ?? []).map((contact) => [sentence(textOf(contact.relationship?.[0])), nameOf(contact.name)].filter(Boolean).join(": ")),
+    },
     immunizations: resourcesOf<Immunization>(bundle, "Immunization").map((immunization) => {
-      const coding = immunization.vaccineCode.coding?.[0];
-      const actor = immunization.performer?.[0]?.actor;
+      const codings = immunization.vaccineCode.coding ?? [];
+      const code = (system: string) => codings.find((coding) => coding.system === system)?.code ?? "";
       return {
-        vaccine: immunization.vaccineCode.text ?? coding?.display ?? coding?.code ?? "",
+        vaccine: textOf(immunization.vaccineCode),
         date: immunization.occurrenceDateTime ?? "",
         dose: doseOf(immunization),
-        performer: actor?.display ?? actor?.reference ?? "",
+        performer: performerOf(bundle, immunization),
+        product: code(PRODUCT_SYSTEM),
+        schedule: code(SCHEDULE_SYSTEM),
+        cvx: code(CVX_SYSTEM),
+        lot: immunization.lotNumber ?? "",
+        location: immunization.location?.display ?? "",
+        primarySource: immunization.primarySource,
       };
     }),
+    allergies: sectionOf(bundle, composition, ALLERGIES_SECTION),
+    problems: sectionOf(bundle, composition, PROBLEMS_SECTION),
     date: bundle.timestamp ?? composition?.date ?? "",
     source: composition?.author?.[0]?.display ?? "",
   };

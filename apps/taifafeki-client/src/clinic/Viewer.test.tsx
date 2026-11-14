@@ -55,7 +55,7 @@ async function openSummary() {
 
 beforeEach(() => {
   vi.mocked(trustListStatuses).mockResolvedValue([]);
-  vi.mocked(scanVhl).mockResolvedValue({ kind: "fetch", url: "https://vhl.example/x", label: "Health summary", exp: 4_102_444_800, needsPasscode: true, handle: "h1" });
+  vi.mocked(scanVhl).mockResolvedValue({ kind: "fetch", url: "https://vhl.example/x", label: "Health summary", exp: 4_102_444_800, issuer: "XXK", needsPasscode: true, handle: "h1" });
   vi.mocked(fetchSummary).mockResolvedValue({ kind: "released", documents: [{ contentType: "application/jose", jwe: JWE }], key: KEY });
   vi.spyOn(Storage.prototype, "setItem");
   vi.stubGlobal("indexedDB", { open: indexedDbOpen });
@@ -118,7 +118,8 @@ describe("theSummaryScreen", () => {
     const { createResource } = mount();
     await openSummary();
     await screen.findByText(/Somsak SENGMANY/);
-    for (const text of [/2025-10-28/, /male/, /Practitioner\/TrustDemoAnan/, /Onesa national health portal/]) expect(screen.getAllByText(text).length).toBeGreaterThan(0);
+    for (const text of [/2025-10-28/, /male/, /XXK-EPI-HEPB-BD/, /Lomaru District Health Center/, /Onesa national health portal/]) expect(screen.getAllByText(text).length).toBeGreaterThan(0);
+    expect(document.body.innerHTML).not.toContain("Practitioner/");
     await waitFor(() => expect(screen.getByText(/receipt recorded/i)).toBeTruthy());
     expect(createResource).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "Close Summary" }));
@@ -135,10 +136,12 @@ describe("theSummaryScreen", () => {
   });
 
   it("shows Onesa's refusal and keeps the link for another try", async () => {
-    vi.mocked(fetchSummary).mockResolvedValue({ kind: "refused", message: "Wrong passcode." });
+    vi.mocked(fetchSummary).mockResolvedValue({ kind: "refused", message: "Wrong passcode.", status: 403, reason: "wrong-passcode", attemptsLeft: 2 });
     mount();
     await openSummary();
     expect((await screen.findByRole("alert")).textContent).toBe("Wrong passcode.");
+    expect(screen.getByText("2 of 3")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Enter Passcode Again" }));
     expect(screen.getByRole("button", { name: "Open Records" })).toBeTruthy();
   });
 

@@ -13,12 +13,13 @@ declare module "smart-trust-kotlin-hcert-core" {
     detail: string;
   }
   interface Verified {
+    iss: string;
     exp: bigint;
     entries: { payload: { tag: string; val: VhlPayload }; keyUsageAuthorised: boolean }[];
-    dsc: { der: Uint8Array };
+    dsc: { der: Uint8Array; participant?: string };
   }
   interface IssueRequest {
-    payloads: { tag: "vhl"; val: VhlPayload }[];
+    payloads: ({ tag: "vhl"; val: VhlPayload } | { tag: "dvc-min"; val: object })[];
     iss: string;
     validity: { iat: bigint; exp: bigint };
     dscDer: Uint8Array;
@@ -51,6 +52,7 @@ declare module "smart-trust-kotlin-hcert-core" {
   }
   export class WitTrustStore {
     constructor();
+    candidates(kid: Uint8Array): { participant?: string }[];
     addDidDocument(json: string): number;
     addVerifiedDidDocument(json: string, signer: string): number;
     size(): number;
@@ -60,7 +62,7 @@ declare module "smart-trust-kotlin-hcert-core" {
   };
   export const WitVerifier: {
     getInstance(): {
-      readUnverified(hc1: string, reg: WitRegistry, limits: object): { iat?: bigint; entries: { payload: { val: unknown } }[] };
+      readUnverified(hc1: string, reg: WitRegistry, limits: object): { kid?: Uint8Array; iss?: string; iat?: bigint; entries: { payload: { val: unknown } }[] };
       verify(
         hc1: string,
         store: WitTrustStore,
@@ -69,6 +71,12 @@ declare module "smart-trust-kotlin-hcert-core" {
         options: { limits: object; clockSkewSeconds: number },
       ): { tag: "verified"; val: Verified } | { tag: "failed"; val: Failure };
     };
+  };
+  export const WitCodec: {
+    getInstance(): { fromHc1(hc1: string, limits: object): Uint8Array };
+  };
+  export const WitCose: {
+    getInstance(): { parseSign1(cose: Uint8Array, limits: object): { alg: string } };
   };
   export class WitPendingSignature {
     toBeSigned(): Uint8Array;

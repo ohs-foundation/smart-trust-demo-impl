@@ -97,17 +97,47 @@ describe("aSummaryThatDoesNotOpen", () => {
 });
 
 describe("readSummary", () => {
-  it("shows the patient, each dose with its performer, and the summary's date and source", () => {
+  it("shows the patient, each dose with its codes, lot, place and primarySource, and the summary's date and source", () => {
     const view = readSummary(IPS);
-    expect(view.patient).toEqual({ name: "Somsak SENGMANY", birthDate: "2025-10-28", sex: "male" });
+    expect(view.patient).toEqual({ name: "Somsak SENGMANY", birthDate: "2025-10-28", sex: "male", contacts: ["Mother: Khamla SENGMANY", "Father: Bounmy SENGMANY"] });
     expect(view.immunizations).toHaveLength(6);
     expect(view.immunizations[0]).toEqual({
       vaccine: "Hepatitis B paediatric birth dose",
       date: "2025-10-28T09:15:00+07:00",
       dose: "1",
-      performer: "Practitioner/TrustDemoAnan",
+      performer: "",
+      product: "vp-hepb-peds-monovalent",
+      schedule: "XXK-EPI-HEPB-BD",
+      cvx: "08",
+      lot: "XXR-4821",
+      location: "Kesaro Provincial Hospital, Taifafeki",
+      primarySource: true,
     });
+    expect(view.immunizations[2]).toMatchObject({ product: "vp-pentavalent-liquid", schedule: "XXK-EPI-PENTA-1", cvx: "", lot: "XXK-2201", location: "Lomaru District Health Center, Onesa" });
     expect(view.date).toBe("2026-10-26T09:00:00+07:00");
     expect(view.source).toBe("Onesa national health portal (Country B, XXK)");
+  });
+
+  it("names a performer from the summary's own records and never shows a bare reference", () => {
+    const practitioner = { resourceType: "Practitioner", id: "TrustDemoAnan", name: [{ text: "Dr Anan" }] };
+    const withEntry = { ...IPS, entry: [...IPS.entry, { fullUrl: "http://smart.who.int/trust-demo/Practitioner/TrustDemoAnan", resource: practitioner }] };
+    expect(readSummary(withEntry).immunizations.map((dose) => dose.performer)).toEqual(["Dr Anan", "Dr Anan", "", "", "", ""]);
+
+    const displayed = structuredClone(IPS);
+    displayed.entry[3].resource.performer[0].actor.display = "Nurse Chanthason";
+    expect(readSummary(displayed).immunizations[1]?.performer).toBe("Nurse Chanthason");
+    expect(JSON.stringify(readSummary(IPS))).not.toContain("Practitioner/");
+  });
+
+  it("reads the allergy and problem sections as the summary gives them", () => {
+    expect(readSummary(IPS)).toMatchObject({ allergies: ["Unavailable"], problems: ["Unavailable"] });
+
+    const noKnownAllergy = { resourceType: "AllergyIntolerance", id: "nka", code: { coding: [{ system: "http://snomed.info/sct", code: "716186003", display: "No known allergy" }] } };
+    const withEntry = structuredClone(IPS);
+    withEntry.entry.push({ fullUrl: "urn:uuid:nka", resource: noKnownAllergy });
+    const allergies = withEntry.entry[0].resource.section[0];
+    delete allergies.emptyReason;
+    allergies.entry = [{ reference: "urn:uuid:nka" }];
+    expect(readSummary(withEntry).allergies).toEqual(["No known allergy"]);
   });
 });

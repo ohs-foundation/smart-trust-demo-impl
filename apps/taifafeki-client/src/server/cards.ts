@@ -10,5 +10,6 @@ export const readCardTexts = createServerFn({ method: "POST" })
     const { readCard } = await import("./readCard");
     const { runtime } = await import("./runtime");
     const { readCardsFor } = await import("./cardReads");
-    return readCardsFor(runtime(), readCard, data);
+    const viewer = runtime();
+    return readCardsFor(viewer, (doseId, hc1) => readCard(doseId, hc1, (kid) => viewer.trust.signerOf(kid)), data);
   });

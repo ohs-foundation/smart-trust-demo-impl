@@ -18,10 +18,11 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { useOnline } from "@/lib/online";
 import { cn } from "@/lib/utils";
+import { trustListStatuses } from "../server/links";
 import { addDoses, readChart, readContext, readNewborns, readProducts, registerNewborn, type Product } from "./api";
 import { WorkplaceGate } from "../Workplaces";
 import { PrintCards, PrintStation, usePrintCards } from "./PrintStation";
-import { hospitalNumberOf, type Context, type Dose, type Newborn, type TimedPatient } from "./records";
+import { HOSPITAL_NUMBER_SYSTEM, hospitalNumberOf, type Context, type Dose, type Newborn, type TimedPatient } from "./records";
 
 export interface EmrSearch {
   organization: string;
@@ -104,11 +105,16 @@ function Hospital({ organization, search, go }: Props & { organization: string }
 
 function HospitalHeader({ hospital, practitioner, subtitle }: { hospital: Organization; practitioner: Practitioner; subtitle?: string }) {
   const online = useOnline();
+  const medplum = useMedplum();
+  const lists = useQuery({ queryKey: ["trust-lists"], queryFn: () => trustListStatuses({ data: { token: medplum.getAccessToken() ?? "" } }) });
+  const country = hospital.contact?.flatMap((contact) => contact.address?.country ?? [])[0];
+  const participant = country && lists.data?.find((list) => list.name === "dev")?.participants.includes(country);
   return (
     <AppHeader
       icon={HospitalIcon}
       title={`${hospital.name} — Newborn Immunization Discharge`}
       subtitle={subtitle ?? `Practitioner: ${nameOf(practitioner)}`}
+      chips={participant && <StatusChip tone="success">GDHCN DEV Participant: {country}</StatusChip>}
       status={<StatusChip tone={online ? "success" : "warning"}>{online ? "Online" : "Offline"}</StatusChip>}
       links={<a href="/" className="hover:text-white">Change workplace</a>}
     />
@@ -336,10 +342,16 @@ function DischargeSummary({ header, patientId, onBack, onPrint, onDone }: Summar
 
 function NewbornBanner({ patient }: { patient: TimedPatient }) {
   const hospitalNumber = hospitalNumberOf(patient);
+  const onlyHospitalNumber = (patient.identifier ?? []).every((it) => it.system === HOSPITAL_NUMBER_SYSTEM);
   return (
     <PatientBanner
       name={nameOf(patient)}
-      chips={hospitalNumber && <StatusChip surface="dark" tone="warning">Hospital number: {hospitalNumber}</StatusChip>}
+      chips={
+        <>
+          {hospitalNumber && <StatusChip surface="dark" tone="warning">Hospital number: {hospitalNumber}</StatusChip>}
+          {onlyHospitalNumber && <StatusChip surface="dark">No Taifafeki CID</StatusChip>}
+        </>
+      }
       subtitle={`Born: ${birthLocal(patient).replace("T", " ")} • Sex: ${sentence(patient.gender ?? "unknown")}`}
     />
   );

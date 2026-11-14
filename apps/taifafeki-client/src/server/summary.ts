@@ -8,6 +8,7 @@ const TIMEOUT_MILLIS = 15_000;
 const RECIPIENT = "Kesaro primary care clinic";
 const DEMO_REASONS = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason";
 const OHS_REASONS = "http://ohs.dev/fhir/trust-demo/CodeSystem/vhl-refusal-reason";
+const ATTEMPTS_LEFT = "http://ohs.dev/fhir/trust-demo/StructureDefinition/passcode-attempts-left";
 
 const REFUSALS: Record<string, string> = {
   withdrawn: "The family withdrew this share.",
@@ -23,12 +24,19 @@ export interface Clinic {
 }
 
 export type SummaryOutcome =
-  | { kind: "refused"; message: string }
+  | { kind: "refused"; message: string; status?: number; reason?: string; attemptsLeft?: number }
   | { kind: "released"; documents: { contentType: string; jwe: string }[]; key: string };
 
 const refused = (message: string): SummaryOutcome => ({ kind: "refused", message });
 
-class Refusal extends Error {}
+class Refusal extends Error {
+  constructor(
+    message: string,
+    readonly answer: { status?: number; reason?: string; attemptsLeft?: number } = {},
+  ) {
+    super(message);
+  }
+}
 
 // Only an https URL on exactly one listed host:port, without userinfo.
 function onesaUrl(text: string, hosts: readonly string[]): URL {
@@ -42,20 +50,30 @@ function onesaUrl(text: string, hosts: readonly string[]): URL {
   return url;
 }
 
-function reasonOf(text: string): string | undefined {
+interface Issue {
+  extension?: { url?: string; valueUnsignedInt?: unknown }[];
+  details?: { coding?: { system?: string; code?: string }[] };
+}
+
+function answerOf(text: string): { reason?: string; attemptsLeft?: number } {
   try {
-    const outcome = JSON.parse(text) as { issue?: { details?: { coding?: { system?: string; code?: string }[] } }[] };
-    const codings = outcome.issue?.flatMap((issue) => issue.details?.coding ?? []) ?? [];
-    return codings.find((coding) => (coding.system === DEMO_REASONS || coding.system === OHS_REASONS) && coding.code && Object.hasOwn(REFUSALS, coding.code))?.code;
+    const { issue } = JSON.parse(text) as { issue?: Issue[] };
+    const codings = issue?.flatMap((it) => it.details?.coding ?? []) ?? [];
+    const reason = codings.find((coding) => (coding.system === DEMO_REASONS || coding.system === OHS_REASONS) && coding.code && Object.hasOwn(REFUSALS, coding.code))?.code;
+    if (!reason) return {};
+    const left = issue?.flatMap((it) => it.extension ?? []).find((extension) => extension.url === ATTEMPTS_LEFT)?.valueUnsignedInt;
+    return Number.isSafeInteger(left) && (left as number) >= 0 ? { reason, attemptsLeft: left as number } : { reason };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
 function refusal(response: Response, text: string): Refusal {
-  const reason = reasonOf(text);
-  if (reason) return new Refusal(REFUSALS[reason]);
-  return new Refusal(response.status === 403 ? "Nothing to release." : `Onesa refused the request (HTTP ${response.status}).`);
+  const { status } = response;
+  const answer = answerOf(text);
+  const message = answer.reason && REFUSALS[answer.reason];
+  if (message) return new Refusal(message, { status, ...answer });
+  return new Refusal(status === 403 ? "Nothing to release." : `Onesa refused the request (HTTP ${status}).`, { status });
 }
 
 async function capped(response: Response): Promise<string> {
@@ -123,7 +141,7 @@ export async function fetchSummary(
     }
     return { kind: "released", documents, key: link.key };
   } catch (error) {
-    if (error instanceof Refusal) return refused(error.message);
+    if (error instanceof Refusal) return { ...refused(error.message), ...error.answer };
     return refused("Onesa could not be reached.");
   }
 }
