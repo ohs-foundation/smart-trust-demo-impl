@@ -48,4 +48,5 @@ decided it:
 A 403 without a reason means there is nothing to release (an unknown link, or a document fetched
 without a fresh release). Documents are served only to the same certificate, within 10 minutes of
 the manifest's release, while the consent is still active. Every decided request is audited on
-Onesa (`TrustDemoOnesaVhlAccess`).
+Onesa (`TrustDemoOnesaVhlAccess`), naming the Patient and, once the link is known, the share's
+`Consent`, whether the request was released or refused.
