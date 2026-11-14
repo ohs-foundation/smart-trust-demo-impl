@@ -19,6 +19,8 @@ import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.hcert.DvcFhirMapper
 import dev.ohs.trustdemo.hcert.DvcMin
 import dev.ohs.trustdemo.hcert.FailureReason
+import dev.ohs.trustdemo.hcert.ReadResult
+import dev.ohs.trustdemo.hcert.TrustedDscInfo
 import dev.ohs.trustdemo.hcert.VerificationFailure
 import dev.ohs.trustdemo.hcert.VerificationResult
 import dev.ohs.trustdemo.hcert.VerifyStep
@@ -59,6 +61,8 @@ sealed interface ScanOutcome {
     val listStale: Boolean = false,
     /** The card list this dose was verified against. */
     val list: ListFreshness? = null,
+    /** The certificate that signed the card. */
+    val signer: TrustedDscInfo? = null,
   ) : ScanOutcome
 
   /** The card verified, but its dose was imported by an earlier scan. */
@@ -70,7 +74,9 @@ sealed interface ScanOutcome {
   /** The card verified, but its holder was born on another day than the child. */
   data class HolderMismatch(val cardBirthDate: String, val childBirthDate: String?) : ScanOutcome
 
-  data class Failed(val step: VerifyStep, val reason: FailureReason) : ScanOutcome
+  /** The card did not verify; [kid] is the key its header names, when the card could be read. */
+  data class Failed(val step: VerifyStep, val reason: FailureReason, val kid: String? = null) :
+    ScanOutcome
 }
 
 /** A verified card waiting for the nurse to say it is the child's; nothing is written for it. */
@@ -124,7 +130,8 @@ class VerificationService(
 
     val verified =
       when (val result = hcert.verifyCard(hc1, request.now.epochSeconds)) {
-        is VerificationResult.Failed -> return settled(refuse(current, request, result.failure))
+        is VerificationResult.Failed ->
+          return settled(refuse(current, request, result.failure, kidOf(hc1)))
         is VerificationResult.Verified -> result.hcert
       }
     val dvc =
@@ -177,6 +184,7 @@ class VerificationService(
       replacedReported = replaced.isNotEmpty(),
       listStale = !synced,
       list = pending.list,
+      signer = pending.card.hcert.dsc,
     )
   }
 
@@ -189,10 +197,14 @@ class VerificationService(
     current: RegistrationSession,
     request: ScanRequest,
     failure: VerificationFailure,
+    kid: String? = null,
   ): ScanOutcome {
     post(current, ScanTransactions.refused(request, failure))
-    return ScanOutcome.Failed(failure.step, failure.reason)
+    return ScanOutcome.Failed(failure.step, failure.reason, kid)
   }
+
+  private suspend fun kidOf(hc1: String): String? =
+    (hcert.read(hc1) as? ReadResult.Decoded)?.hcert?.kid
 
   /** How a scan settles when the card's dose is already on the server, or null when it is not. */
   private suspend fun existing(

@@ -28,7 +28,7 @@ fun ViewRegistry.registerTrustLists() {
   registerComponent<TrustListState, TrustListCardConfig>(
     ViewTypeCS.TrustListCard,
     TrustListCardRenderer(),
-    TrustListCardConfig(),
+    TrustListCardConfig(showSigner = false, showDomains = false),
   )
   registerLayout<TrustListState>(
     VerticalListRenderer.VIEW_TYPE,

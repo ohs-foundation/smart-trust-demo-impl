@@ -27,6 +27,14 @@ import who.smart.trust.issuer.Validity
 import who.smart.trust.payloads.Payload
 import who.smart.trust.types.CoseAlgorithm
 
+/** Who a card is for, and the lot and day of its dose. */
+data class DvcHolder(
+  val name: String = "Test Child",
+  val sex: String = "female",
+  val given: String = "2026-03-01",
+  val lot: String = "LOT1",
+)
+
 /**
  * DVC cards signed with a chosen stand-in key, for checking which trust store accepts which key.
  */
@@ -36,10 +44,11 @@ object SignedCards {
     nowEpochSeconds: Long,
     product: String = "a3K3X000006MiiXUAS",
     dob: String = "2026-01-01",
+    holder: DvcHolder = DvcHolder(),
   ): String {
     val request =
       IssueRequest(
-        payloads = listOf(Payload.DvcMin(dvcMin(product, dob))),
+        payloads = listOf(Payload.DvcMin(dvcMin(product, dob, holder))),
         iss = "XR",
         validity = Validity(iat = nowEpochSeconds, exp = nowEpochSeconds + 86_400),
         dscDer = TestKeys.certificate(signer).encoded,
@@ -56,13 +65,13 @@ object SignedCards {
     return ok(Hcert.issuer.finish(pending, signature)).hc1
   }
 
-  private fun dvcMin(product: String, dob: String) =
+  private fun dvcMin(product: String, dob: String, holder: DvcHolder) =
     DvcMin(
-      n = "Test Child",
+      n = holder.name,
       dob = dob,
-      s = "female",
+      s = holder.sex,
       nt = "XXR",
-      vx = DvcMinVaccineDetails(vp = product, dv = "2026-03-01", `is` = "XXR", bo = "LOT1"),
+      vx = DvcMinVaccineDetails(vp = product, dv = holder.given, `is` = "XXR", bo = holder.lot),
       v = "1.0.0",
       extensions = emptyList(),
     )

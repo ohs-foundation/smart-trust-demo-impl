@@ -33,6 +33,26 @@
           "type": "http://hl7.org/fhir/StructureDefinition/boolean"
         },
         {
+          "name": "productCode",
+          "path": "vaccineCode.coding.where(system = 'http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct').code.first()",
+          "type": "http://hl7.org/fhir/StructureDefinition/string"
+        },
+        {
+          "name": "scheduleCode",
+          "path": "vaccineCode.coding.where(system = 'http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule').code.first()",
+          "type": "http://hl7.org/fhir/StructureDefinition/string"
+        },
+        {
+          "name": "lotNumber",
+          "path": "lotNumber",
+          "type": "http://hl7.org/fhir/StructureDefinition/string"
+        },
+        {
+          "name": "location",
+          "path": "location.display",
+          "type": "http://hl7.org/fhir/StructureDefinition/string"
+        },
+        {
           "name": "immunizationPatientRef",
           "path": "patient.reference.replace('Patient/', '')",
           "type": "http://hl7.org/fhir/StructureDefinition/string"

@@ -78,6 +78,7 @@ class PatientRepository(private val fhirRepository: FhirRepository) {
         telecoms =
           extractor.extract<PatientTelecomState>(result).filter { it.telecomValue != null },
         visit = BookedVisits(fhirRepository).of(patientId),
+        context = PatientContexts(fhirRepository).of(patientId),
       )
     }
 }

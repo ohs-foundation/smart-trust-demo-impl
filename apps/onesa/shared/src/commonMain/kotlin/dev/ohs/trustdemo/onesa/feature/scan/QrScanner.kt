@@ -23,6 +23,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.scan_camera_unavailable
 import dev.ohs.trustdemo.onesa.generated.resources.scan_point_camera
 import dev.ohs.trustdemo.onesa.generated.resources.scan_with_camera
 import dev.ohs.trustdemo.onesa.ui.CameraPanel
+import dev.ohs.trustdemo.onesa.ui.Status
 import org.jetbrains.compose.resources.stringResource
 
 /** What the camera gave back. [Text] is the raw QR content, an `HC1:` string for a card. */
@@ -43,13 +44,15 @@ expect val cameraScanningAvailable: Boolean
 /**
  * The viewfinder block for reading a card. Where this build has a camera, "Scan with camera" opens
  * it as a mode that a read card, its close button or Back ends; without one, it points to the paste
- * field.
+ * field. The last card read shows as [frame], with its [badge].
  */
 @Composable
 fun CardCameraPanel(
   onResult: (QrScan) -> Unit,
   modifier: Modifier = Modifier,
   caption: String? = null,
+  frame: String? = null,
+  badge: Status? = null,
 ) {
   CameraPanel(
     label =
@@ -59,6 +62,8 @@ fun CardCameraPanel(
       ),
     modifier = modifier,
     caption = caption,
+    badge = badge,
+    frame = frame,
     openCameraLabel = stringResource(Res.string.scan_with_camera),
     camera =
       if (cameraScanningAvailable) {

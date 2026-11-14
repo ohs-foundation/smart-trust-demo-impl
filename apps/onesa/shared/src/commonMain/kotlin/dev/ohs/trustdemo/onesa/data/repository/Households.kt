@@ -112,4 +112,25 @@ fun shortAge(birthDate: String?, today: LocalDate): String? {
   }
 }
 
+/**
+ * An age as a clinic header writes it: days in the first week (`5 Days`), weeks under eight weeks
+ * (`4 Weeks`), months under two years (`9 Months`), years after. Null without a readable
+ * [birthDate].
+ */
+fun displayAge(birthDate: String?, today: LocalDate): String? {
+  val born =
+    birthDate?.let { runCatching { LocalDate.parse(it.take(10)) }.getOrNull() } ?: return null
+  val days = born.daysUntil(today)
+  val months = born.monthsUntil(today)
+  val (count, unit) =
+    when {
+      days < 0 -> return null
+      days < 7 -> days to "Day"
+      days < 56 -> days / 7 to "Week"
+      months < 24 -> months to "Month"
+      else -> born.yearsUntil(today) to "Year"
+    }
+  return "$count $unit${if (count == 1) "" else "s"}"
+}
+
 private const val ROLE_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-RoleCode"

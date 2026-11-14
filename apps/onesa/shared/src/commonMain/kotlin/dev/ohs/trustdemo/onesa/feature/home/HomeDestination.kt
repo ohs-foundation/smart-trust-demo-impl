@@ -20,7 +20,9 @@ import dev.ohs.trustdemo.onesa.auth.Permission
 import dev.ohs.trustdemo.onesa.auth.can
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.home_destination_households
+import dev.ohs.trustdemo.onesa.generated.resources.home_destination_patients
 import dev.ohs.trustdemo.onesa.generated.resources.home_destination_referrals
+import dev.ohs.trustdemo.onesa.generated.resources.home_destination_schedule
 import dev.ohs.trustdemo.onesa.generated.resources.home_destination_sync
 import dev.ohs.trustdemo.onesa.generated.resources.home_destination_trust_lists
 import dev.ohs.trustdemo.onesa.generated.resources.home_destination_wallet
@@ -37,6 +39,8 @@ enum class HomeDestination(val label: StringResource, val permission: Permission
     label = Res.string.home_destination_referrals,
     permission = Permission.SentReferrals,
   ),
+  Patients(label = Res.string.home_destination_patients, permission = Permission.Patients),
+  Schedule(label = Res.string.home_destination_schedule, permission = Permission.Schedule),
   TrustLists(label = Res.string.home_destination_trust_lists, permission = Permission.TrustLists),
   Wallet(label = Res.string.home_destination_wallet, permission = Permission.Wallet),
   Sync(label = Res.string.home_destination_sync, permission = Permission.Upload),

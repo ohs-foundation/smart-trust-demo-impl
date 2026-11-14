@@ -30,6 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 
@@ -55,27 +56,51 @@ fun OnesaScaffold(
     topBar()
     banner?.invoke()
     Box(Modifier.weight(1f).fillMaxWidth()) {
-      BoxWithConstraints(Modifier.fillMaxSize()) {
-        if (side != null && maxWidth >= 840.dp) {
-          Row(Modifier.fillMaxSize()) {
-            Blocks(Modifier.weight(if (sideWide) 5f else 7f), scroll, content = content)
-            Blocks(
-              Modifier.weight(if (sideWide) 7f else 5f),
-              scroll,
-              leading = false,
-              content = side,
-            )
-          }
-        } else {
-          Blocks(Modifier.fillMaxWidth(), scroll) {
-            content()
-            side?.invoke(this)
-          }
-        }
-      }
+      SplitBlocks(Modifier.fillMaxSize(), side, sideWide, scroll, content = content)
       Box(Modifier.align(Alignment.BottomCenter)) { snackbarHost() }
     }
     actions?.invoke()
+  }
+}
+
+/**
+ * Blocks in a column, with the [side] blocks in a second column beside them on a tablet (the wider
+ * of the two when [sideWide]) and after them on a phone; [inset] keeps them off the edges. A tab's
+ * content uses it with no inset, as the screen around it already has one.
+ */
+@Composable
+fun SplitBlocks(
+  modifier: Modifier = Modifier,
+  side: (@Composable ColumnScope.() -> Unit)? = null,
+  sideWide: Boolean = false,
+  scroll: Boolean = true,
+  inset: Dp = 12.dp,
+  content: @Composable ColumnScope.() -> Unit,
+) {
+  BoxWithConstraints(modifier) {
+    if (side != null && maxWidth >= 840.dp) {
+      Row(Modifier.fillMaxSize()) {
+        Blocks(
+          Modifier.weight(if (sideWide) 5f else 7f),
+          scroll,
+          inset,
+          end = 12.dp,
+          content = content,
+        )
+        Blocks(
+          Modifier.weight(if (sideWide) 7f else 5f),
+          scroll,
+          inset,
+          start = 0.dp,
+          content = side,
+        )
+      }
+    } else {
+      Blocks(Modifier.fillMaxWidth(), scroll, inset) {
+        content()
+        side?.invoke(this)
+      }
+    }
   }
 }
 
@@ -83,14 +108,16 @@ fun OnesaScaffold(
 private fun Blocks(
   modifier: Modifier,
   scroll: Boolean,
-  leading: Boolean = true,
+  inset: Dp,
+  end: Dp = inset,
+  start: Dp = inset,
   content: @Composable ColumnScope.() -> Unit,
 ) {
   Column(
     modifier
       .fillMaxSize()
       .then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-      .padding(start = if (leading) 12.dp else 0.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+      .padding(start = start, end = end, top = inset, bottom = inset),
     verticalArrangement = Arrangement.spacedBy(12.dp),
     content = content,
   )

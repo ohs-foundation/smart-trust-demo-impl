@@ -5,12 +5,12 @@
     {
       "name": "showSigner",
       "type": "boolean",
-      "valueBoolean": true
+      "valueBoolean": false
     },
     {
       "name": "showDomains",
       "type": "boolean",
-      "valueBoolean": true
+      "valueBoolean": false
     }
   ]
 }

@@ -20,16 +20,21 @@ import dev.ohs.player.client.renderer.ComponentRenderer
 import dev.ohs.player.client.renderer.RenderOptions
 import dev.ohs.trustdemo.onesa.generated.config.ImmunizationItemConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
-import dev.ohs.trustdemo.onesa.generated.resources.immunization_given
+import dev.ohs.trustdemo.onesa.generated.resources.immunization_codes
+import dev.ohs.trustdemo.onesa.generated.resources.immunization_lot
 import dev.ohs.trustdemo.onesa.generated.resources.immunization_unknown
-import dev.ohs.trustdemo.onesa.generated.resources.immunization_verified
+import dev.ohs.trustdemo.onesa.generated.resources.verify_primary_source_false
+import dev.ohs.trustdemo.onesa.generated.resources.verify_primary_source_true
 import dev.ohs.trustdemo.onesa.generated.state.PatientImmunizationState
-import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.RecordRow
 import dev.ohs.trustdemo.onesa.ui.Status
 import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import org.jetbrains.compose.resources.stringResource
 
+/**
+ * A dose as the patient profile lists it: the vaccine, its product and national schedule codes,
+ * when, which lot and where, and whether it is the clinic's own record (`primarySource`).
+ */
 class ImmunizationItemRenderer :
   ComponentRenderer<PatientImmunizationState, ImmunizationItemConfig> {
   @Composable
@@ -41,26 +46,27 @@ class ImmunizationItemRenderer :
     RecordRow(
       label = item.vaccineName ?: stringResource(Res.string.immunization_unknown),
       modifier = options.modifier,
-      icon = OnesaIcons.Syringe,
+      code =
+        if (item.productCode != null || item.scheduleCode != null)
+          stringResource(
+            Res.string.immunization_codes,
+            item.productCode ?: "-",
+            item.scheduleCode ?: "-",
+          )
+        else null,
       detail =
         listOfNotNull(
-            if (config.showDate != false)
-              item.occurrenceDate?.let { stringResource(Res.string.immunization_given, it) }
-            else null,
-            if (item.verified == true) stringResource(Res.string.immunization_verified) else null,
+            if (config.showDate != false) item.occurrenceDate?.toString()?.take(10) else null,
+            item.lotNumber?.let { stringResource(Res.string.immunization_lot, it) },
+            item.location,
           )
-          .joinToString(", ")
+          .joinToString(" • ")
           .ifEmpty { null },
       status =
         if (config.showStatus != false)
-          item.immunizationStatus?.let {
-            val tone =
-              when (it.lowercase()) {
-                "completed" -> Tone.Success
-                "not-done" -> Tone.Danger
-                else -> Tone.Neutral
-              }
-            Status(it.replaceFirstChar { c -> c.uppercaseChar() }, tone)
+          item.verified?.let {
+            if (it) Status(stringResource(Res.string.verify_primary_source_true), Tone.Success)
+            else Status(stringResource(Res.string.verify_primary_source_false), Tone.Warning)
           }
         else null,
     )

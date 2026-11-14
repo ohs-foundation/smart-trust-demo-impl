@@ -15,346 +15,645 @@
  */
 package dev.ohs.trustdemo.onesa.feature.referral
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.ohs.trustdemo.onesa.data.hcert.ListFreshness
+import dev.ohs.trustdemo.hcert.TrustedDscInfo
+import dev.ohs.trustdemo.onesa.auth.AppRole
+import dev.ohs.trustdemo.onesa.data.hcert.TrustDomain
+import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
+import dev.ohs.trustdemo.onesa.data.repository.displayAge
 import dev.ohs.trustdemo.onesa.data.verification.EpiDose
 import dev.ohs.trustdemo.onesa.data.verification.ScanOutcome
+import dev.ohs.trustdemo.onesa.data.verification.ScanTransactions
 import dev.ohs.trustdemo.onesa.data.verification.UnmatchedDose
-import dev.ohs.trustdemo.onesa.data.verification.display
+import dev.ohs.trustdemo.onesa.data.verification.shortName
+import dev.ohs.trustdemo.onesa.feature.home.RoleTopBar
 import dev.ohs.trustdemo.onesa.feature.scan.CardCameraPanel
 import dev.ohs.trustdemo.onesa.feature.scan.QrScan
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.list_stale
+import dev.ohs.trustdemo.onesa.generated.resources.match_birth_day
 import dev.ohs.trustdemo.onesa.generated.resources.match_changed
 import dev.ohs.trustdemo.onesa.generated.resources.match_confirm
 import dev.ohs.trustdemo.onesa.generated.resources.match_done
-import dev.ohs.trustdemo.onesa.generated.resources.match_hint
-import dev.ohs.trustdemo.onesa.generated.resources.match_none
-import dev.ohs.trustdemo.onesa.generated.resources.match_title
-import dev.ohs.trustdemo.onesa.generated.resources.scan_back
+import dev.ohs.trustdemo.onesa.generated.resources.match_found
+import dev.ohs.trustdemo.onesa.generated.resources.match_given
+import dev.ohs.trustdemo.onesa.generated.resources.match_list_title
+import dev.ohs.trustdemo.onesa.generated.resources.match_mapped
+import dev.ohs.trustdemo.onesa.generated.resources.match_needs_decision
+import dev.ohs.trustdemo.onesa.generated.resources.match_not_counted
+import dev.ohs.trustdemo.onesa.generated.resources.match_not_found
+import dev.ohs.trustdemo.onesa.generated.resources.match_question
+import dev.ohs.trustdemo.onesa.generated.resources.match_records_text
+import dev.ohs.trustdemo.onesa.generated.resources.match_records_title
 import dev.ohs.trustdemo.onesa.generated.resources.scan_error_camera
 import dev.ohs.trustdemo.onesa.generated.resources.scan_paste_label
-import dev.ohs.trustdemo.onesa.generated.resources.verify_already_imported
-import dev.ohs.trustdemo.onesa.generated.resources.verify_birth_dates
+import dev.ohs.trustdemo.onesa.generated.resources.verify_age
+import dev.ohs.trustdemo.onesa.generated.resources.verify_already_title
+import dev.ohs.trustdemo.onesa.generated.resources.verify_card_born
+import dev.ohs.trustdemo.onesa.generated.resources.verify_card_holder
+import dev.ohs.trustdemo.onesa.generated.resources.verify_child_born
 import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm
-import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm_card
-import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm_child
-import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm_title
 import dev.ohs.trustdemo.onesa.generated.resources.verify_could_not_save
 import dev.ohs.trustdemo.onesa.generated.resources.verify_decline
-import dev.ohs.trustdemo.onesa.generated.resources.verify_failed
-import dev.ohs.trustdemo.onesa.generated.resources.verify_failed_reason
-import dev.ohs.trustdemo.onesa.generated.resources.verify_imported
-import dev.ohs.trustdemo.onesa.generated.resources.verify_imported_elsewhere
-import dev.ohs.trustdemo.onesa.generated.resources.verify_list_fetched
+import dev.ohs.trustdemo.onesa.generated.resources.verify_decoded
+import dev.ohs.trustdemo.onesa.generated.resources.verify_dose
+import dev.ohs.trustdemo.onesa.generated.resources.verify_dose_code
+import dev.ohs.trustdemo.onesa.generated.resources.verify_elsewhere_title
+import dev.ohs.trustdemo.onesa.generated.resources.verify_fail
+import dev.ohs.trustdemo.onesa.generated.resources.verify_fail_detail
+import dev.ohs.trustdemo.onesa.generated.resources.verify_fail_title
+import dev.ohs.trustdemo.onesa.generated.resources.verify_failed_step
+import dev.ohs.trustdemo.onesa.generated.resources.verify_holder_title
+import dev.ohs.trustdemo.onesa.generated.resources.verify_imported_detail
+import dev.ohs.trustdemo.onesa.generated.resources.verify_imported_title
+import dev.ohs.trustdemo.onesa.generated.resources.verify_incoming
+import dev.ohs.trustdemo.onesa.generated.resources.verify_keep_reported
+import dev.ohs.trustdemo.onesa.generated.resources.verify_kid
+import dev.ohs.trustdemo.onesa.generated.resources.verify_list_fetched_label
 import dev.ohs.trustdemo.onesa.generated.resources.verify_list_stale
+import dev.ohs.trustdemo.onesa.generated.resources.verify_none_pending
 import dev.ohs.trustdemo.onesa.generated.resources.verify_nothing_imported
-import dev.ohs.trustdemo.onesa.generated.resources.verify_open_schedule
-import dev.ohs.trustdemo.onesa.generated.resources.verify_other_child
+import dev.ohs.trustdemo.onesa.generated.resources.verify_origin
+import dev.ohs.trustdemo.onesa.generated.resources.verify_pass
+import dev.ohs.trustdemo.onesa.generated.resources.verify_pass_detail
+import dev.ohs.trustdemo.onesa.generated.resources.verify_pass_title
+import dev.ohs.trustdemo.onesa.generated.resources.verify_pending_count
+import dev.ohs.trustdemo.onesa.generated.resources.verify_primary_source_false
+import dev.ohs.trustdemo.onesa.generated.resources.verify_primary_source_true
+import dev.ohs.trustdemo.onesa.generated.resources.verify_proceed
+import dev.ohs.trustdemo.onesa.generated.resources.verify_reason
+import dev.ohs.trustdemo.onesa.generated.resources.verify_reason_label
+import dev.ohs.trustdemo.onesa.generated.resources.verify_referred_by
+import dev.ohs.trustdemo.onesa.generated.resources.verify_refused
 import dev.ohs.trustdemo.onesa.generated.resources.verify_replaced
-import dev.ohs.trustdemo.onesa.generated.resources.verify_results
-import dev.ohs.trustdemo.onesa.generated.resources.verify_title
+import dev.ohs.trustdemo.onesa.generated.resources.verify_scan_again
+import dev.ohs.trustdemo.onesa.generated.resources.verify_service_request
+import dev.ohs.trustdemo.onesa.generated.resources.verify_status_gdhcn
+import dev.ohs.trustdemo.onesa.generated.resources.verify_status_local
+import dev.ohs.trustdemo.onesa.generated.resources.verify_trust_authority
+import dev.ohs.trustdemo.onesa.generated.resources.verify_unverified_title
 import dev.ohs.trustdemo.onesa.generated.resources.verify_use_text
+import dev.ohs.trustdemo.onesa.generated.resources.verify_verified_count
+import dev.ohs.trustdemo.onesa.generated.resources.verify_verified_title
+import dev.ohs.trustdemo.onesa.ui.Action
+import dev.ohs.trustdemo.onesa.ui.AlertCard
+import dev.ohs.trustdemo.onesa.ui.ChildAvatar
+import dev.ohs.trustdemo.onesa.ui.Field
+import dev.ohs.trustdemo.onesa.ui.FieldGrid
+import dev.ohs.trustdemo.onesa.ui.FormLabel
+import dev.ohs.trustdemo.onesa.ui.NoteLine
+import dev.ohs.trustdemo.onesa.ui.OnesaButton
+import dev.ohs.trustdemo.onesa.ui.OnesaIcons
+import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
 import dev.ohs.trustdemo.onesa.ui.OnesaTextField
+import dev.ohs.trustdemo.onesa.ui.OptionRow
+import dev.ohs.trustdemo.onesa.ui.PatientBanner
+import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
+import dev.ohs.trustdemo.onesa.ui.RecordRow
+import dev.ohs.trustdemo.onesa.ui.SectionCard
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.VerificationResultCard
+import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import dev.ohs.trustdemo.onesa.util.displayTime
+import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-/** S4: verifies each of a referred child's cards against the trust list and imports its dose. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** What the verify screens' buttons and camera do. */
+class VerifyActions(
+  val onScan: (QrScan) -> Unit,
+  val onText: (String) -> Unit,
+  val confirm: () -> Unit,
+  val decline: () -> Unit,
+  val proceed: () -> Unit,
+  val scanAgain: () -> Unit,
+  val match: (UnmatchedDose, EpiDose?) -> Unit,
+  val back: () -> Unit,
+)
+
+/**
+ * S4: verifies each of a referred child's cards against the trust list and imports its dose; a card
+ * that fails shows why (1-12). Before the schedule, a dose whose product the national map does not
+ * name goes to the dose match picker (1-13).
+ */
 @Composable
-fun VerifyCardsScreen(referralId: String, onBack: () -> Unit, onOpenSchedule: () -> Unit) {
+fun VerifyCardsScreen(
+  referralId: String,
+  role: AppRole,
+  onBack: () -> Unit,
+  onOpenSchedule: () -> Unit,
+) {
   val viewModel = koinViewModel<VerifyCardsViewModel>(key = referralId) { parametersOf(referralId) }
   val state by viewModel.uiState.collectAsStateWithLifecycle()
-  var pasted by remember { mutableStateOf("") }
+  var matching by rememberSaveable { mutableStateOf(false) }
+  var dismissed by rememberSaveable { mutableIntStateOf(0) }
   var cameraFailed by remember { mutableStateOf(false) }
+  var choice by remember(state.unmatched.firstOrNull()?.id) { mutableStateOf<EpiDose?>(null) }
+  val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
 
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = {
-          Text(
-            state.referral?.let { "${stringResource(Res.string.verify_title)}: ${it.patientName}" }
-              ?: stringResource(Res.string.verify_title)
-          )
-        },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(
-              Icons.AutoMirrored.Filled.ArrowBack,
-              contentDescription = stringResource(Res.string.scan_back),
-              tint = MaterialTheme.colorScheme.onPrimary,
-            )
-          }
-        },
-        colors =
-          TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-          ),
-      )
+  LaunchedEffect(matching, state.unmatched, state.busy) {
+    if (matching && state.unmatched.isEmpty() && !state.busy) {
+      matching = false
+      onOpenSchedule()
     }
-  ) { padding ->
-    Column(
-      Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-      val onScan = { scan: QrScan ->
+  }
+  val actions =
+    VerifyActions(
+      onScan = { scan ->
         when (scan) {
-          is QrScan.Text -> viewModel.onText(scan.value)
+          is QrScan.Text -> {
+            cameraFailed = false
+            viewModel.onText(scan.value)
+          }
           is QrScan.Failed -> cameraFailed = true
           QrScan.Cancelled -> Unit
         }
-      }
-      CardCameraPanel(onResult = onScan)
-      if (cameraFailed) {
-        Text(stringResource(Res.string.scan_error_camera), color = MaterialTheme.colorScheme.error)
-      }
-      OnesaTextField(
-        label = stringResource(Res.string.scan_paste_label),
-        value = pasted,
-        onValueChange = { pasted = it },
-        placeholder = "HC1:…",
-        mono = true,
-        minLines = 2,
+      },
+      onText = viewModel::onText,
+      confirm = viewModel::confirm,
+      decline = viewModel::decline,
+      proceed = { if (state.unmatched.isNotEmpty()) matching = true else onOpenSchedule() },
+      scanAgain = { dismissed = state.results.size },
+      match = { dose, picked ->
+        if (picked == null) viewModel.leaveUnmapped(dose) else viewModel.match(dose, picked)
+      },
+      back = { matching = false },
+    )
+  if (matching) {
+    DoseMatchContent(state, today, choice, { choice = it }, actions)
+  } else {
+    VerifyCardsContent(
+      state = state,
+      today = today,
+      topBar = { RoleTopBar(role, onBack) },
+      showOutcome = state.results.size > dismissed,
+      cameraFailed = cameraFailed,
+      actions = actions,
+    )
+  }
+}
+
+/** S4, or 1-12 when the last card shown was refused: the referral, the doses and the scanner. */
+@Composable
+fun VerifyCardsContent(
+  state: VerifyCardsUiState,
+  today: LocalDate,
+  topBar: @Composable () -> Unit,
+  showOutcome: Boolean,
+  actions: VerifyActions,
+  cameraFailed: Boolean = false,
+) {
+  val pending = state.pending
+  val outcome = state.results.lastOrNull()?.takeIf { showOutcome && pending == null }
+  val refused =
+    outcome is ScanOutcome.Failed ||
+      outcome is ScanOutcome.HolderMismatch ||
+      outcome is ScanOutcome.ImportedForAnotherChild
+  val childName = state.child?.name ?: state.referral?.patientName.orEmpty()
+  val signer = pending?.card?.hcert?.dsc ?: (outcome as? ScanOutcome.Imported)?.signer
+  var pasted by remember { mutableStateOf("") }
+
+  OnesaScaffold(
+    topBar = topBar,
+    banner = {
+      PatientBanner(
+        name = childName,
+        chips =
+          listOfNotNull(
+            displayAge(state.child?.birthDate, today)?.let {
+              Status(stringResource(Res.string.verify_age, it), Tone.Info)
+            },
+            state.referral?.requester?.let {
+              Status(stringResource(Res.string.verify_referred_by, it), Tone.Warning)
+            },
+          ),
+        avatar = OnesaIcons.Baby,
+        avatarColor = ChildAvatar,
       )
-      OutlinedButton(
-        onClick = {
-          viewModel.onText(pasted)
-          pasted = ""
-        },
-        enabled = pasted.isNotBlank() && !state.busy,
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Text(stringResource(Res.string.verify_use_text))
-      }
-      if (state.busy) CircularProgressIndicator()
-      if (state.couldNotSave) {
+    },
+    sideWide = !refused,
+    side = {
+      CardCameraPanel(
+        onResult = actions.onScan,
+        frame = state.scanned,
+        badge =
+          state.scanned?.let {
+            Status(
+              stringResource(Res.string.verify_decoded, it.take(10)),
+              if (refused) Tone.Warning else Tone.Success,
+            )
+          },
+      )
+      if (cameraFailed) {
         Text(
-          stringResource(Res.string.verify_could_not_save),
-          color = MaterialTheme.colorScheme.error,
+          stringResource(Res.string.scan_error_camera),
+          style = MaterialTheme.typography.bodySmall,
+          color = OnesaColors.Crimson,
         )
       }
-
-      state.pending?.let { pending ->
-        Card(Modifier.fillMaxWidth()) {
-          Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-              stringResource(Res.string.verify_confirm_title),
-              style = MaterialTheme.typography.labelLarge,
-            )
-            Text(
-              stringResource(
-                Res.string.verify_confirm_card,
-                pending.holderName,
-                pending.holderBirthDate,
-              )
-            )
-            Text(stringResource(Res.string.verify_confirm_child, pending.childName))
-            Text(pending.dose)
-            ListFetched(pending.list)
-            Button(
-              onClick = viewModel::confirm,
-              enabled = !state.busy,
-              modifier = Modifier.fillMaxWidth(),
-            ) {
-              Text(stringResource(Res.string.verify_confirm, pending.childName))
-            }
-            OutlinedButton(
-              onClick = viewModel::decline,
-              enabled = !state.busy,
-              modifier = Modifier.fillMaxWidth(),
-            ) {
-              Text(stringResource(Res.string.verify_decline))
-            }
+      when {
+        pending != null -> {
+          VerificationResultCard(
+            title = stringResource(Res.string.verify_pass_title),
+            tone = Tone.Success,
+            verdict = stringResource(Res.string.verify_pass),
+            fields =
+              signerFields(pending.card.hcert.dsc) +
+                listOf(
+                  Field(
+                    stringResource(Res.string.verify_card_holder),
+                    "${pending.holderName}, ${pending.holderBirthDate}",
+                  )
+                ) +
+                listOfNotNull(
+                  pending.list.fetchedAtEpochSeconds?.let {
+                    Field(stringResource(Res.string.verify_list_fetched_label), displayTime(it))
+                  }
+                ),
+            detail =
+              stringResource(Res.string.verify_pass_detail, day(pending.card.hcert.dsc.notAfter)),
+          )
+          if (pending.list.stale) {
+            AlertCard(null, stringResource(Res.string.verify_list_stale), Tone.Warning)
           }
         }
+        outcome != null -> OutcomeCard(outcome)
       }
-
-      if (state.matchChanged) {
-        Text(stringResource(Res.string.match_changed), color = MaterialTheme.colorScheme.error)
-      }
-      state.matchedTo.forEach { Text(stringResource(Res.string.match_done, it.display)) }
-      if (state.listStale) Text(stringResource(Res.string.list_stale))
-      state.unmatched.forEach { dose ->
-        MatchPicker(
-          dose = dose,
-          choices = state.choices,
-          busy = state.busy,
-          onMatch = { viewModel.match(dose, it) },
-          onNone = { viewModel.leaveUnmapped(dose) },
+      SectionCard {
+        OnesaTextField(
+          label = stringResource(Res.string.scan_paste_label),
+          value = pasted,
+          onValueChange = { pasted = it },
+          placeholder = "HC1:…",
+          mono = true,
+          minLines = 2,
+        )
+        OnesaButton(
+          Action(
+            stringResource(Res.string.verify_use_text),
+            onClick = {
+              actions.onText(pasted)
+              pasted = ""
+            },
+            primary = false,
+            enabled = pasted.isNotBlank() && !state.busy && pending == null,
+          ),
+          Modifier.fillMaxWidth(),
         )
       }
-
-      if (state.results.isNotEmpty()) {
+    },
+    actions = {
+      val busy = state.busy
+      PrimaryActionBar(
+        actions =
+          when {
+            pending != null ->
+              listOf(
+                Action(
+                  stringResource(Res.string.verify_decline),
+                  onClick = actions.decline,
+                  primary = false,
+                  enabled = !busy,
+                ),
+                Action(
+                  stringResource(Res.string.verify_confirm, pending.childName),
+                  onClick = actions.confirm,
+                  busy = busy,
+                  enabled = !busy,
+                ),
+              )
+            refused ->
+              listOf(
+                Action(
+                  stringResource(Res.string.verify_scan_again),
+                  onClick = actions.scanAgain,
+                  primary = false,
+                ),
+                Action(
+                  stringResource(Res.string.verify_keep_reported),
+                  onClick = actions.proceed,
+                  enabled = !busy && state.referral != null,
+                ),
+              )
+            else ->
+              listOf(
+                Action(
+                  stringResource(Res.string.verify_proceed),
+                  onClick = actions.proceed,
+                  busy = busy,
+                  enabled = !busy && state.referral != null,
+                )
+              )
+          },
+        caption = signer?.let { statusCaption(it) },
+      )
+    },
+  ) {
+    if (!refused) {
+      state.referral?.let { referral ->
+        SectionCard(title = stringResource(Res.string.verify_incoming), icon = OnesaIcons.File) {
+          FieldGrid(
+            listOfNotNull(
+              Field(
+                stringResource(Res.string.verify_service_request),
+                "#${referral.id}",
+                mono = true,
+              ),
+              referral.reason?.let { Field(stringResource(Res.string.verify_reason), it) },
+            )
+          )
+        }
+      }
+    }
+    SectionCard(
+      title = stringResource(Res.string.verify_unverified_title),
+      summary =
+        Status(
+          stringResource(Res.string.verify_pending_count, state.reported.size),
+          if (state.reported.isEmpty()) Tone.Success else Tone.Warning,
+        ),
+    ) {
+      if (state.reported.isEmpty()) {
         Text(
-          stringResource(Res.string.verify_results),
-          style = MaterialTheme.typography.titleMedium,
+          stringResource(Res.string.verify_none_pending),
+          style = MaterialTheme.typography.bodyMedium,
+          color = OnesaColors.Muted,
         )
       }
-      state.results.forEach { Outcome(it) }
-      if (state.referral != null && state.unmatched.isEmpty()) {
-        Button(
-          onClick = onOpenSchedule,
-          enabled = !state.busy && state.pending == null,
-          modifier = Modifier.fillMaxWidth(),
-        ) {
-          Text(stringResource(Res.string.verify_open_schedule))
-        }
+      state.reported.forEach { dose ->
+        DoseRow(
+          product = dose.product,
+          lot = dose.lot,
+          origin = dose.origin,
+          status = Status(stringResource(Res.string.verify_primary_source_false), Tone.Warning),
+        )
       }
     }
-  }
-}
-
-@Composable
-private fun ListFetched(list: ListFreshness) {
-  list.fetchedAtEpochSeconds?.let {
-    Text(stringResource(Res.string.verify_list_fetched, displayTime(it)))
-  }
-  if (list.stale) {
-    Text(stringResource(Res.string.verify_list_stale), color = MaterialTheme.colorScheme.error)
-  }
-}
-
-@Composable
-private fun Outcome(outcome: ScanOutcome) {
-  Card(Modifier.fillMaxWidth()) {
-    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-      when (outcome) {
-        is ScanOutcome.Imported -> {
-          Text(
-            stringResource(Res.string.verify_imported),
-            style = MaterialTheme.typography.labelLarge,
-          )
-          Text(outcome.dose)
-          outcome.list?.let { ListFetched(it) }
-          if (outcome.replacedReported) Text(stringResource(Res.string.verify_replaced))
-          if (outcome.listStale) Text(stringResource(Res.string.list_stale))
-        }
-        is ScanOutcome.AlreadyImported -> {
-          Text(
-            stringResource(Res.string.verify_already_imported),
-            style = MaterialTheme.typography.labelLarge,
-          )
-          Text(outcome.dose)
-        }
-        is ScanOutcome.HolderMismatch -> {
-          Text(
-            stringResource(Res.string.verify_other_child),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.error,
-          )
-          Text(
-            stringResource(
-              Res.string.verify_birth_dates,
-              outcome.cardBirthDate,
-              outcome.childBirthDate ?: "-",
-            )
-          )
-          Text(stringResource(Res.string.verify_nothing_imported))
-        }
-        is ScanOutcome.ImportedForAnotherChild -> {
-          Text(
-            stringResource(Res.string.verify_imported_elsewhere),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.error,
-          )
-          Text(outcome.dose)
-          Text(stringResource(Res.string.verify_nothing_imported))
-        }
-        is ScanOutcome.Failed -> {
-          Text(
-            stringResource(Res.string.verify_failed),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.error,
-          )
-          Text(
-            stringResource(
-              Res.string.verify_failed_reason,
-              outcome.step.display,
-              outcome.reason.display,
-            )
-          )
-          Text(stringResource(Res.string.verify_nothing_imported))
-        }
-      }
-    }
-  }
-}
-
-@Composable
-private fun MatchPicker(
-  dose: UnmatchedDose,
-  choices: List<EpiDose>,
-  busy: Boolean,
-  onMatch: (EpiDose) -> Unit,
-  onNone: () -> Unit,
-) {
-  var selected by remember(dose.id) { mutableStateOf<EpiDose?>(null) }
-  Card(Modifier.fillMaxWidth()) {
-    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-      Text(stringResource(Res.string.match_title), style = MaterialTheme.typography.labelLarge)
-      Text(dose.label)
-      Text(stringResource(Res.string.match_hint))
-      choices.forEach { choice ->
-        Row(
-          Modifier.fillMaxWidth()
-            .selectable(
-              selected = selected == choice,
-              enabled = !busy,
-              role = Role.RadioButton,
-              onClick = { selected = choice },
-            ),
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          RadioButton(selected = selected == choice, onClick = null)
-          Text(choice.display, Modifier.padding(start = 8.dp))
-        }
-      }
-      Button(
-        onClick = { selected?.let(onMatch) },
-        enabled = selected != null && !busy,
-        modifier = Modifier.fillMaxWidth(),
+    val verified = state.doses.filter { it.verified }
+    if (verified.isNotEmpty()) {
+      SectionCard(
+        title = stringResource(Res.string.verify_verified_title),
+        summary =
+          Status(stringResource(Res.string.verify_verified_count, verified.size), Tone.Success),
       ) {
-        Text(stringResource(Res.string.match_confirm, selected?.display ?: "-"))
-      }
-      OutlinedButton(onClick = onNone, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(Res.string.match_none))
+        verified.forEach { dose ->
+          DoseRow(
+            product = dose.product,
+            lot = dose.lot,
+            origin = dose.origin,
+            status = Status(stringResource(Res.string.verify_primary_source_true), Tone.Success),
+          )
+        }
       }
     }
+    Messages(state)
   }
 }
+
+/** The picker's answer that the dose counts as no national schedule dose. */
+val NotCounted = EpiDose("", "")
+
+/**
+ * 1-13: the nurse says which national schedule dose a product the map does not name counts as;
+ * [choice] is her pick so far, [NotCounted] when none fits.
+ */
+@Composable
+fun DoseMatchContent(
+  state: VerifyCardsUiState,
+  today: LocalDate,
+  choice: EpiDose?,
+  onChoose: (EpiDose) -> Unit,
+  actions: VerifyActions,
+) {
+  val dose = state.unmatched.firstOrNull()
+  val unmatched = state.unmatched.map { it.id }.toSet()
+  val about = state.doses.firstOrNull { it.id == dose?.id }
+
+  OnesaScaffold(
+    topBar = {
+      ChildTopBar(
+        child = state.child,
+        fallbackName = state.referral?.patientName.orEmpty(),
+        today = today,
+        onBack = actions.back,
+        doses = state.doses,
+      )
+    },
+    side = {
+      AlertCard(
+        stringResource(Res.string.match_records_title),
+        stringResource(
+          Res.string.match_records_text,
+          about?.productName ?: dose?.product.orEmpty(),
+        ),
+        Tone.Info,
+      )
+    },
+    actions = {
+      PrimaryActionBar(
+        listOf(
+          Action(
+            stringResource(Res.string.match_confirm),
+            onClick = {
+              val picked = choice
+              if (dose != null && picked != null) {
+                actions.match(dose, picked.takeIf { it != NotCounted })
+              }
+            },
+            busy = state.busy,
+            enabled = dose != null && choice != null && !state.busy,
+          )
+        )
+      )
+    },
+  ) {
+    SectionCard(title = stringResource(Res.string.match_list_title)) {
+      state.doses.forEach { foreign ->
+        val open = foreign.id in unmatched
+        RecordRow(
+          label = foreign.productName,
+          code = "${foreign.product} → ${foreign.schedule?.code?.takeUnless { open } ?: "?"}",
+          detail =
+            if (open) stringResource(Res.string.match_not_found)
+            else
+              stringResource(
+                Res.string.match_found,
+                ScanTransactions.EPI_MAP.substringAfterLast('/'),
+              ),
+          status =
+            if (open) Status(stringResource(Res.string.match_needs_decision), Tone.Warning)
+            else Status(stringResource(Res.string.match_mapped), Tone.Success),
+        )
+      }
+    }
+    if (dose != null) {
+      SectionCard(title = stringResource(Res.string.match_question)) {
+        FormLabel(
+          listOfNotNull(
+              about?.let {
+                stringResource(
+                  Res.string.match_given,
+                  it.date.orEmpty(),
+                  it.origin?.let(NewbornRegistration::countryName).orEmpty(),
+                  it.lot.orEmpty(),
+                )
+              } ?: dose.label,
+              about
+                ?.takeIf { it.date != null && it.date == state.child?.birthDate }
+                ?.let { stringResource(Res.string.match_birth_day) },
+            )
+            .joinToString(" • ")
+        )
+        state.choices.forEach { option ->
+          OptionRow(
+            label = option.shortName,
+            selected = choice == option,
+            onClick = { onChoose(option) },
+            code = option.code,
+          )
+        }
+        OptionRow(
+          label = stringResource(Res.string.match_not_counted),
+          selected = choice == NotCounted,
+          onClick = { onChoose(NotCounted) },
+        )
+      }
+    }
+    Messages(state)
+  }
+}
+
+@Composable
+private fun DoseRow(product: String, lot: String?, origin: String?, status: Status) {
+  RecordRow(
+    label = NewbornRegistration.PRODUCTS[product] ?: product,
+    icon = OnesaIcons.Syringe,
+    code = stringResource(Res.string.verify_dose_code, product, lot ?: "-"),
+    detail =
+      origin?.let { stringResource(Res.string.verify_origin, NewbornRegistration.countryName(it)) },
+    status = status,
+  )
+}
+
+@Composable
+private fun Messages(state: VerifyCardsUiState) {
+  if (state.couldNotSave) {
+    AlertCard(null, stringResource(Res.string.verify_could_not_save), Tone.Danger)
+  }
+  if (state.matchChanged) {
+    AlertCard(null, stringResource(Res.string.match_changed), Tone.Warning)
+  }
+  state.matchedTo.forEach {
+    AlertCard(null, stringResource(Res.string.match_done, it.display), Tone.Info)
+  }
+  if (state.listStale) NoteLine(stringResource(Res.string.list_stale))
+}
+
+@Composable
+private fun OutcomeCard(outcome: ScanOutcome) {
+  val nothing = stringResource(Res.string.verify_nothing_imported)
+  when (outcome) {
+    is ScanOutcome.Imported -> {
+      VerificationResultCard(
+        title = stringResource(Res.string.verify_imported_title),
+        tone = Tone.Success,
+        verdict = stringResource(Res.string.verify_pass),
+        fields =
+          listOf(Field(stringResource(Res.string.verify_dose), outcome.dose)) +
+            outcome.signer?.let { signerFields(it) }.orEmpty(),
+        detail =
+          listOfNotNull(
+              stringResource(Res.string.verify_imported_detail),
+              if (outcome.replacedReported) stringResource(Res.string.verify_replaced) else null,
+            )
+            .joinToString(" "),
+      )
+      if (outcome.listStale) NoteLine(stringResource(Res.string.list_stale))
+    }
+    is ScanOutcome.AlreadyImported ->
+      VerificationResultCard(
+        title = stringResource(Res.string.verify_already_title),
+        tone = Tone.Success,
+        verdict = stringResource(Res.string.verify_pass),
+        fields = listOf(Field(stringResource(Res.string.verify_dose), outcome.dose)),
+        detail = nothing,
+      )
+    is ScanOutcome.Failed ->
+      VerificationResultCard(
+        title = stringResource(Res.string.verify_fail_title, outcome.step.name),
+        tone = Tone.Danger,
+        verdict = stringResource(Res.string.verify_fail),
+        fields =
+          listOfNotNull(
+            Field(stringResource(Res.string.verify_failed_step), outcome.step.name, mono = true),
+            Field(stringResource(Res.string.verify_reason_label), outcome.reason.name, mono = true),
+            outcome.kid?.let { Field(stringResource(Res.string.verify_kid), it, mono = true) },
+          ),
+        detail = stringResource(Res.string.verify_fail_detail),
+      )
+    is ScanOutcome.HolderMismatch ->
+      VerificationResultCard(
+        title = stringResource(Res.string.verify_holder_title),
+        tone = Tone.Danger,
+        verdict = stringResource(Res.string.verify_refused),
+        fields =
+          listOf(
+            Field(stringResource(Res.string.verify_card_born), outcome.cardBirthDate),
+            Field(stringResource(Res.string.verify_child_born), outcome.childBirthDate ?: "-"),
+          ),
+        detail = nothing,
+      )
+    is ScanOutcome.ImportedForAnotherChild ->
+      VerificationResultCard(
+        title = stringResource(Res.string.verify_elsewhere_title),
+        tone = Tone.Danger,
+        verdict = stringResource(Res.string.verify_refused),
+        fields = listOf(Field(stringResource(Res.string.verify_dose), outcome.dose)),
+        detail = nothing,
+      )
+  }
+}
+
+/** Who signed the card: the participant and trust domain, and the key. */
+@Composable
+private fun signerFields(dsc: TrustedDscInfo): List<Field> =
+  listOf(
+    Field(
+      stringResource(Res.string.verify_trust_authority),
+      listOfNotNull(
+          (dsc.participant ?: dsc.country)?.let(NewbornRegistration::countryName),
+          dsc.domain,
+        )
+        .joinToString(" • "),
+    ),
+    Field(stringResource(Res.string.verify_kid), dsc.kid, mono = true),
+  )
+
+/** Which list vouched for the signer, as ScanTransactions records it in the Provenance. */
+@Composable
+private fun statusCaption(dsc: TrustedDscInfo): String =
+  if (dsc.domain == TrustDomain.Dvc.code) {
+    stringResource(Res.string.verify_status_local, TrustDomain.Dvc.code)
+  } else stringResource(Res.string.verify_status_gdhcn)
+
+private fun day(epochSeconds: Long): String =
+  Instant.fromEpochSeconds(epochSeconds).toLocalDateTime(TimeZone.UTC).date.toString()

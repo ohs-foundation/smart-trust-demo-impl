@@ -19,6 +19,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.ohs.trustdemo.onesa.data.hcert.HcertService
 import dev.ohs.trustdemo.onesa.data.hcert.TrustListStatus
+import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.util.displayTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,8 @@ import kotlinx.coroutines.launch
 class TrustListViewModel(private val hcert: HcertService) : ViewModel() {
   private val _lists = MutableStateFlow<List<TrustListState>?>(null)
   val lists: StateFlow<List<TrustListState>?> = _lists.asStateFlow()
+  private val _refreshing = MutableStateFlow(false)
+  val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
 
   init {
     load()
@@ -36,17 +39,43 @@ class TrustListViewModel(private val hcert: HcertService) : ViewModel() {
   fun load() {
     viewModelScope.launch { _lists.value = hcert.statuses().map { it.toState() } }
   }
+
+  /** Fetches the local list now; a failed fetch keeps the last list and shows why. */
+  fun refresh() {
+    if (_refreshing.value) return
+    _refreshing.value = true
+    viewModelScope.launch {
+      try {
+        hcert.refreshLocalList()
+        _lists.value = hcert.statuses().map { it.toState() }
+      } finally {
+        _refreshing.value = false
+      }
+    }
+  }
 }
 
-private fun TrustListStatus.toState() =
+/** The status as the screen shows it. */
+internal fun TrustListStatus.toState() =
   TrustListState(
     name = name,
     source = source.ifBlank { null },
     signer = signer.ifBlank { null },
     fetchedAt = fetchedAtEpochSeconds?.let(::displayTime),
+    fetchedAtEpochSeconds = fetchedAtEpochSeconds,
     entryCount = entryCount.toString(),
     domains = domains.joinToString().ifBlank { null },
     stale = stale,
     refreshFailedAt = lastFailure?.let { displayTime(it.atEpochSeconds) },
     refreshFailure = lastFailure?.reason,
+    bundled = bundled,
+    signingKeys = entries.count { it.signsDocuments },
+    namedKeys =
+      entries
+        .filter { it.signsDocuments && it.participant?.let(::isDemoCountry) == true }
+        .joinToString { "${it.participant} ${it.kid.orEmpty()}" }
+        .ifBlank { null },
+    keys = entries.map { TrustKeyState(it.participant, it.usage, it.domain, it.kid, it.testOnly) },
   )
+
+private fun isDemoCountry(code: String): Boolean = NewbornRegistration.countryName(code) != code

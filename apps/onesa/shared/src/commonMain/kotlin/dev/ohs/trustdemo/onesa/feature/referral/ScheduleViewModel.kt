@@ -17,11 +17,15 @@ package dev.ohs.trustdemo.onesa.feature.referral
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.ohs.trustdemo.onesa.data.repository.PatientContext
+import dev.ohs.trustdemo.onesa.data.repository.PatientContexts
 import dev.ohs.trustdemo.onesa.data.schedule.BookingOutcome
 import dev.ohs.trustdemo.onesa.data.schedule.OpenReferral
 import dev.ohs.trustdemo.onesa.data.schedule.Schedule
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
 import dev.ohs.trustdemo.onesa.data.schedule.VisitBooking
+import dev.ohs.trustdemo.onesa.data.verification.ForeignDose
+import dev.ohs.trustdemo.onesa.data.verification.ForeignDoses
 import dev.ohs.trustdemo.onesa.data.verification.Referral
 import dev.ohs.trustdemo.onesa.data.verification.ReferralInbox
 import kotlinx.coroutines.CancellationException
@@ -31,9 +35,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** S5's state: the referral, the schedule as evaluated and the outcome of booking the visit. */
+/**
+ * S5's state: the referral, the schedule as evaluated and the outcome of booking the visit, with
+ * the [child]'s household and audits and the coding of their foreign [doses].
+ */
 data class ScheduleUiState(
   val referral: Referral? = null,
+  val child: PatientContext? = null,
+  val doses: List<ForeignDose> = emptyList(),
   val schedule: Schedule? = null,
   val busy: Boolean = true,
   val open: OpenReferral? = null,
@@ -55,6 +64,8 @@ class ScheduleViewModel(
   private val inbox: ReferralInbox,
   private val service: ScheduleService,
   private val booking: VisitBooking,
+  private val contexts: PatientContexts,
+  private val foreign: ForeignDoses,
 ) : ViewModel() {
   private val _uiState = MutableStateFlow(ScheduleUiState())
   val uiState: StateFlow<ScheduleUiState> = _uiState.asStateFlow()
@@ -112,11 +123,14 @@ class ScheduleViewModel(
   }
 
   private suspend fun reload(referral: Referral) {
+    val child = attempt { contexts.of(referral.patientId) }
+    val doses = attempt { foreign.of(referral.patientId) }.orEmpty()
+    _uiState.update { it.copy(child = child, doses = doses) }
     val schedule = attempt { service.evaluate(referral.patientId) }
     _uiState.update { it.copy(schedule = schedule, busy = false, failed = schedule == null) }
   }
 
-  private suspend fun <T : Any> attempt(block: suspend () -> T): T? =
+  private suspend fun <T> attempt(block: suspend () -> T): T? =
     try {
       block()
     } catch (e: CancellationException) {

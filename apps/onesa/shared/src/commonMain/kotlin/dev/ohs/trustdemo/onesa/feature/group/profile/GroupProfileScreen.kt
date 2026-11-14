@@ -97,10 +97,6 @@ fun GroupProfileContent(
   actions: List<Action>,
   onMemberClick: (String) -> Unit,
 ) {
-  val registry = LocalViewRegistry.current
-  val member =
-    remember(registry) { registry.componentRenderer<GroupMemberState>(ViewTypeCS.MemberItem) }
-  val header = state.groupHeader
   OnesaScaffold(
     topBar = topBar,
     actions =
@@ -110,16 +106,26 @@ fun GroupProfileContent(
           { PrimaryActionBar(it, caption = stringResource(Res.string.group_profile_born_abroad)) }
         },
   ) {
-    SectionCard(
-      title = header?.groupName ?: stringResource(Res.string.group_profile_default_name),
-      summary =
-        Status(stringResource(Res.string.group_profile_members, state.members.size), Tone.Info),
-      footnote = header?.householdId?.let { stringResource(Res.string.group_profile_footnote, it) },
-    ) {
-      CompositionLocalProvider(LocalHouseholdHead provides state.headMemberId) {
-        state.members.forEach { item ->
-          member.Render(item, RenderOptions(onClick = { item.memberId?.let(onMemberClick) }))
-        }
+    HouseholdCard(state, onMemberClick)
+  }
+}
+
+/** The household's card: its name, member count, profile footnote and a row per member. */
+@Composable
+fun HouseholdCard(state: GroupProfileUiState, onMemberClick: (String) -> Unit) {
+  val registry = LocalViewRegistry.current
+  val member =
+    remember(registry) { registry.componentRenderer<GroupMemberState>(ViewTypeCS.MemberItem) }
+  val header = state.groupHeader
+  SectionCard(
+    title = header?.groupName ?: stringResource(Res.string.group_profile_default_name),
+    summary =
+      Status(stringResource(Res.string.group_profile_members, state.members.size), Tone.Info),
+    footnote = header?.householdId?.let { stringResource(Res.string.group_profile_footnote, it) },
+  ) {
+    CompositionLocalProvider(LocalHouseholdHead provides state.headMemberId) {
+      state.members.forEach { item ->
+        member.Render(item, RenderOptions(onClick = { item.memberId?.let(onMemberClick) }))
       }
     }
   }

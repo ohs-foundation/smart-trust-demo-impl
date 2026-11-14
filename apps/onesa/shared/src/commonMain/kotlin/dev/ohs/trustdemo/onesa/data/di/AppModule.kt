@@ -37,6 +37,7 @@ import dev.ohs.trustdemo.onesa.data.registration.ScannedCards
 import dev.ohs.trustdemo.onesa.data.repository.FhirEngineRepository
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.data.repository.GroupRepository
+import dev.ohs.trustdemo.onesa.data.repository.PatientContexts
 import dev.ohs.trustdemo.onesa.data.repository.PatientRepository
 import dev.ohs.trustdemo.onesa.data.schedule.DoseRecording
 import dev.ohs.trustdemo.onesa.data.schedule.SchedulePlans
@@ -53,6 +54,7 @@ import dev.ohs.trustdemo.onesa.data.sync.StoreOwnership
 import dev.ohs.trustdemo.onesa.data.sync.SyncManager
 import dev.ohs.trustdemo.onesa.data.sync.createSyncTimestampDataStore
 import dev.ohs.trustdemo.onesa.data.verification.DoseMatchService
+import dev.ohs.trustdemo.onesa.data.verification.ForeignDoses
 import dev.ohs.trustdemo.onesa.data.verification.ReferralInbox
 import dev.ohs.trustdemo.onesa.data.verification.VerificationService
 import dev.ohs.trustdemo.onesa.feature.group.list.GroupListViewModel
@@ -60,9 +62,12 @@ import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileViewModel
 import dev.ohs.trustdemo.onesa.feature.home.HomeViewModel
 import dev.ohs.trustdemo.onesa.feature.patient.list.PatientListViewModel
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileViewModel
+import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientReferralsViewModel
+import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientScheduleViewModel
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireHostViewModel
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireLaunchContext
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireService
+import dev.ohs.trustdemo.onesa.feature.referral.ClinicScheduleViewModel
 import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxViewModel
 import dev.ohs.trustdemo.onesa.feature.referral.ScheduleViewModel
 import dev.ohs.trustdemo.onesa.feature.referral.SentReferralsViewModel
@@ -121,6 +126,8 @@ internal val serviceModule = module {
     )
   }
   single { ReferralInbox(get()) }
+  single { PatientContexts(get()) }
+  single { ForeignDoses(get()) }
   single {
     VerificationService(
       repository = get(),
@@ -265,6 +272,13 @@ internal val viewModelModule = module {
   viewModel { ShareViewModel(get(), get()) }
   viewModel { SharedLinksViewModel(get()) }
   viewModel { (consentIds: List<String>) -> IssuedLinksViewModel(consentIds, get<ShareService>()) }
-  viewModel { (referralId: String) -> VerifyCardsViewModel(referralId, get(), get(), get()) }
-  viewModel { (referralId: String) -> ScheduleViewModel(referralId, get(), get(), get()) }
+  viewModel { (referralId: String) ->
+    VerifyCardsViewModel(referralId, get(), get(), get(), get(), get())
+  }
+  viewModel { (referralId: String) ->
+    ScheduleViewModel(referralId, get(), get(), get(), get(), get())
+  }
+  viewModel { (patientId: String) -> PatientScheduleViewModel(patientId, get()) }
+  viewModel { (patientId: String) -> PatientReferralsViewModel(patientId, get()) }
+  viewModel { ClinicScheduleViewModel(get()) }
 }

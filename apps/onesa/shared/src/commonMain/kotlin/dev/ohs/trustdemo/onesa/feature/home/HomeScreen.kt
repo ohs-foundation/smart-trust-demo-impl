@@ -45,11 +45,16 @@ import androidx.window.core.layout.WindowSizeClass
 import dev.ohs.fhir.engine.sync.FhirDataStore
 import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.auth.SessionRepository
+import dev.ohs.trustdemo.onesa.data.verification.Referral
 import dev.ohs.trustdemo.onesa.feature.group.list.GroupListScreen
 import dev.ohs.trustdemo.onesa.feature.group.list.LocalSelectedGroupId
 import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileScreen
+import dev.ohs.trustdemo.onesa.feature.patient.list.PatientListScreen
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileScreen
-import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxScreen
+import dev.ohs.trustdemo.onesa.feature.referral.ClinicScheduleScreen
+import dev.ohs.trustdemo.onesa.feature.referral.InboxToday
+import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxContent
+import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxViewModel
 import dev.ohs.trustdemo.onesa.feature.referral.SentReferralsScreen
 import dev.ohs.trustdemo.onesa.feature.role.ScreenAction
 import dev.ohs.trustdemo.onesa.feature.role.actions
@@ -57,6 +62,7 @@ import dev.ohs.trustdemo.onesa.feature.sync.SyncStatusContent
 import dev.ohs.trustdemo.onesa.feature.sync.SyncStatusViewModel
 import dev.ohs.trustdemo.onesa.feature.sync.syncAction
 import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListScreen
+import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListSide
 import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListViewModel
 import dev.ohs.trustdemo.onesa.feature.wallet.WalletScreen
 import dev.ohs.trustdemo.onesa.feature.wallet.WalletViewModel
@@ -64,12 +70,14 @@ import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.group_list_register_household
 import dev.ohs.trustdemo.onesa.generated.resources.home_back
 import dev.ohs.trustdemo.onesa.generated.resources.home_cancel_sync
+import dev.ohs.trustdemo.onesa.generated.resources.home_destination_referrals_count
 import dev.ohs.trustdemo.onesa.generated.resources.home_select_household
 import dev.ohs.trustdemo.onesa.generated.resources.home_sign_out
 import dev.ohs.trustdemo.onesa.generated.resources.home_signed_in_as
 import dev.ohs.trustdemo.onesa.generated.resources.home_sync_cancelled
 import dev.ohs.trustdemo.onesa.generated.resources.home_sync_failed
 import dev.ohs.trustdemo.onesa.generated.resources.home_sync_now
+import dev.ohs.trustdemo.onesa.generated.resources.inbox_open
 import dev.ohs.trustdemo.onesa.generated.resources.shell_chw_subtitle
 import dev.ohs.trustdemo.onesa.generated.resources.shell_chw_subtitle_no_place
 import dev.ohs.trustdemo.onesa.generated.resources.shell_chw_title
@@ -84,17 +92,20 @@ import dev.ohs.trustdemo.onesa.generated.resources.shell_portal_connected
 import dev.ohs.trustdemo.onesa.generated.resources.shell_synced
 import dev.ohs.trustdemo.onesa.generated.resources.shell_trust_cached
 import dev.ohs.trustdemo.onesa.generated.resources.shell_trust_stale
+import dev.ohs.trustdemo.onesa.generated.resources.trust_refresh_now
 import dev.ohs.trustdemo.onesa.ui.Action
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaTopBar
 import dev.ohs.trustdemo.onesa.ui.Status
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 import dev.ohs.trustdemo.onesa.ui.theme.Tone
+import dev.ohs.trustdemo.onesa.util.timeAgo
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -112,6 +123,7 @@ fun HomeScreen(
   onOpenReferral: (String) -> Unit = {},
   onShareRecords: () -> Unit = {},
   onSharedLinks: () -> Unit = {},
+  onOpenPatient: (String) -> Unit = {},
 ) {
   val homeViewModel: HomeViewModel = koinViewModel()
   val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
@@ -125,6 +137,12 @@ fun HomeScreen(
   var selectedGroupId by rememberSaveable { mutableStateOf<String?>(null) }
   var selectedPatientId by rememberSaveable(selectedGroupId) { mutableStateOf<String?>(null) }
   val snackbarHostState = remember { SnackbarHostState() }
+  val referrals = inbox(HomeDestination.Referrals in destinations)
+  var selectedReferral by rememberSaveable { mutableStateOf<String?>(null) }
+  val openReferral =
+    selectedReferral?.takeIf { id -> referrals.orEmpty().any { it.id == id } }
+      ?: referrals?.firstOrNull()?.id
+  val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
 
   val syncErrorMessage =
     when (uiState.syncError) {
@@ -148,7 +166,12 @@ fun HomeScreen(
 
   HomeShell(
     header = shellHeader(role, userName, uiState.lastSyncedAt),
-    tabs = destinations.map { stringResource(it.label) },
+    tabs =
+      destinations.map {
+        if (it == HomeDestination.Referrals && referrals != null) {
+          stringResource(Res.string.home_destination_referrals_count, referrals.size)
+        } else stringResource(it.label)
+      },
     selected = destinations.indexOf(destination),
     onSelect = { selected = it },
     menu = { close ->
@@ -182,6 +205,15 @@ fun HomeScreen(
       when {
         destination == HomeDestination.Sync ->
           listOf(syncAction(uiState.isSyncing, { onSyncNow() }, onCancelSync))
+        destination == HomeDestination.Referrals ->
+          listOf(
+            Action(
+              stringResource(Res.string.inbox_open),
+              onClick = { openReferral?.let(onOpenReferral) },
+              enabled = openReferral != null,
+            )
+          )
+        destination == HomeDestination.TrustLists -> listOf(refreshAction())
         destination == HomeDestination.Households &&
           ScreenAction.RegisterHousehold in role.actions() ->
           listOf(
@@ -194,6 +226,16 @@ fun HomeScreen(
         else -> null
       },
     snackbarHost = { SnackbarHost(snackbarHostState) },
+    side =
+      when (destination) {
+        HomeDestination.Referrals -> {
+          { InboxToday(today, syncChip(uiState.lastSyncedAt).text) }
+        }
+        HomeDestination.TrustLists -> {
+          { TrustListSide() }
+        }
+        else -> null
+      },
   ) {
     when (destination) {
       HomeDestination.Households ->
@@ -215,6 +257,8 @@ fun HomeScreen(
                     role = role,
                     onBack = { selectedPatientId = null },
                     onAddClinicalData = { onAddClinicalData(patientId) },
+                    showHeader = false,
+                    onOpenPatient = { selectedPatientId = it },
                   )
                 groupId != null ->
                   GroupProfileScreen(
@@ -233,8 +277,16 @@ fun HomeScreen(
         } else {
           GroupListScreen(onGroupClick = onGroupClick)
         }
-      HomeDestination.Referrals -> ReferralInboxScreen(onOpen = onOpenReferral)
+      HomeDestination.Referrals ->
+        ReferralInboxContent(
+          referrals = referrals.orEmpty(),
+          place = rememberPlace(),
+          selected = openReferral,
+          onSelect = { selectedReferral = it },
+        )
       HomeDestination.SentReferrals -> SentReferralsScreen()
+      HomeDestination.Patients -> PatientListScreen(onPatientClick = onOpenPatient)
+      HomeDestination.Schedule -> ClinicScheduleScreen(onOpenPatient = onOpenPatient)
       HomeDestination.TrustLists -> TrustListScreen()
       HomeDestination.Wallet ->
         WalletScreen(onShare = onShareRecords, onSharedLinks = onSharedLinks)
@@ -296,8 +348,14 @@ private fun shellHeader(role: AppRole, userName: String, lastSync: Instant?): Sh
               list == null -> null
               list.stale -> Status(stringResource(Res.string.shell_trust_stale), Tone.Warning)
               else ->
-                list.fetchedAt?.let {
-                  Status(stringResource(Res.string.shell_trust_cached, it), Tone.Success)
+                list.fetchedAtEpochSeconds?.let {
+                  Status(
+                    stringResource(
+                      Res.string.shell_trust_cached,
+                      timeAgo(it, Clock.System.now().epochSeconds),
+                    ),
+                    Tone.Success,
+                  )
                 }
             }
           ),
@@ -348,6 +406,29 @@ private fun syncChip(lastSync: Instant?): Status {
   } else {
     Status(stringResource(Res.string.shell_offline, age.inWholeDays.toInt()), Tone.Warning)
   }
+}
+
+/** The clinic's open referrals, read only for a role that has the inbox. */
+@Composable
+private fun inbox(enabled: Boolean): List<Referral>? {
+  if (!enabled) return null
+  val viewModel: ReferralInboxViewModel = koinViewModel()
+  val referrals by viewModel.referrals.collectAsStateWithLifecycle()
+  return referrals
+}
+
+/** "Refresh Now" for the trust list tab: fetches the local list, with a spinner meanwhile. */
+@Composable
+private fun refreshAction(): Action {
+  val viewModel: TrustListViewModel = koinViewModel()
+  val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
+  return Action(
+    stringResource(Res.string.trust_refresh_now),
+    onClick = viewModel::refresh,
+    primary = false,
+    busy = refreshing,
+    enabled = !refreshing,
+  )
 }
 
 @Composable

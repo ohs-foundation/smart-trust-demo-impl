@@ -98,8 +98,9 @@ fun SentReferralsContent(referrals: List<SentReferral>, place: String?) {
   }
 }
 
+/** A referral's status as its chip: open, completed or withdrawn. */
 @Composable
-private fun sentStatus(status: String?): Status? =
+internal fun sentStatus(status: String?): Status? =
   when (status) {
     "active" -> Status(stringResource(Res.string.sent_status_open), Tone.Warning)
     "completed" -> Status(stringResource(Res.string.sent_status_completed), Tone.Success)

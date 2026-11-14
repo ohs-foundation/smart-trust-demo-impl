@@ -39,6 +39,7 @@ import dev.ohs.trustdemo.onesa.data.sync.FakeSyncManager
 import dev.ohs.trustdemo.onesa.data.sync.LocalCopy
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import dev.ohs.trustdemo.trustkit.StandIn
+import dev.ohs.trustdemo.trustkit.TestKeys
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -48,6 +49,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import java.io.File
+import java.security.MessageDigest
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -177,6 +179,12 @@ class CardVerificationTest {
       VerifyStep.TRUST_LOOKUP to FailureReason.KID_NOT_FOUND,
       outcome.step to outcome.reason,
     )
+    val kid =
+      MessageDigest.getInstance("SHA-256")
+        .digest(TestKeys.certificate(StandIn.XXK_LINK).encoded)
+        .take(8)
+        .joinToString("") { "%02x".format(it) }
+    assertEquals(kid, outcome.kid, "the failure names the key the card's header gives")
     assertEquals(1, gateway.transactions.size)
     assertEquals(setOf("AuditEvent"), gateway.transactions.single().map { it.type }.toSet())
     assertEquals(listOf("reported-bcg", "reported-hepb"), gateway.reportedIds().sorted())

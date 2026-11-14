@@ -15,30 +15,17 @@
  */
 package dev.ohs.trustdemo.onesa.feature.patient.list
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import dev.ohs.trustdemo.onesa.data.repository.displayAge
+import dev.ohs.trustdemo.onesa.data.repository.personName
 import dev.ohs.trustdemo.onesa.generated.config.PatientCardConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.label_age
 import dev.ohs.trustdemo.onesa.generated.resources.name_unknown
+import dev.ohs.trustdemo.onesa.generated.resources.profile_born
 import dev.ohs.trustdemo.onesa.generated.state.PatientSummaryState
+import dev.ohs.trustdemo.onesa.ui.OnesaIcons
+import dev.ohs.trustdemo.onesa.ui.RecordRow
 import dev.ohs.trustdemo.onesa.ui.Status
 import dev.ohs.trustdemo.onesa.ui.StatusChip
 import dev.ohs.trustdemo.onesa.ui.theme.Tone
@@ -48,79 +35,36 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import org.jetbrains.compose.resources.stringResource
 
+/** A patient as a list row: the name, the record's reference, sex, birth date and age. */
 @Composable
 fun PatientCard(
   patient: PatientSummaryState,
   config: PatientCardConfig = PatientCardConfig(),
   onClick: (() -> Unit)? = null,
 ) {
-  val initials =
-    buildString {
-        patient.givenName?.firstOrNull()?.uppercaseChar()?.let { append(it) }
-        patient.familyName?.firstOrNull()?.uppercaseChar()?.let { append(it) }
-      }
-      .ifBlank { "?" }
-  val fullName =
-    listOfNotNull(patient.givenName, patient.familyName).joinToString(" ").ifBlank {
-      stringResource(Res.string.name_unknown)
-    }
-
-  Row(
-    modifier =
-      Modifier.fillMaxWidth()
-        .clip(RoundedCornerShape(18.dp))
-        .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-        .padding(horizontal = 12.dp, vertical = 12.dp),
-    horizontalArrangement = Arrangement.spacedBy(14.dp),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Box(
-      modifier =
-        Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
-      contentAlignment = Alignment.Center,
-    ) {
-      Text(
-        text = initials,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onPrimary,
-        fontWeight = FontWeight.Bold,
-      )
-    }
-    Column(modifier = Modifier.weight(1f)) {
-      Text(
-        text = fullName,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-      )
-      val subtitleParts = buildList {
-        if (config.showAge != false) {
-          calculateAge(patient.birthDate?.toString())?.let {
-            add(stringResource(Res.string.label_age, it))
-          }
-        }
-        if (config.showGender != false) {
-          patient.gender?.let { add(it.replaceFirstChar { c -> c.uppercaseChar() }) }
-        }
-      }
-      if (subtitleParts.isNotEmpty()) {
-        Text(
-          text = subtitleParts.joinToString(" · "),
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+  val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+  val birthDate = patient.birthDate?.toString()
+  RecordRow(
+    label =
+      personName(patient.givenName, patient.familyName).ifBlank {
+        stringResource(Res.string.name_unknown)
+      },
+    icon = OnesaIcons.User,
+    code = patient.mrn ?: patient.patientId?.let { "Patient/$it" },
+    detail =
+      listOfNotNull(
+          if (config.showGender != false) patient.gender?.replaceFirstChar(Char::uppercaseChar)
+          else null,
+          birthDate?.let { stringResource(Res.string.profile_born, it) },
+          if (config.showAge != false)
+            displayAge(birthDate, today)?.let { stringResource(Res.string.label_age, it) }
+          else null,
         )
-      }
-      patient.mrn?.let {
-        Text(
-          text = it,
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.outline,
-        )
-      }
-    }
-    if (config.showStatusChip != false) {
-      ActiveChip(patient.active ?: false)
-    }
-  }
+        .joinToString(" • ")
+        .ifEmpty { null },
+    status = patient.active?.takeIf { config.showStatusChip != false }?.let(::activeStatus),
+    onClick = onClick,
+  )
 }
 
 internal fun calculateAge(
@@ -143,5 +87,8 @@ internal fun calculateAge(
 /** Whether the patient record is active, as a chip. */
 @Composable
 fun ActiveChip(active: Boolean) {
-  StatusChip(if (active) Status("Active", Tone.Success) else Status("Inactive", Tone.Danger))
+  StatusChip(activeStatus(active))
 }
+
+private fun activeStatus(active: Boolean) =
+  if (active) Status("Active", Tone.Success) else Status("Inactive", Tone.Danger)

@@ -195,6 +195,7 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
             onOpenReferral = { id -> navController.navigate("verifyCards/$id") },
             onShareRecords = { navController.navigate("share") },
             onSharedLinks = { navController.navigate("shared") },
+            onOpenPatient = { id -> navController.navigate("patientProfile/$id") },
           )
         }
 
@@ -300,6 +301,7 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
           RouteGuard(role, Permission.Referrals, onSignOut) {
             VerifyCardsScreen(
               referralId = referralId,
+              role = role,
               onBack = { navController.popBackStack() },
               onOpenSchedule = { navController.navigate("schedule/$referralId") },
             )
@@ -355,6 +357,7 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
                   )
                 )
               },
+              onOpenPatient = { id -> navController.navigate("patientProfile/$id") },
             )
           }
         }

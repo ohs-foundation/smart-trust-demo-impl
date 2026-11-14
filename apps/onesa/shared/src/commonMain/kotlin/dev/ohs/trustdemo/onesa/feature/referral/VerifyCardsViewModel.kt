@@ -17,12 +17,17 @@ package dev.ohs.trustdemo.onesa.feature.referral
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.ohs.trustdemo.onesa.data.repository.PatientContext
+import dev.ohs.trustdemo.onesa.data.repository.PatientContexts
 import dev.ohs.trustdemo.onesa.data.verification.DoseMatchService
 import dev.ohs.trustdemo.onesa.data.verification.EpiDose
+import dev.ohs.trustdemo.onesa.data.verification.ForeignDose
+import dev.ohs.trustdemo.onesa.data.verification.ForeignDoses
 import dev.ohs.trustdemo.onesa.data.verification.MatchOutcome
 import dev.ohs.trustdemo.onesa.data.verification.PendingImport
 import dev.ohs.trustdemo.onesa.data.verification.Referral
 import dev.ohs.trustdemo.onesa.data.verification.ReferralInbox
+import dev.ohs.trustdemo.onesa.data.verification.ReportedDose
 import dev.ohs.trustdemo.onesa.data.verification.ScanCheck
 import dev.ohs.trustdemo.onesa.data.verification.ScanOutcome
 import dev.ohs.trustdemo.onesa.data.verification.UnmatchedDose
@@ -35,10 +40,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * S4's state: the referral, every scan so far, the card awaiting the nurse and any scan under way.
+ * S4's state: the referral, every scan so far, the card awaiting the nurse and any scan under way,
+ * with the child's record as it stands: the doses still [reported], the verified foreign [doses]
+ * and the [child]'s household and audits. [scanned] is the last card text read.
  */
 data class VerifyCardsUiState(
   val referral: Referral? = null,
+  val child: PatientContext? = null,
+  val reported: List<ReportedDose> = emptyList(),
+  val doses: List<ForeignDose> = emptyList(),
+  val scanned: String? = null,
   val results: List<ScanOutcome> = emptyList(),
   val pending: PendingImport? = null,
   val busy: Boolean = false,
@@ -56,6 +67,8 @@ class VerifyCardsViewModel(
   private val inbox: ReferralInbox,
   private val service: VerificationService,
   private val matching: DoseMatchService,
+  private val contexts: PatientContexts,
+  private val foreign: ForeignDoses,
 ) : ViewModel() {
   private val _uiState = MutableStateFlow(VerifyCardsUiState())
   val uiState: StateFlow<VerifyCardsUiState> = _uiState.asStateFlow()
@@ -102,6 +115,10 @@ class VerifyCardsViewModel(
 
   private suspend fun loadUnmatched() {
     val referral = _uiState.value.referral ?: return
+    val child = attempt { contexts.of(referral.patientId) }
+    val reported = attempt { inbox.reportedDoses(referral.patientId) }.orEmpty()
+    val foreignDoses = attempt { foreign.of(referral.patientId) }.orEmpty()
+    _uiState.update { it.copy(child = child, reported = reported, doses = foreignDoses) }
     val doses = attempt { matching.unmatched(referral.patientId) } ?: return
     val choices = attempt { matching.choices() } ?: return
     _uiState.update {
@@ -120,7 +137,7 @@ class VerifyCardsViewModel(
     if (referral == null || card.isEmpty() || state.busy || state.pending != null) return
     if (card == lastText) return
     lastText = null
-    _uiState.update { it.copy(busy = true, couldNotSave = false) }
+    _uiState.update { it.copy(busy = true, couldNotSave = false, scanned = card) }
     viewModelScope.launch {
       val checked = attempt { service.check(referral, card) }
       when (checked) {
@@ -158,7 +175,7 @@ class VerifyCardsViewModel(
     viewModelScope.launch { loadUnmatched() }
   }
 
-  private suspend fun <T : Any> attempt(block: suspend () -> T): T? =
+  private suspend fun <T> attempt(block: suspend () -> T): T? =
     try {
       block()
     } catch (e: CancellationException) {

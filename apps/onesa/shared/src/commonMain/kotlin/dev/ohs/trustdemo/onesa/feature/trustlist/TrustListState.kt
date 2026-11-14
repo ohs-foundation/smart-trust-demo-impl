@@ -17,16 +17,35 @@ package dev.ohs.trustdemo.onesa.feature.trustlist
 
 import kotlinx.serialization.Serializable
 
-/** One trust list as the status screen shows it; every field is display text. */
+/** One key of a trust list as the status screen shows it; [testOnly] for the demo's domains. */
+@Serializable
+data class TrustKeyState(
+  val participant: String? = null,
+  val usage: String? = null,
+  val domain: String? = null,
+  val kid: String? = null,
+  val testOnly: Boolean = false,
+)
+
+/**
+ * One trust list as the status screen shows it. A [bundled] list ships with the app and is never
+ * fetched; [signingKeys] counts its document signing keys, of which [namedKeys] lists those of the
+ * demo's countries, and [keys] holds every key.
+ */
 @Serializable
 data class TrustListState(
   val name: String,
   val source: String? = null,
   val signer: String? = null,
   val fetchedAt: String? = null,
+  val fetchedAtEpochSeconds: Long? = null,
   val entryCount: String? = null,
   val domains: String? = null,
   val stale: Boolean = false,
   val refreshFailedAt: String? = null,
   val refreshFailure: String? = null,
+  val bundled: Boolean = false,
+  val signingKeys: Int = 0,
+  val namedKeys: String? = null,
+  val keys: List<TrustKeyState> = emptyList(),
 )

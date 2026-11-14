@@ -45,8 +45,17 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
-/** A dose Vilay reported at J2, which a verified card of the same product replaces. */
-data class ReportedDose(val id: String, val product: String, val date: String? = null) {
+/**
+ * A dose Vilay reported at J2, which a verified card of the same product replaces; [origin] is
+ * where the card says it was given.
+ */
+data class ReportedDose(
+  val id: String,
+  val product: String,
+  val date: String? = null,
+  val lot: String? = null,
+  val origin: String? = null,
+) {
   /** Whether this is the dose [dvc] documents: the same product given on the same day. */
   fun isDoseOf(dvc: DvcMin): Boolean =
     product == dvc.vx.vp && date != null && date == dvc.vx.dv.substringBefore('T')

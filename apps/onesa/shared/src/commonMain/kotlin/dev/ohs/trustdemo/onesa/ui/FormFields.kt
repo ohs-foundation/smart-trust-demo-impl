@@ -64,7 +64,11 @@ private fun inputStyle(mono: Boolean): TextStyle =
   if (mono) OnesaTheme.mono.code.copy(fontSize = 12.sp, color = OnesaColors.Ink)
   else MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp, color = OnesaColors.Ink)
 
-/** A labelled text input on the build map's form style; [placeholder] shows while it is empty. */
+/**
+ * A labelled text input on the build map's form style; [placeholder] shows while it is empty, and a
+ * [readOnly] field shows a value the form records but the user does not type, such as who gave a
+ * dose.
+ */
 @Composable
 fun OnesaTextField(
   label: String,
@@ -75,6 +79,7 @@ fun OnesaTextField(
   mono: Boolean = false,
   minLines: Int = 1,
   maxLines: Int = if (minLines > 1) minLines + 2 else 1,
+  readOnly: Boolean = false,
 ) {
   Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
     FormLabel(label)
@@ -82,6 +87,7 @@ fun OnesaTextField(
       value = value,
       onValueChange = onValueChange,
       modifier = Modifier.fillMaxWidth(),
+      readOnly = readOnly,
       textStyle = inputStyle(mono),
       singleLine = maxLines == 1,
       minLines = minLines,

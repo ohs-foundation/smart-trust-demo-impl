@@ -15,175 +15,278 @@
  */
 package dev.ohs.trustdemo.onesa.feature.referral
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleDose
-import dev.ohs.trustdemo.onesa.data.schedule.ScheduleItem
 import dev.ohs.trustdemo.onesa.data.schedule.Standing
+import dev.ohs.trustdemo.onesa.data.verification.ForeignDose
+import dev.ohs.trustdemo.onesa.data.verification.shortName
 import dev.ohs.trustdemo.onesa.generated.resources.Res
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_code
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_detail
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_match
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_title
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_verdict
+import dev.ohs.trustdemo.onesa.generated.resources.booking_booked
+import dev.ohs.trustdemo.onesa.generated.resources.booking_date
+import dev.ohs.trustdemo.onesa.generated.resources.booking_not_booked
+import dev.ohs.trustdemo.onesa.generated.resources.booking_recommended
+import dev.ohs.trustdemo.onesa.generated.resources.booking_recommended_value
+import dev.ohs.trustdemo.onesa.generated.resources.booking_referral_done
+import dev.ohs.trustdemo.onesa.generated.resources.booking_task
+import dev.ohs.trustdemo.onesa.generated.resources.booking_title
+import dev.ohs.trustdemo.onesa.generated.resources.layer1
+import dev.ohs.trustdemo.onesa.generated.resources.layer1_chip
+import dev.ohs.trustdemo.onesa.generated.resources.layer1_detail
+import dev.ohs.trustdemo.onesa.generated.resources.layer2
+import dev.ohs.trustdemo.onesa.generated.resources.layer2_chip
+import dev.ohs.trustdemo.onesa.generated.resources.layer2_detail
+import dev.ohs.trustdemo.onesa.generated.resources.layer3
+import dev.ohs.trustdemo.onesa.generated.resources.layer3_confirmed
+import dev.ohs.trustdemo.onesa.generated.resources.layer3_confirmed_detail
+import dev.ohs.trustdemo.onesa.generated.resources.layer3_gap
+import dev.ohs.trustdemo.onesa.generated.resources.layer3_gap_detail
+import dev.ohs.trustdemo.onesa.generated.resources.layer3_mapped_detail
+import dev.ohs.trustdemo.onesa.generated.resources.layers_footnote_gap
+import dev.ohs.trustdemo.onesa.generated.resources.layers_title
 import dev.ohs.trustdemo.onesa.generated.resources.list_stale
-import dev.ohs.trustdemo.onesa.generated.resources.scan_back
+import dev.ohs.trustdemo.onesa.generated.resources.match_mapped
+import dev.ohs.trustdemo.onesa.generated.resources.not_counted_title
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_book
-import dev.ohs.trustdemo.onesa.generated.resources.schedule_booked
-import dev.ohs.trustdemo.onesa.generated.resources.schedule_complete
-import dev.ohs.trustdemo.onesa.generated.resources.schedule_could_not
+import dev.ohs.trustdemo.onesa.generated.resources.schedule_book_age
+import dev.ohs.trustdemo.onesa.generated.resources.schedule_book_caption
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_could_not_load
-import dev.ohs.trustdemo.onesa.generated.resources.schedule_due
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_incomplete
-import dev.ohs.trustdemo.onesa.generated.resources.schedule_not_open
-import dev.ohs.trustdemo.onesa.generated.resources.schedule_not_yet
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_nothing_due
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_referral_changed
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_reported
-import dev.ohs.trustdemo.onesa.generated.resources.schedule_title
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_unmapped
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_unreadable
 import dev.ohs.trustdemo.onesa.generated.resources.sync_first
+import dev.ohs.trustdemo.onesa.ui.Action
+import dev.ohs.trustdemo.onesa.ui.AlertCard
+import dev.ohs.trustdemo.onesa.ui.Field
+import dev.ohs.trustdemo.onesa.ui.FieldGrid
+import dev.ohs.trustdemo.onesa.ui.NoteLine
+import dev.ohs.trustdemo.onesa.ui.OnesaIcons
+import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
+import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
+import dev.ohs.trustdemo.onesa.ui.RecordRow
+import dev.ohs.trustdemo.onesa.ui.SectionCard
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.VerificationResultCard
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
+import dev.ohs.trustdemo.onesa.util.displayDate
+import kotlin.time.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
- * S5: the national schedule evaluated for the child, and the booking of the visit it recommends.
+ * S5: how each foreign dose reaches the national schedule, the schedule evaluated for the child,
+ * and the booking of the visit it recommends.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleScreen(referralId: String, onBack: () -> Unit) {
   val viewModel = koinViewModel<ScheduleViewModel>(key = referralId) { parametersOf(referralId) }
   val state by viewModel.uiState.collectAsStateWithLifecycle()
+  val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
+  ScheduleContent(state, today, onBack, viewModel::book)
+}
 
-  Scaffold(
+@Composable
+fun ScheduleContent(
+  state: ScheduleUiState,
+  today: LocalDate,
+  onBack: () -> Unit,
+  onBook: () -> Unit,
+) {
+  val schedule = state.schedule
+  val due = schedule?.items.orEmpty().filter { it.standing is Standing.Due }
+  OnesaScaffold(
     topBar = {
-      TopAppBar(
-        title = {
-          Text(
-            state.referral?.let {
-              "${stringResource(Res.string.schedule_title)}: ${it.patientName}"
-            } ?: stringResource(Res.string.schedule_title)
-          )
-        },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(
-              Icons.AutoMirrored.Filled.ArrowBack,
-              contentDescription = stringResource(Res.string.scan_back),
-              tint = MaterialTheme.colorScheme.onPrimary,
-            )
-          }
-        },
-        colors =
-          TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-          ),
+      ChildTopBar(
+        child = state.child,
+        fallbackName = state.referral?.patientName.orEmpty(),
+        today = today,
+        onBack = onBack,
+        doses = state.doses,
+        chips = listOfNotNull(auditChip(state.child)),
       )
-    }
-  ) { padding ->
-    Column(
-      Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-      if (state.busy) CircularProgressIndicator()
-      if (state.failed) {
-        Text(
-          stringResource(Res.string.schedule_could_not_load),
-          color = MaterialTheme.colorScheme.error,
-        )
-      }
-      state.schedule?.let { schedule ->
-        schedule.items.forEach { Item(it) }
-        Doses(Res.string.schedule_reported, schedule.reported)
-        Doses(Res.string.schedule_unmapped, schedule.unmapped)
-        Doses(Res.string.schedule_unreadable, schedule.unreadable)
-      }
-      if (state.syncFirst) {
-        Text(stringResource(Res.string.sync_first), color = MaterialTheme.colorScheme.error)
-      }
-      if (state.referralChanged) {
-        Text(
-          stringResource(Res.string.schedule_referral_changed),
-          color = MaterialTheme.colorScheme.error,
-        )
-      }
-      state.booked?.let {
-        Text(
-          stringResource(Res.string.schedule_booked, it.date.toString(), it.doses),
-          style = MaterialTheme.typography.titleMedium,
-        )
-        if (it.listStale) Text(stringResource(Res.string.list_stale))
-      }
-      val gap = state.schedule?.complete == false
-      if (gap)
-        Text(
-          stringResource(Res.string.schedule_incomplete),
-          color = MaterialTheme.colorScheme.error,
-        )
-      if (state.open != null && !state.isOpen) Text(stringResource(Res.string.schedule_not_open))
-      if (state.schedule?.let { it.complete && !it.hasDue } == true && state.booked == null) {
-        Text(stringResource(Res.string.schedule_nothing_due))
-      }
-      Button(
-        onClick = viewModel::book,
-        enabled = state.canBook,
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Text(stringResource(Res.string.schedule_book))
-      }
-    }
-  }
-}
-
-@Composable
-private fun Item(item: ScheduleItem) {
-  Card(Modifier.fillMaxWidth()) {
-    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-      Text(item.title, style = MaterialTheme.typography.labelLarge)
-      when (val standing = item.standing) {
-        Standing.Complete -> Text(stringResource(Res.string.schedule_complete))
-        is Standing.Due -> Text(stringResource(Res.string.schedule_due, standing.date.toString()))
-        is Standing.NotYet ->
-          Text(stringResource(Res.string.schedule_not_yet, standing.date.toString()))
-        is Standing.CouldNotEvaluate ->
-          Text(
-            stringResource(Res.string.schedule_could_not),
-            color = MaterialTheme.colorScheme.error,
+    },
+    sideWide = true,
+    side = {
+      schedule?.let { ScheduleCard(it) }
+      SectionCard(title = stringResource(Res.string.booking_title), icon = OnesaIcons.Clock) {
+        FieldGrid(
+          listOfNotNull(
+            schedule
+              ?.takeIf { due.isNotEmpty() }
+              ?.let {
+                Field(
+                  stringResource(Res.string.booking_recommended),
+                  stringResource(
+                    Res.string.booking_recommended_value,
+                    displayDate(it.visit),
+                    due.joinToString { item -> item.dose.shortName },
+                  ),
+                )
+              },
+            schedule
+              ?.takeIf { due.isNotEmpty() }
+              ?.let { Field(stringResource(Res.string.booking_date), it.visit.toString(), true) },
+            Field(
+              stringResource(Res.string.booking_task),
+              stringResource(
+                when {
+                  state.booked != null -> Res.string.booking_booked
+                  state.open != null && !state.isOpen -> Res.string.booking_referral_done
+                  else -> Res.string.booking_not_booked
+                }
+              ),
+            ),
           )
+        )
+        if (schedule?.let { it.complete && !it.hasDue } == true && state.booked == null) {
+          NoteLine(stringResource(Res.string.schedule_nothing_due))
+        }
+      }
+    },
+    actions = {
+      PrimaryActionBar(
+        listOf(
+          Action(
+            due.lastOrNull()?.age?.let { stringResource(Res.string.schedule_book_age, it) }
+              ?: stringResource(Res.string.schedule_book),
+            onClick = onBook,
+            busy = state.busy,
+            enabled = state.canBook,
+          )
+        ),
+        caption = stringResource(Res.string.schedule_book_caption),
+      )
+    },
+  ) {
+    state.doses.filter { it.adjudication != null || it.schedule == null }.forEach { Layers(it) }
+    state.doses
+      .filter { it.adjudication != null && it.schedule != null }
+      .forEach { dose ->
+        val coded = dose.schedule ?: return@forEach
+        val adjudication = dose.adjudication ?: return@forEach
+        VerificationResultCard(
+          title = stringResource(Res.string.adjudication_title),
+          tone = Tone.Success,
+          verdict = stringResource(Res.string.adjudication_verdict),
+          fields =
+            listOf(
+              Field(stringResource(Res.string.adjudication_match), coded.display),
+              Field(stringResource(Res.string.adjudication_code), coded.code, mono = true),
+            ),
+          detail =
+            stringResource(
+              Res.string.adjudication_detail,
+              adjudication.attester,
+              adjudication.recorded?.take(10).orEmpty(),
+            ),
+        )
+      }
+    schedule?.let {
+      val uncounted =
+        doses(Res.string.schedule_reported, it.reported) +
+          doses(Res.string.schedule_unmapped, it.unmapped) +
+          doses(Res.string.schedule_unreadable, it.unreadable)
+      if (uncounted.isNotEmpty()) {
+        SectionCard(
+          title = stringResource(Res.string.not_counted_title),
+          summary = Status(uncounted.size.toString(), Tone.Warning),
+        ) {
+          uncounted.forEach { (why, dose) ->
+            RecordRow(label = dose.label, status = Status(why, Tone.Warning))
+          }
+        }
       }
     }
+    Messages(state)
   }
 }
 
 @Composable
-private fun Doses(title: StringResource, doses: List<ScheduleDose>) {
-  if (doses.isEmpty()) return
-  Card(Modifier.fillMaxWidth()) {
-    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-      Text(stringResource(title), style = MaterialTheme.typography.labelLarge)
-      doses.forEach { Text(it.label) }
-    }
+private fun doses(
+  why: StringResource,
+  doses: List<ScheduleDose>,
+): List<Pair<String, ScheduleDose>> {
+  val text = stringResource(why)
+  return doses.map { text to it }
+}
+
+/** The three codings of one foreign dose: as issued, its WHO vaccine type, and the national one. */
+@Composable
+private fun Layers(dose: ForeignDose) {
+  val coded = dose.schedule
+  val adjudication = dose.adjudication
+  SectionCard(
+    title = stringResource(Res.string.layers_title),
+    icon = OnesaIcons.Layers,
+    footnote = if (coded == null) stringResource(Res.string.layers_footnote_gap) else null,
+  ) {
+    RecordRow(
+      label =
+        stringResource(
+          Res.string.layer1,
+          dose.origin?.let(NewbornRegistration::countryName).orEmpty(),
+        ),
+      code = dose.product,
+      detail = stringResource(Res.string.layer1_detail),
+      status = Status(stringResource(Res.string.layer1_chip)),
+    )
+    RecordRow(
+      label = stringResource(Res.string.layer2),
+      code = dose.productName,
+      detail = stringResource(Res.string.layer2_detail),
+      status = Status(stringResource(Res.string.layer2_chip), Tone.Info),
+    )
+    RecordRow(
+      label = stringResource(Res.string.layer3),
+      code = coded?.code,
+      detail =
+        when {
+          coded == null -> stringResource(Res.string.layer3_gap_detail, dose.product)
+          adjudication != null ->
+            stringResource(
+              Res.string.layer3_confirmed_detail,
+              adjudication.attester,
+              adjudication.recorded?.take(10).orEmpty(),
+            )
+          else -> stringResource(Res.string.layer3_mapped_detail)
+        },
+      status =
+        when {
+          coded == null -> Status(stringResource(Res.string.layer3_gap), Tone.Warning)
+          adjudication != null -> Status(stringResource(Res.string.layer3_confirmed), Tone.Success)
+          else -> Status(stringResource(Res.string.match_mapped), Tone.Success)
+        },
+    )
+  }
+}
+
+@Composable
+private fun Messages(state: ScheduleUiState) {
+  if (state.failed) {
+    AlertCard(null, stringResource(Res.string.schedule_could_not_load), Tone.Danger)
+  }
+  if (state.syncFirst) AlertCard(null, stringResource(Res.string.sync_first), Tone.Warning)
+  if (state.referralChanged) {
+    AlertCard(null, stringResource(Res.string.schedule_referral_changed), Tone.Warning)
+  }
+  if (state.booked?.listStale == true) NoteLine(stringResource(Res.string.list_stale))
+  if (state.schedule?.complete == false) {
+    AlertCard(null, stringResource(Res.string.schedule_incomplete), Tone.Danger)
   }
 }

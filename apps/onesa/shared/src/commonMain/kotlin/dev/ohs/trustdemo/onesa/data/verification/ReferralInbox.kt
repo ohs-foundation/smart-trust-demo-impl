@@ -27,13 +27,21 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-/** A referral to this clinic to verify a child's cards (J2 wrote it), as the inbox lists it. */
+/**
+ * A referral to this clinic to verify a child's cards (J2 wrote it), as the inbox lists it: who
+ * asked ([requester]), what for ([purpose], the request's code text), why ([reason]) and how soon
+ * ([priority]).
+ */
 data class Referral(
   val id: String,
   val patientId: String,
   val patientName: String,
   val authoredOn: String? = null,
   val reportedDoses: List<String> = emptyList(),
+  val requester: String? = null,
+  val purpose: String? = null,
+  val reason: String? = null,
+  val priority: String? = null,
 )
 
 /** A referral the signed-in CHW sent, as her referrals tab lists it. */
@@ -61,14 +69,20 @@ class ReferralInbox(private val repository: FhirRepository) {
   fun observeSent(practitionerId: String?): Flow<List<SentReferral>> =
     repository.revision.map { sent(practitionerId) }
 
-  internal suspend fun sent(practitionerId: String?): List<SentReferral> =
+  internal suspend fun sent(practitionerId: String?): List<SentReferral> = referrals {
+    practitionerId == null || it.reference("requester") == "Practitioner/$practitionerId"
+  }
+
+  /** The referrals about [patientId], open or done, newest first. */
+  suspend fun about(patientId: String): List<SentReferral> = referrals {
+    it.reference("subject") == "Patient/$patientId"
+  }
+
+  private suspend fun referrals(where: (JsonObject) -> Boolean): List<SentReferral> =
     repository
       .all("ServiceRequest")
       .map { it.toJson() }
-      .filter {
-        it.isReferral() &&
-          (practitionerId == null || it.reference("requester") == "Practitioner/$practitionerId")
-      }
+      .filter { it.isReferral() && where(it) }
       .mapNotNull { request ->
         val id = request["id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
         val patientId = request.reference("subject")?.removePrefix("Patient/")
@@ -86,17 +100,38 @@ class ReferralInbox(private val repository: FhirRepository) {
           status = request["status"]?.jsonPrimitive?.contentOrNull,
           performer = performer?.let { organizationName(it) },
           authoredOn = request["authoredOn"]?.jsonPrimitive?.contentOrNull,
-          reason =
-            request["reasonCode"]
-              ?.jsonArray
-              ?.firstOrNull()
-              ?.jsonObject
-              ?.get("text")
-              ?.jsonPrimitive
-              ?.contentOrNull,
+          reason = request.reasonText(),
         )
       }
       .sortedByDescending { it.authoredOn }
+
+  private fun JsonObject.reasonText(): String? =
+    this["reasonCode"]
+      ?.jsonArray
+      ?.firstOrNull()
+      ?.jsonObject
+      ?.get("text")
+      ?.jsonPrimitive
+      ?.contentOrNull
+
+  private suspend fun practitionerName(reference: String): String {
+    val name =
+      repository
+        .get("Practitioner", reference.removePrefix("Practitioner/"))
+        ?.toJson()
+        ?.get("name")
+        ?.jsonArray
+        ?.firstOrNull()
+        ?.jsonObject
+    return name?.get("text")?.jsonPrimitive?.contentOrNull
+      ?: name?.let {
+        personName(
+          it["given"]?.jsonArray?.firstOrNull()?.jsonPrimitive?.contentOrNull,
+          it["family"]?.jsonPrimitive?.contentOrNull,
+        )
+      }
+      ?: reference
+  }
 
   private suspend fun organizationName(reference: String): String =
     repository
@@ -118,7 +153,9 @@ class ReferralInbox(private val repository: FhirRepository) {
         val id = dose["id"]?.jsonPrimitive?.contentOrNull
         val product = dose.product()
         val date = dose["occurrenceDateTime"]?.jsonPrimitive?.contentOrNull?.substringBefore('T')
-        if (id != null && product != null) ReportedDose(id, product, date) else null
+        val lot = dose["lotNumber"]?.jsonPrimitive?.contentOrNull
+        val origin = dose["location"]?.jsonObject?.get("display")?.jsonPrimitive?.contentOrNull
+        if (id != null && product != null) ReportedDose(id, product, date, lot, origin) else null
       }
 
   private suspend fun waiting(): List<Referral> =
@@ -136,6 +173,10 @@ class ReferralInbox(private val repository: FhirRepository) {
           patientName = patientName(patientId),
           authoredOn = request["authoredOn"]?.jsonPrimitive?.contentOrNull,
           reportedDoses = reportedDoses(patientId).map { it.product },
+          requester = request.reference("requester")?.let { practitionerName(it) },
+          purpose = request["code"]?.jsonObject?.get("text")?.jsonPrimitive?.contentOrNull,
+          reason = request.reasonText(),
+          priority = request["priority"]?.jsonPrimitive?.contentOrNull,
         )
       }
       .sortedByDescending { it.authoredOn }
@@ -181,7 +222,8 @@ class ReferralInbox(private val repository: FhirRepository) {
   private fun Resource.toJson(): JsonObject =
     json.encodeToJsonElement(Resource.serializer(), this).jsonObject
 
-  private companion object {
+  companion object {
+    /** SNOMED CT "Patient referral", the code a referral to verify cards carries. */
     const val REFERRAL_CODE = "3457005"
   }
 }

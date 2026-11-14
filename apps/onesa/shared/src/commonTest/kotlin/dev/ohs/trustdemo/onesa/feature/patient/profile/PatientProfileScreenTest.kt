@@ -18,6 +18,7 @@ package dev.ohs.trustdemo.onesa.feature.patient.profile
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
@@ -85,6 +86,7 @@ class PatientProfileScreenTest {
             role = AppRole.CLINICIAN,
             onBack = {},
             onAddClinicalData = {},
+            showHeader = false,
           )
         }
       }
@@ -93,9 +95,9 @@ class PatientProfileScreenTest {
     waitUntil(timeoutMillis = 5_000L) {
       onAllNodesWithText("Amina Diallo").fetchSemanticsNodes().isNotEmpty()
     }
-    val scrollable = onNode(hasScrollAction())
-    listOf("Amina Diallo", "Allergies", "Medications", "Conditions", "Immunizations").forEach { text
-      ->
+    val scrollable =
+      onNode(hasScrollAction() and hasAnyDescendant(hasText("Allergies", ignoreCase = true)))
+    listOf("Allergies", "Medications", "Conditions", "Immunizations").forEach { text ->
       scrollable.performScrollToNode(hasText(text, ignoreCase = true))
       assertTrue(
         onAllNodesWithText(text, ignoreCase = true).fetchSemanticsNodes().isNotEmpty(),

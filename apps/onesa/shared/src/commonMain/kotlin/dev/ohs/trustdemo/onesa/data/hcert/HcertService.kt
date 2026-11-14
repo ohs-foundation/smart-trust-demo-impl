@@ -68,7 +68,10 @@ private fun freshnessOf(fetchedAtEpochSeconds: Long?, now: Long, fetched: Boolea
         now - fetchedAtEpochSeconds > TRUST_LIST_STALE_AFTER_SECONDS,
   )
 
-/** What the trust list status screen shows about one list. */
+/**
+ * What the trust list status screen shows about one list; a [bundled] list ships with the app and
+ * is never fetched.
+ */
 data class TrustListStatus(
   val name: String,
   val source: String,
@@ -78,6 +81,8 @@ data class TrustListStatus(
   val domains: List<String>,
   val stale: Boolean = false,
   val lastFailure: RefreshFailure? = null,
+  val entries: List<TrustEntry> = emptyList(),
+  val bundled: Boolean = false,
 )
 
 /**
@@ -166,6 +171,8 @@ class HcertService(private val local: PinnedTrustList, private val gdhcnDev: Pin
       domains = snapshot?.let { DidDocuments.domains(it.json) }.orEmpty(),
       stale = freshnessOf(snapshot?.fetchedAtEpochSeconds, now, fetched = this === local).stale,
       lastFailure = failures.value[name],
+      entries = snapshot?.let { trustEntries(it.json) }.orEmpty(),
+      bundled = this !== local,
     )
   }
 
