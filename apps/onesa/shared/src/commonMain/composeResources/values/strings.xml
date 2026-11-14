@@ -358,7 +358,7 @@
     <string name="verify_fail">FAIL</string>
     <string name="verify_failed_step">Failed at step</string>
     <string name="verify_reason_label">Reason</string>
-    <string name="verify_fail_detail">Not verified against the trust lists. Nothing imported; doses stay as reported. Attempt logged.</string>
+    <string name="verify_fail_detail">Not verified against the GDHCN trust lists. Nothing imported; doses stay as reported. Attempt logged.</string>
     <string name="verify_holder_title">CARD IS FOR ANOTHER CHILD</string>
     <string name="verify_elsewhere_title">ALREADY IMPORTED FOR ANOTHER CHILD</string>
     <string name="verify_refused">REFUSED</string>
@@ -367,7 +367,7 @@
     <string name="verify_scan_again">Scan Again</string>
     <string name="verify_keep_reported">Keep Doses as Reported</string>
     <string name="verify_proceed">Continue to Schedule Evaluation</string>
-    <string name="verify_status_local">Status: signature verified against the local test list (%1$s)</string>
+    <string name="verify_status_local">Status: Cryptographic trust verified via GDHCN (%1$s)</string>
     <string name="verify_status_gdhcn">Status: signature verified against the GDHCN DEV trust list</string>
     <string name="match_list_title">Matching the foreign doses to the Onesan schedule</string>
     <string name="match_mapped">Mapped Automatically</string>
@@ -492,7 +492,7 @@
     <string name="wallet_doses_verified">%1$d Doses Verified</string>
     <string name="wallet_no_doses">No doses recorded yet.</string>
     <string name="wallet_doses_footnote">%1$s • %2$d from verified foreign cards, %3$d recorded in Onesa</string>
-    <string name="wallet_card_verified">Card Verified</string>
+    <string name="wallet_card_verified">GDHCN Verified</string>
     <string name="wallet_cross_border">Cross-Border Provenance: %1$s</string>
     <string name="wallet_dose_detail">Date: %1$s • Lot: %2$s</string>
     <string name="share_subtitle">Share records for travel</string>
@@ -515,6 +515,8 @@
     <string name="issued_passcode_text">Say the passcode you chose to the clinician. It is not in the QR, and this phone does not keep it.</string>
     <string name="issued_validity">Link validity</string>
     <string name="issued_validity_value">%1$d Days (%2$s)</string>
+    <string name="issued_rate_limit">Rate Limit</string>
+    <string name="issued_rate_limit_value">Max %1$d Failed Attempts</string>
     <string name="issued_consent_note">Consent to share recorded at generation (IHE PCF / FHIR Consent).</string>
     <string name="shared_subtitle">%1$s • Shared link</string>
     <string name="shared_who_opened">Who opened %1$s's link</string>
@@ -525,6 +527,7 @@
     <string name="shared_look_document">Summary fetched</string>
     <string name="shared_status">Status</string>
     <string name="shared_failed_attempts">Failed attempts</string>
+    <string name="shared_failed_attempts_value">%1$d of %2$d</string>
     <string name="shared_withdraw_link">Withdraw Link</string>
     <string name="shared_withdraw_caption">Withdrawing refuses every later request.</string>
 </resources>

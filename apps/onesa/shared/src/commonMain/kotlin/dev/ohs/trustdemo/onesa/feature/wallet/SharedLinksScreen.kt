@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.data.sharing.Look
+import dev.ohs.trustdemo.onesa.data.sharing.MAX_WRONG_PASSCODES
 import dev.ohs.trustdemo.onesa.data.sharing.Refusal
 import dev.ohs.trustdemo.onesa.data.sharing.ShareStatus
 import dev.ohs.trustdemo.onesa.data.sharing.SharedLink
@@ -46,6 +47,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.shared_audit_footnote
 import dev.ohs.trustdemo.onesa.generated.resources.shared_clinic_unknown
 import dev.ohs.trustdemo.onesa.generated.resources.shared_empty
 import dev.ohs.trustdemo.onesa.generated.resources.shared_failed_attempts
+import dev.ohs.trustdemo.onesa.generated.resources.shared_failed_attempts_value
 import dev.ohs.trustdemo.onesa.generated.resources.shared_from_other_device
 import dev.ohs.trustdemo.onesa.generated.resources.shared_look_document
 import dev.ohs.trustdemo.onesa.generated.resources.shared_look_refused
@@ -260,7 +262,11 @@ internal fun SharedLinksContent(
           },
           Field(
             stringResource(Res.string.shared_failed_attempts),
-            share.looks.count { it.refusal == Refusal.WrongPasscode }.toString(),
+            stringResource(
+              Res.string.shared_failed_attempts_value,
+              share.looks.count { it.refusal == Refusal.WrongPasscode },
+              MAX_WRONG_PASSCODES,
+            ),
           ),
         ),
         columns = 2,

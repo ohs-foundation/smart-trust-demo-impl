@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.onesa.data.sharing.FamilyMember
 import dev.ohs.trustdemo.onesa.data.sharing.IssuedLink
+import dev.ohs.trustdemo.onesa.data.sharing.MAX_WRONG_PASSCODES
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.issued_badge
 import dev.ohs.trustdemo.onesa.generated.resources.issued_close
@@ -55,6 +56,8 @@ import dev.ohs.trustdemo.onesa.generated.resources.issued_previous
 import dev.ohs.trustdemo.onesa.generated.resources.issued_qr_caption
 import dev.ohs.trustdemo.onesa.generated.resources.issued_qr_of
 import dev.ohs.trustdemo.onesa.generated.resources.issued_qr_title
+import dev.ohs.trustdemo.onesa.generated.resources.issued_rate_limit
+import dev.ohs.trustdemo.onesa.generated.resources.issued_rate_limit_value
 import dev.ohs.trustdemo.onesa.generated.resources.issued_show_full_screen
 import dev.ohs.trustdemo.onesa.generated.resources.issued_title
 import dev.ohs.trustdemo.onesa.generated.resources.issued_traveller
@@ -206,8 +209,13 @@ internal fun IssuedLinksContent(
                 today.daysUntil(until),
                 displayDate(until),
               ),
-            )
-          )
+            ),
+            Field(
+              stringResource(Res.string.issued_rate_limit),
+              stringResource(Res.string.issued_rate_limit_value, MAX_WRONG_PASSCODES),
+            ),
+          ),
+          columns = 2,
         )
       }
       NoteLine(stringResource(Res.string.issued_consent_note), icon = OnesaIcons.ShieldCheck)

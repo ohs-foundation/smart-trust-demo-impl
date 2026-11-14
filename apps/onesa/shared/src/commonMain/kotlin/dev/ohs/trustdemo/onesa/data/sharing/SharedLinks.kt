@@ -55,6 +55,9 @@ enum class ShareStatus {
   Expired,
 }
 
+/** Wrong passcodes that lock a link: the VHL service's fixed rule (docs/vhl-client.md). */
+const val MAX_WRONG_PASSCODES = 3
+
 /** Why the service refused a clinic, by the code its audit records. */
 enum class Refusal(val code: String?) {
   Withdrawn("withdrawn"),
