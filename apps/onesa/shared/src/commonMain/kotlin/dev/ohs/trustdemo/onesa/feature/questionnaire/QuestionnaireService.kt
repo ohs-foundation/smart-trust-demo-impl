@@ -155,27 +155,27 @@ class QuestionnaireService(
           .withInitialAnswer(linkId, JsonObject(mapOf("valueString" to JsonPrimitive(value))))
           .first
       }
+    val parentOptions =
+      launchContext.groupId
+        ?.takeIf { questionnaire.id == QuestionnaireIds.NEWBORN_REGISTRATION }
+        ?.let { registration.parentOptions(it) }
+    val withOptions =
+      if (parentOptions == null) withContext
+      else
+        listOf(RegistrationItems.MOTHER, RegistrationItems.FATHER).fold(withContext) {
+          current,
+          linkId ->
+          current.withAnswerOptions(linkId, parentOptions)
+        }
     val registrationAnswers =
       launchContext.groupId
         ?.takeIf { questionnaire.id == QuestionnaireIds.NEWBORN_REGISTRATION }
         ?.let { registration.initialAnswers(it) }
         .orEmpty()
-    val withAnswers =
-      registrationAnswers.entries.fold(withContext) { current, (linkId, answer) ->
+    val prepared =
+      registrationAnswers.entries.fold(withOptions) { current, (linkId, answer) ->
         current.withInitialAnswer(linkId, answer).first
       }
-    val parentOptions =
-      launchContext.groupId
-        ?.takeIf { questionnaire.id == QuestionnaireIds.NEWBORN_REGISTRATION }
-        ?.let { registration.parentOptions(it) }
-    val prepared =
-      if (parentOptions == null) withAnswers
-      else
-        listOf(RegistrationItems.MOTHER, RegistrationItems.FATHER).fold(withAnswers) {
-          current,
-          linkId ->
-          current.withAnswerOptions(linkId, parentOptions)
-        }
 
     val preparedJson = fhirJson.encodeToString(JsonObject.serializer(), prepared)
 
@@ -413,7 +413,13 @@ private fun JsonObject.withAnswerOptions(linkId: String, options: List<JsonObjec
   return JsonObject(node)
 }
 
-private fun JsonObject.withInitialAnswer(
+private fun JsonObject.answers(answer: JsonObject): Boolean {
+  val coding = this["valueCoding"]?.jsonObject ?: return this == answer
+  val chosen = answer["valueCoding"]?.jsonObject ?: return false
+  return coding["system"] == chosen["system"] && coding["code"] == chosen["code"]
+}
+
+internal fun JsonObject.withInitialAnswer(
   linkId: String,
   answer: JsonObject,
 ): Pair<JsonObject, Boolean> {
@@ -421,7 +427,18 @@ private fun JsonObject.withInitialAnswer(
   val mutableNode = toMutableMap()
 
   if (this["linkId"]?.jsonPrimitive?.contentOrNull == linkId) {
-    mutableNode["initial"] = JsonArray(listOf(answer))
+    val options = this["answerOption"]?.jsonArray
+    if (options == null) {
+      mutableNode["initial"] = JsonArray(listOf(answer))
+    } else {
+      mutableNode["answerOption"] =
+        JsonArray(
+          options.map {
+            val option = it.jsonObject
+            JsonObject(option + ("initialSelected" to JsonPrimitive(option.answers(answer))))
+          }
+        )
+    }
     updated = true
   }
 
