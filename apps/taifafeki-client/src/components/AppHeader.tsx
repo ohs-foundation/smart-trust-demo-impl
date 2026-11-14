@@ -17,7 +17,7 @@ export function AppHeader({ icon: Icon, title, subtitle, chips, status, links }:
     <div className="print:hidden">
       <div className="bg-frame text-slate-300">
         <div className={cn(CONTAINER, "flex items-center justify-between gap-4 py-2")}>
-          <span className="text-ui font-semibold text-white">OHS Facility Client</span>
+          <span className="text-ui font-semibold text-white">Taifafeki Facility Client</span>
           {links && <nav className="flex items-center gap-4 font-mono text-xs">{links}</nav>}
         </div>
       </div>
@@ -39,5 +39,5 @@ export function AppHeader({ icon: Icon, title, subtitle, chips, status, links }:
 }
 
 export function ClientHeader() {
-  return <AppHeader icon={HospitalIcon} title="OHS Facility Client" subtitle="Taifafeki Ministry of Public Health • Medplum" />;
+  return <AppHeader icon={HospitalIcon} title="Taifafeki Facility Client" subtitle="Taifafeki Ministry of Public Health • Medplum" />;
 }
