@@ -1,11 +1,13 @@
 # Builds what testers install: the debug APK, and the server images in the registry.
-# Both read the deployment from repository variables (Settings > Secrets and variables > Actions > Variables).
+# The base domain is the repository secret LIVE_BASE_DOMAIN, so the logs mask it; the registry
+# settings are repository variables (Settings > Secrets and variables > Actions).
 
 name: Artifacts
 
 on:
   push:
     branches: [seed-from-template, main]
+    tags: ['v*']
   workflow_dispatch:
 
 concurrency:
@@ -16,30 +18,39 @@ permissions:
   contents: read
 
 jobs:
-  skipped:
-    name: Skipped builds
+  gate:
+    name: What to build
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    outputs:
+      apk: ${{ steps.check.outputs.apk }}
+      images: ${{ steps.check.outputs.images }}
     steps:
-      - name: Say what is skipped and why
+      # Jobs cannot test secrets in their own `if`, so this job decides for them.
+      - id: check
         env:
-          BASE: ${{ vars.LIVE_BASE_DOMAIN }}
+          BASE: ${{ secrets.LIVE_BASE_DOMAIN }}
           PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           ACCOUNT: ${{ vars.GCP_CI_SERVICE_ACCOUNT }}
           REGISTRY: ${{ vars.REGISTRY }}
         run: |
-          [ -n "$BASE" ] || echo "::notice title=APK skipped::Set the repository variable LIVE_BASE_DOMAIN to build the APK."
-          if [ -z "$BASE" ] || [ -z "$PROVIDER" ] || [ -z "$ACCOUNT" ] || [ -z "$REGISTRY" ]; then
-            echo "::notice title=Images skipped::Set LIVE_BASE_DOMAIN, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_CI_SERVICE_ACCOUNT and REGISTRY to push the images."
+          apk=false
+          images=false
+          if [ -n "$BASE" ]; then apk=true; else
+            echo "::notice title=APK skipped::Set the repository secret LIVE_BASE_DOMAIN to build the APK."
           fi
+          if [ -n "$BASE" ] && [ -n "$PROVIDER" ] && [ -n "$ACCOUNT" ] && [ -n "$REGISTRY" ]; then images=true; else
+            echo "::notice title=Images skipped::Set the secret LIVE_BASE_DOMAIN and the variables GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_CI_SERVICE_ACCOUNT and REGISTRY to push the images."
+          fi
+          echo "apk=$apk" >> "$GITHUB_OUTPUT"
+          echo "images=$images" >> "$GITHUB_OUTPUT"
 
   apk:
     name: Debug APK
-    if: ${{ vars.LIVE_BASE_DOMAIN != '' }}
+    needs: gate
+    if: ${{ needs.gate.outputs.apk == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    env:
-      BASE: ${{ vars.LIVE_BASE_DOMAIN }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -58,26 +69,28 @@ jobs:
 
       - name: Assemble
         env:
-          OAUTH_ISSUER: https://keycloak.onesa.${{ vars.LIVE_BASE_DOMAIN }}/realms/onesa
-          FHIR_BASE_URL: https://gateway.onesa.${{ vars.LIVE_BASE_DOMAIN }}/fhir/
-          VHL_BASE_URL: https://vhl.onesa.${{ vars.LIVE_BASE_DOMAIN }}
-          TRUST_LIST_URL: https://trust.gdhcn.${{ vars.LIVE_BASE_DOMAIN }}/local-test-list.json
+          OAUTH_ISSUER: https://keycloak.onesa.${{ secrets.LIVE_BASE_DOMAIN }}/realms/onesa
+          FHIR_BASE_URL: https://gateway.onesa.${{ secrets.LIVE_BASE_DOMAIN }}/fhir/
+          VHL_BASE_URL: https://vhl.onesa.${{ secrets.LIVE_BASE_DOMAIN }}
+          TRUST_LIST_URL: https://trust.gdhcn.${{ secrets.LIVE_BASE_DOMAIN }}/local-test-list.json
         run: ./gradlew :apps:onesa:android:assembleDebug -Pkotlin.daemon.jvmargs="-Xmx6g -XX:+UseG1GC" --stacktrace
 
-      - name: Short SHA
-        id: sha
-        run: echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Version
+        id: version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then echo "tag=$GITHUB_REF_NAME"; else echo "tag=$(git rev-parse --short HEAD)"; fi >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: onesa-${{ steps.sha.outputs.short }}
+          name: onesa-${{ steps.version.outputs.tag }}
           path: apps/onesa/android/build/outputs/apk/debug/*.apk
           retention-days: 14
           if-no-files-found: error
 
   images:
     name: Server images
-    if: ${{ vars.LIVE_BASE_DOMAIN != '' && vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_CI_SERVICE_ACCOUNT != '' && vars.REGISTRY != '' }}
+    needs: gate
+    if: ${{ needs.gate.outputs.images == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -111,9 +124,10 @@ jobs:
       # The web portal bakes its hostnames at build, so they come from the same base domain as the server's.
       - name: Build and push
         env:
-          BASE: ${{ vars.LIVE_BASE_DOMAIN }}
+          BASE: ${{ secrets.LIVE_BASE_DOMAIN }}
         run: |
           cd infra
           ./dev.sh init
           sed -i -e "s|^BASE_DOMAIN=.*|BASE_DOMAIN=$BASE|" -e "s|^REGISTRY=.*|REGISTRY=$REGISTRY|" .env
-          ./dev.sh push "$(git rev-parse --short HEAD)" vhl taifafeki-client web-portal
+          if [ "$GITHUB_REF_TYPE" = tag ]; then tag="$GITHUB_REF_NAME"; else tag="$(git rev-parse --short HEAD)"; fi
+          ./dev.sh push "$tag" vhl taifafeki-client web-portal

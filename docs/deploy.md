@@ -109,16 +109,17 @@ gcloud auth configure-docker <region>-docker.pkg.dev
 
 | Variable | Value |
 |---|---|
-| `LIVE_BASE_DOMAIN` | the base domain, e.g. `demo.example.org` |
+| `LIVE_BASE_DOMAIN` (a **secret**, so the logs mask it) | the base domain, e.g. `demo.example.org` |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | `github_workload_identity_provider` output |
 | `GCP_CI_SERVICE_ACCOUNT` | `github_ci_service_account` output |
 | `REGISTRY` | `registry` output |
 
 ```
-gh variable set LIVE_BASE_DOMAIN -R owner/repo -b demo.example.org
+gh secret set LIVE_BASE_DOMAIN -R owner/repo -b demo.example.org
+gh variable set REGISTRY -R owner/repo -b <registry output>     # and the two GCP_* variables
 ```
 
-(and the same for the other three). A public repository's Actions logs are public, so the base domain can appear in them.
+The workflow runs on pushes to `seed-from-template` and `main`, by hand (`gh workflow run artifacts.yml`), and on version tags: `git tag -s v0.1.0 && git push origin v0.1.0` builds the APK `onesa-v0.1.0` and the images tagged `v0.1.0` and `latest`; a branch push tags them with the short commit SHA. The APK carries the live URLs, so anyone who can download the run's artifacts can read them.
 
 CI never builds `fhir-gateway`: its plugin comes from a private fork. Push it from the laptop with `GATEWAY_PLUGIN_DIR` set: `./dev.sh push <sha> fhir-gateway`, using the SHA CI tagged so the server pulls one `IMAGE_TAG` for all four.
 
@@ -259,12 +260,15 @@ Run `trust-demo watch --stack-env infra/.env` on the server and follow [Walk the
 ## Update
 
 ```
-./dev.sh push v2                          # laptop; rebuild and push (CI does this by commit SHA, except the gateway)
-# server: set IMAGE_TAG=v2 in infra/.env, then
-./dev.sh up --pull --taifafeki
+git tag -s v0.2.0 && git push origin v0.2.0      # CI builds the APK and vhl, taifafeki-client, web-portal as v0.2.0
+infra/dev.sh push v0.2.0 fhir-gateway            # laptop: the gateway, from the private fork
+# laptop: set IMAGE_TAG=v0.2.0 in infra/.env, then
+infra/gcp/server.sh setup                        # pulls the code, copies .env
+infra/gcp/server.sh up --taifafeki
+infra/gcp/server.sh status
 ```
 
-With CI images, set `IMAGE_TAG=<sha>` of the pushed commit instead. A changed CLI is shipped again as in step 5. A realm change needs a fresh Keycloak database (`./dev.sh reset` wipes all volumes, then `up` and `trust-demo reset`).
+Without a tag, CI tags images with the short commit SHA; `./dev.sh push <tag>` on the laptop still builds all four. A changed CLI is shipped again as in step 5. A realm change needs a fresh Keycloak database (`./dev.sh reset` wipes all volumes, then `up` and `trust-demo reset`).
 
 ## Tear down
 

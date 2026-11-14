@@ -30,7 +30,7 @@ With `github_repository` set, a workload identity pool trusts GitHub's OIDC toke
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | output `github_workload_identity_provider` |
 | `GCP_CI_SERVICE_ACCOUNT` | output `github_ci_service_account` |
 | `REGISTRY` | output `registry` |
-| `LIVE_BASE_DOMAIN` | `base_domain` from `config.yaml` |
+| `LIVE_BASE_DOMAIN` (secret) | `base_domain` from `config.yaml` |
 
 The server then runs `../dev.sh` as `../README.md` describes.
 
