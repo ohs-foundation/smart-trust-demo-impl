@@ -114,7 +114,7 @@ internal const val HOSPITAL_NUMBER =
   "http://smart.who.int/trust-demo/sid/xxr-kesaro-hn|CRH-HN-68-104377"
 private const val DESIGN = "http://smart.who.int/trust-demo/StructureDefinition"
 private const val REGISTRATION =
-  "http://smart.who.int/trust-demo/Questionnaire/TrustDemoHouseholdRegistration"
+  "http://ohs.dev/fhir/trust-demo/Questionnaire/TrustDemoHouseholdRegistration"
 private const val PRODUCT_MAP =
   "http://smart.who.int/trust-demo/ConceptMap/TrustDemoProductToOnesaEpi"
 private const val REFERRAL_CODE = "http://snomed.info/sct|3457005"

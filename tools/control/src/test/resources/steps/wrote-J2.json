@@ -4,7 +4,7 @@
       "resourceType": "QuestionnaireResponse",
       "id": "Registration",
       "status": "completed",
-      "questionnaire": "http://smart.who.int/trust-demo/Questionnaire/TrustDemoHouseholdRegistration"
+      "questionnaire": "http://ohs.dev/fhir/trust-demo/Questionnaire/TrustDemoHouseholdRegistration"
     }
   ],
   "Somsak's record on Onesa": [
