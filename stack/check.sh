@@ -8,6 +8,7 @@ set -a
 set +a
 
 base="${STACK_HOST}:${PROXY_PORT}"
+echo "expects a stack seeded by 'trust-demo reset'"
 failures=0
 
 check() {
@@ -32,8 +33,9 @@ token=$(curl -s --max-time 10 \
   -d username=vilay -d "password=${TRUSTDEMO_USER_PASSWORD}" \
   "http://keycloak.onesa.${base}/realms/ohs-player/protocol/openid-connect/token" | jq -r '.access_token // empty')
 check "Keycloak issues vilay a token" yes "$([ -n "$token" ] && echo yes || echo no)"
-check "gateway serves vilay's Patient search" 200 \
-  "$(status -H "Authorization: Bearer $token" "http://gateway.onesa.${base}/fhir/Patient")"
+patients=$(status -H "Authorization: Bearer $token" "http://gateway.onesa.${base}/fhir/Patient")
+check "gateway serves vilay's Patient search" 200 "$patients"
+[ "$patients" = 403 ] && echo "      vilay has no Practitioner yet: run 'trust-demo reset' before this check"
 
 check "Medplum health" 200 "$(status "http://medplum.kesaro.${base}/healthcheck")"
 check "Medplum issues the super-admin client a token" yes \

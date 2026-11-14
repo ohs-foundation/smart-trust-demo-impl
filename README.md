@@ -43,6 +43,9 @@ make stack-down
 make stack-reset   # removes volumes and stack/.env; needed after a realm change
 ```
 
+The gateway builds the sibling fork `ohs-player-reference-backend-fork` (branch `trust-demo-household`), so clone it next to this repository.
+Set `PLUGIN_SRC` in `stack/.env` to the upstream git URL to build upstream instead.
+
 Medplum's super-admin settings in `stack/.env` apply only when its database is first created, so a stack created before them needs `make stack-reset` once.
 
 | Service | Address |

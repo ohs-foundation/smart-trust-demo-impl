@@ -48,6 +48,15 @@
   "roles": {
     "realm": [
       {
+        "id": "05a4d68c-95cd-4ff3-b586-c53bb82c1b8b",
+        "name": "ORG_SCOPE_EXEMPT",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "ohs-player",
+        "attributes": {}
+      },
+      {
         "id": "cc4147ae-0160-417e-a1c7-c43bb64925c9",
         "name": "GET_AUDITEVENT",
         "description": "",
@@ -2555,6 +2564,7 @@
       "groups": []
     },
     {
+      "id": "f319bf6e-2b4c-4bda-8e0d-78a7b7a314c9",
       "username": "vilay",
       "enabled": true,
       "emailVerified": true,
@@ -2581,6 +2591,7 @@
       }
     },
     {
+      "id": "0ccf76a7-59ab-4506-969b-44fe92f20b54",
       "username": "chanthason",
       "enabled": true,
       "emailVerified": true,
@@ -2647,7 +2658,8 @@
         }
       ],
       "realmRoles": [
-        "default-roles-ohs-player"
+        "default-roles-ohs-player",
+        "ORG_SCOPE_EXEMPT"
       ],
       "groups": [
         "/Trust demo admin"

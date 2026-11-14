@@ -21,6 +21,7 @@ import dev.ohs.fhir.model.r4.ConceptMap
 import dev.ohs.fhir.model.r4.Device
 import dev.ohs.fhir.model.r4.Enumeration
 import dev.ohs.fhir.model.r4.Group
+import dev.ohs.fhir.model.r4.Identifier
 import dev.ohs.fhir.model.r4.Organization
 import dev.ohs.fhir.model.r4.Patient
 import dev.ohs.fhir.model.r4.Practitioner
@@ -37,6 +38,13 @@ object Seed {
   private const val LOMARU = "TrustDemoLomaruDhc"
   private const val PARENT_PATIENTS = "TrustDemoBounmyPatient,TrustDemoKhamlaPatient"
   private const val HEPB_PRODUCT = "vp-hepb-peds-monovalent"
+  private const val KEYCLOAK_USER_ID = "http://ohs.dev/identifiers/keycloak-user-id"
+
+  private val keycloakUserIds =
+    mapOf(
+      "TrustDemoVilay" to "f319bf6e-2b4c-4bda-8e0d-78a7b7a314c9",
+      "TrustDemoChanthason" to "0ccf76a7-59ab-4506-969b-44fe92f20b54",
+    )
 
   private val locations =
     listOf(
@@ -62,7 +70,7 @@ object Seed {
           .map(::withoutHepB) +
         ig.filterIsInstance<Organization>() +
         locations.map(::parse) +
-        ig.filterIsInstance<Practitioner>() +
+        ig.filterIsInstance<Practitioner>().map(::withKeycloakUser) +
         roles.map(::parse) +
         ig.filterIsInstance<Device>() +
         ig
@@ -93,6 +101,15 @@ object Seed {
           group.copy(element = group.element.filter { it.code?.value != HEPB_PRODUCT })
         }
     )
+
+  private fun withKeycloakUser(practitioner: Practitioner) =
+    keycloakUserIds[practitioner.id]?.let { userId ->
+      practitioner.copy(
+        identifier =
+          practitioner.identifier +
+            Identifier(system = Uri(value = KEYCLOAK_USER_ID), value = FhirString(value = userId))
+      )
+    } ?: practitioner
 
   private fun parent(patient: Patient) =
     patient.copy(link = emptyList(), managingOrganization = reference("Organization/$LOMARU"))

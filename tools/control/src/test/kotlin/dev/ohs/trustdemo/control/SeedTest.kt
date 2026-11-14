@@ -18,10 +18,17 @@ package dev.ohs.trustdemo.control
 import dev.ohs.fhir.model.r4.ConceptMap
 import dev.ohs.fhir.model.r4.Group
 import dev.ohs.fhir.model.r4.Patient
+import dev.ohs.fhir.model.r4.Practitioner
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class SeedTest {
   @Test
@@ -55,5 +62,38 @@ class SeedTest {
     assertTrue(bundle.entry.size > 20)
     val dangling = bundle.allReferences().filterNot { bundle.has(it) }
     assertTrue(dangling.isEmpty(), "references outside the base bundle: $dangling")
+  }
+
+  @Test
+  fun staffPractitionersCarryTheirKeycloakUserIds() {
+    val realm = Json.parseToJsonElement(File(REALM).readText()).jsonObject
+    val staff =
+      realm
+        .getValue("users")
+        .jsonArray
+        .map { it.jsonObject }
+        .filter { fhirUser(it)?.startsWith("Practitioner/") == true }
+    assertEquals(
+      setOf("vilay", "chanthason"),
+      staff.map { it.getValue("username").jsonPrimitive.content }.toSet(),
+    )
+    val base = Seed.onesaBase(ig)
+    staff.forEach { user ->
+      val practitioner = base.resource<Practitioner>(fhirUser(user)!!.removePrefix("Practitioner/"))
+      val linked = practitioner.identifier.single { it.system?.value == KEYCLOAK_USER_ID }
+      assertEquals(
+        user.getValue("id").jsonPrimitive.content,
+        linked.value?.value,
+        user.getValue("username").jsonPrimitive.content,
+      )
+    }
+  }
+
+  private fun fhirUser(user: JsonObject) =
+    user["attributes"]?.jsonObject?.get("fhirUser")?.jsonArray?.single()?.jsonPrimitive?.content
+
+  private companion object {
+    const val REALM = "../../stack/onesa/keycloak/ohs-player-realm.json"
+    const val KEYCLOAK_USER_ID = "http://ohs.dev/identifiers/keycloak-user-id"
   }
 }
