@@ -38,7 +38,7 @@ describe("sign-in start", () => {
     expect(location).not.toContain(pending.verifier);
     expect(cookie).toMatch(/; HttpOnly/);
     expect(cookie).toMatch(/; SameSite=Lax/);
-    expect(cookie).toMatch(/; Max-Age=600/);
+    expect(cookie).toMatch(/; Max-Age=600(;|$)/);
     expect(cookie).not.toMatch(/Secure/);
   });
 
@@ -98,6 +98,8 @@ describe("the code exchange", () => {
     );
     expect(seen.body?.get("code_verifier")).toBe(pending.verifier);
     expect(seen.body?.get("code")).toBe("code-1");
+    expect(seen.body?.get("redirect_uri")).toBe(settings.clientOrigin);
+    expect(seen.body?.get("client_id")).toBe(settings.clientId);
     expect(result.tokens).toMatchObject({ accessToken: "a", refreshToken: "r" });
   });
 
@@ -125,6 +127,28 @@ describe("the code exchange", () => {
     }
     expect(refused.error).toBeDefined();
     expect(refused.tokens).toBeUndefined();
+  });
+
+  it("aWrongStateNeverReachesMedplum", async () => {
+    const { pending } = started();
+    const neverCalled = async (): Promise<Response> => {
+      throw new Error("Medplum must not be asked");
+    };
+    const result = await exchangeCode(settings, pending, "c", "wrong", neverCalled);
+    expect(result.error).toBe("Start sign-in again");
+  });
+
+  it("aFailedExchangeStillClearsTheCookie", async () => {
+    const { pending } = started();
+    const unreachable = async (): Promise<Response> => {
+      throw new TypeError("fetch failed");
+    };
+    const garbled = async () => new Response("<html>", { status: 502 });
+    for (const fetcher of [unreachable, garbled]) {
+      const result = await exchangeCode(settings, pending, "c", pending.state, fetcher);
+      expect(result.error).toBe("Sign-in failed");
+      expect(result.clear).toMatch(/^pkce=; .*Max-Age=0/);
+    }
   });
 
   it("fails cleanly when the sign-in was replaced by a second tab", async () => {
