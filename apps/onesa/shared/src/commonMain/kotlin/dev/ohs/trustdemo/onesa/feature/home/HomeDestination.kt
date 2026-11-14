@@ -19,11 +19,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.home_destination_households
 import dev.ohs.trustdemo.onesa.generated.resources.home_destination_referrals
 import dev.ohs.trustdemo.onesa.generated.resources.home_destination_trust_lists
+import dev.ohs.trustdemo.onesa.generated.resources.home_destination_wallet
 import org.jetbrains.compose.resources.StringResource
 
 /**
@@ -34,4 +36,5 @@ enum class HomeDestination(val label: StringResource, val icon: ImageVector) {
   Households(label = Res.string.home_destination_households, icon = Icons.Filled.Home),
   Referrals(label = Res.string.home_destination_referrals, icon = Icons.Filled.Email),
   TrustLists(label = Res.string.home_destination_trust_lists, icon = Icons.Filled.Lock),
+  Wallet(label = Res.string.home_destination_wallet, icon = Icons.Filled.Person),
 }

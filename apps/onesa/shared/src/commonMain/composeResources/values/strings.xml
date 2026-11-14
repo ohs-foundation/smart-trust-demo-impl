@@ -191,4 +191,35 @@
     <string name="schedule_incomplete">Part of the schedule could not be evaluated, so no visit can be booked. Fix the dose or the schedule first.</string>
     <string name="schedule_not_open">The referral is no longer open.</string>
     <string name="schedule_nothing_due">No dose is due.</string>
+
+    <!-- Family wallet -->
+    <string name="home_destination_wallet">Family wallet</string>
+    <string name="wallet_household">Your household</string>
+    <string name="wallet_empty">No household members have been synced yet.</string>
+    <string name="wallet_share">Share Health Records</string>
+    <string name="share_title">Share Health Records</string>
+    <string name="share_back">Back</string>
+    <string name="share_people">Who to share</string>
+    <string name="share_purpose">Purpose</string>
+    <string name="share_purpose_value">Treatment</string>
+    <string name="share_terms">Consent</string>
+    <string name="share_agree">I have read and accept this consent</string>
+    <string name="share_end">Share until</string>
+    <string name="share_choose_date">Choose date</string>
+    <string name="share_end_hint">Starts today; at most until %1$s.</string>
+    <string name="share_ok">OK</string>
+    <string name="share_passcode">Passcode (4 to 12 characters)</string>
+    <string name="share_passcode_again">Passcode again</string>
+    <string name="share_passcode_length">Use 4 to 12 characters.</string>
+    <string name="share_passcode_differ">The passcodes differ.</string>
+    <string name="share_confirm">Share</string>
+    <string name="share_sharing">Sharing…</string>
+    <string name="issued_title">Health links</string>
+    <string name="issued_passcode_hint">Show each QR to the clinic. Tell them the passcode yourself; it is not in the QR.</string>
+    <string name="issued_show_full_screen">Show QR Full Screen</string>
+    <string name="issued_expires">Expires %1$s</string>
+    <string name="issued_qr_of">QR %1$d of %2$d</string>
+    <string name="issued_previous">Previous</string>
+    <string name="issued_next">Next</string>
+    <string name="issued_close">Close</string>
 </resources>

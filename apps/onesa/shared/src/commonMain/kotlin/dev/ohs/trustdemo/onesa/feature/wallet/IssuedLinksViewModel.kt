@@ -1,0 +1,35 @@
+/*
+ * Copyright 2026 Open Health Stack Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.ohs.trustdemo.onesa.feature.wallet
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dev.ohs.trustdemo.onesa.data.sharing.IssuedLink
+import dev.ohs.trustdemo.onesa.data.sharing.LinkStore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+/** S7's links: the ones just issued, read back from the encrypted store by Consent id. */
+internal class IssuedLinksViewModel(consentIds: List<String>, store: LinkStore) : ViewModel() {
+  private val _links = MutableStateFlow<List<IssuedLink>?>(null)
+  val links: StateFlow<List<IssuedLink>?> = _links.asStateFlow()
+
+  init {
+    viewModelScope.launch { _links.value = store.get(consentIds) }
+  }
+}

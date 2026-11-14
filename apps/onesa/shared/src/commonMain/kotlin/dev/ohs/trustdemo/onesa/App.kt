@@ -53,6 +53,8 @@ import dev.ohs.trustdemo.onesa.feature.scan.ScanCardScreen
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncGateState
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncScreen
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
+import dev.ohs.trustdemo.onesa.feature.wallet.IssuedLinksScreen
+import dev.ohs.trustdemo.onesa.feature.wallet.ShareScreen
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import org.koin.compose.viewmodel.koinViewModel
@@ -157,6 +159,7 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
             },
             onSignOut = onSignOut,
             onOpenReferral = { id -> navController.navigate("verifyCards/$id") },
+            onShareRecords = { navController.navigate("share") },
             destinations = role.destinations(),
           )
         }
@@ -202,6 +205,30 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
             onMemberClick = { id -> navController.navigate("patientProfile/$id") },
             onAddMembers = { navController.navigate("scanCard/$groupId") },
           )
+        }
+
+        composable("share") {
+          ShareScreen(
+            onBack = { navController.popBackStack() },
+            onIssued = { ids ->
+              navController.navigate("issued/${ids.joinToString(",")}") {
+                popUpTo("share") { inclusive = true }
+              }
+            },
+          )
+        }
+
+        composable(
+          route = "issued/{consentIds}",
+          arguments = listOf(navArgument("consentIds") { type = NavType.StringType }),
+        ) { back ->
+          val ids =
+            back.arguments
+              ?.read { getStringOrNull("consentIds") }
+              .orEmpty()
+              .split(',')
+              .filter { it.isNotBlank() }
+          IssuedLinksScreen(consentIds = ids, onBack = { navController.popBackStack() })
         }
 
         composable(
@@ -268,7 +295,7 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
 
 private fun AppRole.destinations(): List<HomeDestination> =
   when (this) {
-    AppRole.FAMILY -> listOf(HomeDestination.Households)
+    AppRole.FAMILY -> listOf(HomeDestination.Wallet)
     AppRole.CHW -> listOf(HomeDestination.Households, HomeDestination.TrustLists)
     AppRole.CLINICIAN ->
       listOf(HomeDestination.Referrals, HomeDestination.Households, HomeDestination.TrustLists)

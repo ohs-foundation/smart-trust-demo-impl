@@ -79,6 +79,8 @@ val resolvedFhirBaseUrl =
     if (it.endsWith("/")) it else "$it/"
   }
 
+val resolvedVhlBaseUrl = authProp("VHL_BASE_URL", "https://vhl.onesa.example.org:8443").trimEnd('/')
+
 kotlin {
   jvmToolchain(21)
 
@@ -119,6 +121,7 @@ kotlin {
       implementation(libs.androidx.lifecycle.viewmodelCompose)
       implementation(libs.androidx.lifecycle.runtimeCompose)
       implementation(libs.kermit)
+      implementation(libs.qrose)
       implementation(libs.kotlinx.serialization.json)
       implementation(libs.kotlinx.datetime)
       implementation(libs.navigation.compose)
@@ -161,6 +164,7 @@ kotlin {
       implementation(libs.hcert.core)
       implementation(projects.libs.trustkit)
       implementation(projects.tools.control)
+      implementation(projects.services.vhl)
     }
   }
 }
@@ -182,6 +186,7 @@ val generateAuthConfig =
     val scopes = resolvedScopes
     val fhirBaseUrl = resolvedFhirBaseUrl
     val trustListUrl = resolvedTrustListUrl
+    val vhlBaseUrl = resolvedVhlBaseUrl
     val versionName = releaseVersionName
     val versionCode = releaseVersionCode
     val outDir = authConfigOutputDir
@@ -193,6 +198,7 @@ val generateAuthConfig =
     inputs.property("scopes", scopes)
     inputs.property("fhirBaseUrl", fhirBaseUrl)
     inputs.property("trustListUrl", trustListUrl)
+    inputs.property("vhlBaseUrl", vhlBaseUrl)
     inputs.property("versionName", versionName)
     inputs.property("versionCode", versionCode)
     outputs.dir(outDir)
@@ -215,6 +221,7 @@ val generateAuthConfig =
         |  const val SCOPES: String = "$scopes"
         |  const val FHIR_BASE_URL: String = "$fhirBaseUrl"
         |  const val TRUST_LIST_URL: String = "$trustListUrl"
+        |  const val VHL_BASE_URL: String = "$vhlBaseUrl"
         |}
         |
         """

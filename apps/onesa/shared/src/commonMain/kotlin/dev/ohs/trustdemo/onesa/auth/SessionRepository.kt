@@ -15,6 +15,7 @@
  */
 package dev.ohs.trustdemo.onesa.auth
 
+import dev.ohs.trustdemo.onesa.data.sharing.SecureLinkStore
 import eu.anifantakis.lib.ksafe.KSafe
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -65,6 +66,7 @@ internal object SessionRepository : SessionStore {
 
   override suspend fun clear() {
     ksafe.put(KEY_SESSION, EMPTY_SESSION)
+    SecureLinkStore.clear()
     _session.value = null
   }
 

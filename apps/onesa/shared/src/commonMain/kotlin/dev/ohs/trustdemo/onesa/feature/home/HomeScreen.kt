@@ -82,6 +82,7 @@ import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileScreen
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileScreen
 import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxScreen
 import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListScreen
+import dev.ohs.trustdemo.onesa.feature.wallet.WalletScreen
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.home_cancel_sync
 import dev.ohs.trustdemo.onesa.generated.resources.home_last_synced
@@ -109,6 +110,7 @@ fun HomeScreen(
   onSignOut: () -> Unit,
   destinations: List<HomeDestination> = HomeDestination.entries,
   onOpenReferral: (String) -> Unit = {},
+  onShareRecords: () -> Unit = {},
 ) {
   val homeViewModel: HomeViewModel = koinViewModel()
   val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
@@ -299,6 +301,7 @@ fun HomeScreen(
           }
         HomeDestination.Referrals -> ReferralInboxScreen(onOpen = onOpenReferral)
         HomeDestination.TrustLists -> TrustListScreen()
+        HomeDestination.Wallet -> WalletScreen(onShare = onShareRecords)
       }
     }
 

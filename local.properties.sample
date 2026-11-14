@@ -60,6 +60,9 @@ OAUTH_DESKTOP_REDIRECT_PORT=8765
 # Sync paths resolve against this URL, so it ends in a slash. The build adds one if missing.
 FHIR_BASE_URL=https://hapi.fhir.org/baseR4/
 
+# The Onesa VHL service the family wallet shares through (HTTPS, no trailing slash).
+VHL_BASE_URL=https://vhl.onesa.example.org:8443
+
 
 # --- Trust list --------------------------------------------------------------
 # The signed local trust list the app refreshes after each sync. Its proof is

@@ -42,6 +42,9 @@ import dev.ohs.trustdemo.onesa.data.schedule.DoseRecording
 import dev.ohs.trustdemo.onesa.data.schedule.SchedulePlans
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
 import dev.ohs.trustdemo.onesa.data.schedule.VisitBooking
+import dev.ohs.trustdemo.onesa.data.sharing.LinkStore
+import dev.ohs.trustdemo.onesa.data.sharing.SecureLinkStore
+import dev.ohs.trustdemo.onesa.data.sharing.ShareService
 import dev.ohs.trustdemo.onesa.data.sync.DataStoreInitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.InitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.SyncManager
@@ -64,6 +67,9 @@ import dev.ohs.trustdemo.onesa.feature.role.UserContextViewModel
 import dev.ohs.trustdemo.onesa.feature.scan.ScanCardViewModel
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
 import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListViewModel
+import dev.ohs.trustdemo.onesa.feature.wallet.IssuedLinksViewModel
+import dev.ohs.trustdemo.onesa.feature.wallet.ShareViewModel
+import dev.ohs.trustdemo.onesa.feature.wallet.WalletViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpTimeout
 import org.koin.core.module.dsl.viewModel
@@ -156,6 +162,16 @@ internal val serviceModule = module {
     )
   }
   factory { QuestionnaireService(get(), get()) }
+  single<LinkStore> { SecureLinkStore }
+  single {
+    ShareService(
+      repository = get(),
+      accessToken = { SessionRepository.session.value?.accessToken },
+      httpClient = OidcAuthApi.defaultHttpClient(),
+      baseUrl = GeneratedAuthConfig.VHL_BASE_URL,
+      links = get(),
+    )
+  }
 }
 
 /**
@@ -224,6 +240,9 @@ internal val viewModelModule = module {
   viewModel { TrustListViewModel(get()) }
   viewModel { ScanCardViewModel(get(), get()) }
   viewModel { ReferralInboxViewModel(get()) }
+  viewModel { WalletViewModel(get(), get()) }
+  viewModel { ShareViewModel(get(), get()) }
+  viewModel { (consentIds: List<String>) -> IssuedLinksViewModel(consentIds, get()) }
   viewModel { (referralId: String) -> VerifyCardsViewModel(referralId, get(), get(), get()) }
   viewModel { (referralId: String) -> ScheduleViewModel(referralId, get(), get(), get()) }
 }

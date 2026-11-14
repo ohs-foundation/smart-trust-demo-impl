@@ -41,6 +41,7 @@ ohsFhirEngine   = "2.0.0-alpha04"
 ohsFhirModelR4  = "1.0.0-rc03"
 ohsFhirWorkflow = "2.0.0-alpha01"
 ohsPlayerClient = "1.0.0-alpha03"
+qrose = "1.1.2"
 spotless = "8.10.1"
 zxing = "3.5.4"
 
@@ -90,6 +91,7 @@ kotlinx-coroutinesSwing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-s
 kotlinx-datetime  = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 ksafe = { module = "eu.anifantakis:ksafe", version.ref = "ksafe" }
+qrose = { module = "io.github.alexzhirkevich:qrose", version.ref = "qrose" }
 kscan = { module = "io.github.ismai117:KScan", version.ref = "kscan" }
 ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
