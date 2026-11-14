@@ -1,0 +1,5 @@
+config.yaml
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan

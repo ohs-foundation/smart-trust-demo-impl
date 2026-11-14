@@ -1,0 +1,14 @@
+# Copy to config.yaml (git-ignored) and fill in your own values.
+project_id: my-trust-demo
+project_name: SMART Trust demo
+# One of org_id or folder_id, or neither for a project without an organisation.
+org_id: "000000000000"
+billing_account: 000000-000000-000000
+region: europe-west3
+zone: europe-west3-a
+machine_type: e2-standard-4
+disk_gb: 100
+# The demo's names are <service>.<country>.<base_domain>, e.g. keycloak.onesa.demo.example.org
+base_domain: demo.example.org
+repository: trust-demo
+server_name: trust-demo
