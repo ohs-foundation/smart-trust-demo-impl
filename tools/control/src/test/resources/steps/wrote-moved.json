@@ -1,0 +1,16 @@
+{
+  "Somsak's patient record": [
+    {
+      "resourceType": "Patient",
+      "id": "TaifafekiSomsak",
+      "birthDate": "2025-11-16"
+    }
+  ],
+  "Somsak's record on Onesa": [
+    {
+      "resourceType": "Patient",
+      "id": "Somsak",
+      "birthDate": "2025-11-16"
+    }
+  ]
+}

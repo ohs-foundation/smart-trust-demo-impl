@@ -15,8 +15,6 @@
  */
 package dev.ohs.trustdemo.control
 
-import java.time.temporal.ChronoUnit
-
 private val KEYCLOAK_LOGINS = listOf("vilay", "chanthason", "bounmy", "trustdemo-admin")
 private const val MEDPLUM_LOGIN = "anan@kesaro.example"
 
@@ -68,7 +66,6 @@ private fun incompleteBeforeWritten(state: StoryState): List<Pair<Step, List<Ste
     if (!state.isDone(step) && later.isNotEmpty()) step to later else null
   }
 
-private fun dateShift(state: StoryState): String {
-  val shift = state.shiftDays() ?: ChronoUnit.DAYS.between(IG_BIRTH, state.dates.birthDates.max())
-  return "Dates: the IG's dates shifted by $shift days; reset on ${state.resetDay}, today ${state.today}"
-}
+private fun dateShift(state: StoryState) =
+  "Dates: the IG's dates shifted by ${state.shiftDays()} days; " +
+    "reset on ${state.resetDay}, today ${state.today}"

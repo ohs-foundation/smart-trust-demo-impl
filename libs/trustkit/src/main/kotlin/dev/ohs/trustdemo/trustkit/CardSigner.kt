@@ -22,6 +22,7 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import who.smart.trust.HcertResult
+import who.smart.trust.core.DEFAULT_LIMITS
 import who.smart.trust.core.Hcert
 import who.smart.trust.dvc.DvcMin
 import who.smart.trust.dvc.DvcMinVaccineDetails
@@ -63,6 +64,14 @@ object CardSigner {
         sign()
       }
     return ok(Hcert.issuer.finish(pending, signature)).hc1
+  }
+
+  /** The vaccination date a card carries, read without checking its signature or trust. */
+  fun vaccinationDate(hc1: String): LocalDate {
+    val card = ok(Hcert.verifier.readUnverified(hc1, Hcert.subclaims.newRegistry(), DEFAULT_LIMITS))
+    return LocalDate.parse(
+      card.entries.firstNotNullOf { it.payload as? Payload.DvcMin }.value.vx.dv
+    )
   }
 
   private fun dvc(

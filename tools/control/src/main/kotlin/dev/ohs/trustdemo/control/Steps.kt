@@ -16,10 +16,11 @@
 package dev.ohs.trustdemo.control
 
 import dev.ohs.fhir.model.r4.Resource
+import dev.ohs.trustdemo.trustkit.CardSigner
 import java.time.Clock
-import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import java.util.Base64
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -153,6 +154,9 @@ private fun JsonObject.codeIn(name: String): Set<String> =
     else -> element.codes()
   }
 
+private fun List<JsonObject>.coverBirthDoses() =
+  listOf(HEPB_PRODUCT, BCG_PRODUCT).all { product -> any { product in it.codeIn("vaccineCode") } }
+
 private fun List<JsonObject>.verified() = filter {
   it.text("status") == "completed" && it.flag("primarySource") == true
 }
@@ -189,10 +193,7 @@ val expectations: Map<Step, List<Expectation>> =
           Server.MEDPLUM,
           Query("Immunization", mapOf("patient.identifier" to HOSPITAL_NUMBER)),
           { found, _ ->
-            val products = found.fields().filter { it.text("status") == "completed" }
-            listOf(HEPB_PRODUCT, BCG_PRODUCT).all { product ->
-              products.any { product in it.codeIn("vaccineCode") }
-            }
+            found.fields().filter { it.text("status") == "completed" }.coverBirthDoses()
           },
           statusMiss("completed"),
         ),
@@ -234,7 +235,7 @@ val expectations: Map<Step, List<Expectation>> =
           Query("Immunization", somsakOnOnesa),
           { found, _ ->
             val doses = found.fields()
-            doses.reported().size >= 2 || doses.verified().size >= 2
+            doses.reported().coverBirthDoses() || doses.verified().coverBirthDoses()
           },
         ),
         Expectation(
@@ -251,7 +252,7 @@ val expectations: Map<Step, List<Expectation>> =
           "Verified doses",
           Server.HAPI,
           Query("Immunization", somsakOnOnesa),
-          { found, _ -> found.fields().verified().size >= 2 },
+          { found, _ -> found.fields().verified().coverBirthDoses() },
           { found, _ ->
             found
               .fields()
@@ -402,13 +403,8 @@ data class StoryState(
 
   fun isDone(step: Step): Boolean = metCount(step) == expectations.getValue(step).size
 
-  /** Somsak's birth date as the records hold it, from which the date shift follows. */
-  fun shiftDays(): Long? =
-    found.values
-      .flatten()
-      .filter { it.resourceType() == "Patient" }
-      .firstNotNullOfOrNull { it.fields().text("birthDate") }
-      ?.let { ChronoUnit.DAYS.between(IG_BIRTH, LocalDate.parse(it)) }
+  /** How far the reset day lies from the IG's J3. */
+  fun shiftDays(): Long = ChronoUnit.DAYS.between(IG_J3, resetDay)
 }
 
 /**
@@ -421,32 +417,43 @@ class StepEngine(
   private val clock: Clock = Clock.systemDefaultZone(),
 ) {
   /**
-   * The reset day is when the cards were uploaded, since reset signs them with J3 as that day;
-   * before they exist it is today.
+   * The reset day is the IG's J3 moved by the shift in the signed Hep B card's vaccination date,
+   * which reset signs once; before the card exists it is today.
    */
   suspend fun state(): StoryState = coroutineScope {
     val today = LocalDate.now(clock)
     val cards = async { kesaro.searchResources(anchorQuery.type, anchorQuery.params) }
     val searches =
-      expectations.values.flatten().map { expectation ->
-        async { expectation.label to search(expectation) }
-      }
-    val resetDay =
-      cards
-        .await()
-        .firstNotNullOfOrNull { it.fields()["meta"]?.jsonObject?.text("lastUpdated") }
-        ?.let { Instant.parse(it).atZone(clock.zone).toLocalDate() } ?: today
-    StoryState(today, resetDay, searches.awaitAll().toMap())
+      expectations.values
+        .flatten()
+        .groupBy { it.server to it.query }
+        .map { (where, group) ->
+          async { group.map { it.label } to search(where.first, where.second) }
+        }
+    val found = searches.awaitAll().flatMap { (labels, records) -> labels.map { it to records } }
+    StoryState(today, resetDayFrom(cards.await()) ?: today, found.toMap())
   }
 
-  private suspend fun search(expectation: Expectation): List<Resource> {
-    val (type, params) = expectation.query
-    val withPage = params + ("_count" to PAGE)
-    return when (expectation.server) {
-      Server.HAPI -> onesa.search(type, withPage)
-      Server.MEDPLUM -> kesaro.searchResources(type, withPage)
+  private suspend fun search(server: Server, query: Query): List<Resource> {
+    val params = query.params + ("_count" to PAGE)
+    return when (server) {
+      Server.HAPI -> onesa.search(query.type, params)
+      Server.MEDPLUM -> kesaro.searchResources(query.type, params)
     }
   }
+
+  private fun resetDayFrom(cards: List<Resource>): LocalDate? =
+    cards
+      .firstNotNullOfOrNull { card ->
+        runCatching {
+            val data = card.fields()["content"]!!.jsonArray[0].jsonObject["attachment"]!!
+            CardSigner.vaccinationDate(
+              String(Base64.getDecoder().decode(data.jsonObject.text("data")!!))
+            )
+          }
+          .getOrNull()
+      }
+      ?.let { IG_J3.plusDays(ChronoUnit.DAYS.between(IG_BIRTH, it)) }
 
   companion object {
     private const val PAGE = "100"

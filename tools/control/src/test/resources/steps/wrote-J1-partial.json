@@ -1,0 +1,28 @@
+{
+  "Somsak's patient record": [
+    {
+      "resourceType": "Patient",
+      "id": "TaifafekiSomsak",
+      "birthDate": "2026-10-17"
+    }
+  ],
+  "Birth doses (Hep B, BCG)": [
+    {
+      "resourceType": "Immunization",
+      "id": "J1HepB",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+            "code": "vp-hepb-peds-monovalent"
+          }
+        ]
+      },
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    }
+  ]
+}
