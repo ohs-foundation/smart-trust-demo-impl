@@ -50,7 +50,7 @@ async function openSummary() {
   fireEvent.change(await screen.findByLabelText(/paste the link text/i), { target: { value: "vhlink:/abc" } });
   fireEvent.click(screen.getByRole("button", { name: "Check link" }));
   fireEvent.change(await screen.findByLabelText("Passcode"), { target: { value: "0482" } });
-  fireEvent.click(screen.getByRole("button", { name: "Open summary" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open Records" }));
 }
 
 beforeEach(() => {
@@ -139,7 +139,7 @@ describe("theSummaryScreen", () => {
     mount();
     await openSummary();
     expect((await screen.findByRole("alert")).textContent).toBe("Wrong passcode.");
-    expect(screen.getByRole("button", { name: "Open summary" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open Records" })).toBeTruthy();
   });
 
   it("keeps the summary open and says so when the receipt cannot be written", async () => {

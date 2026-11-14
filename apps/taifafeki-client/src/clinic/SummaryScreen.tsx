@@ -1,50 +1,67 @@
+import { Syringe } from "lucide-react";
+import type { ReactNode } from "react";
+import { Action, ActionBar } from "@/components/ActionBar";
+import { Facts } from "@/components/Facts";
+import { Problem } from "@/components/Feedback";
+import { Page } from "@/components/Page";
+import { PatientBanner } from "@/components/PatientBanner";
+import { RecordCard, RecordRow } from "@/components/RecordCard";
+import { ResultPanel } from "@/components/ResultPanel";
+import { StatusChip } from "@/components/StatusChip";
 import type { SummaryView } from "./summary";
 
 export type Receipt = { state: "pending" } | { state: "recorded" } | { state: "failed"; reason: string };
 
 interface Props {
+  header: ReactNode;
   view: SummaryView;
   receipt: Receipt;
+  passcode: boolean;
   onClose: () => void;
 }
 
-export function SummaryScreen({ view, receipt, onClose }: Props) {
+export function SummaryScreen({ header, view, receipt, passcode, onClose }: Props) {
   const { patient } = view;
+  const count = view.immunizations.length;
   return (
-    <section>
-      <h2>Patient summary</h2>
-      <p>
-        {patient.name} · born {patient.birthDate} · {patient.sex}
-      </p>
-      <p>
-        Summary of {view.date} from {view.source}. Viewed here only; nothing is saved.
-      </p>
-      <h3>Immunizations</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Vaccine</th>
-            <th>Date</th>
-            <th>Dose</th>
-            <th>Given by</th>
-          </tr>
-        </thead>
-        <tbody>
-          {view.immunizations.map((dose, index) => (
-            <tr key={index}>
-              <td>{dose.vaccine}</td>
-              <td>{dose.date}</td>
-              <td>{dose.dose}</td>
-              <td>{dose.performer}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {receipt.state === "recorded" && <p role="status">Receipt recorded.</p>}
-      {receipt.state === "failed" && <p role="alert">The receipt could not be recorded: {receipt.reason}</p>}
-      <p>
-        <button onClick={onClose}>Close Summary</button>
-      </p>
-    </section>
+    <Page
+      header={header}
+      width="narrow"
+      actions={
+        <ActionBar>
+          <Action onClick={onClose}>Close Summary</Action>
+        </ActionBar>
+      }
+    >
+      <ResultPanel tone="pass" title={`${passcode ? "Passcode Verified (✓) • " : ""}Read-Only Zero-Retention Clinical Session`}>
+        Viewed here only; nothing is saved.{" "}
+        {receipt.state === "pending" && "Recording the receipt."}
+        {receipt.state === "recorded" && <span role="status">Receipt recorded.</span>}
+      </ResultPanel>
+      {receipt.state === "failed" && <Problem>The receipt could not be recorded: {receipt.reason}</Problem>}
+      <PatientBanner surface="light" name={patient.name} chips={<StatusChip tone="info">Born {patient.birthDate}</StatusChip>} subtitle={`Sex: ${patient.sex}`}>
+        <Facts
+          items={[
+            { label: "Source", value: view.source },
+            { label: "Summary of", value: view.date.replace("T", " ").slice(0, 16), mono: true },
+          ]}
+        />
+      </PatientBanner>
+      <RecordCard
+        title="International Patient Summary (IPS) — Immunization History"
+        icon={Syringe}
+        summary={<StatusChip tone="success">{count} {count === 1 ? "Immunization" : "Immunizations"}</StatusChip>}
+      >
+        {view.immunizations.map((dose, index) => (
+          <RecordRow
+            key={index}
+            icon={Syringe}
+            label={dose.vaccine}
+            detail={[dose.date.slice(0, 10), dose.performer].filter(Boolean).join(" • ")}
+            status={dose.dose && <StatusChip tone="info">Dose {dose.dose}</StatusChip>}
+          />
+        ))}
+      </RecordCard>
+    </Page>
   );
 }

@@ -42,6 +42,6 @@ export function Scanner({ onText }: { onText: (text: string) => void }) {
     };
   }, [onText]);
 
-  if (failure) return <p role="alert">{failure}</p>;
-  return <video ref={video} muted playsInline style={{ maxWidth: "100%", width: 320 }} />;
+  if (failure) return <p role="alert" className="grid size-full place-items-center text-center text-2xs text-bad-line">{failure}</p>;
+  return <video ref={video} muted playsInline className="size-full rounded-md object-cover" />;
 }
