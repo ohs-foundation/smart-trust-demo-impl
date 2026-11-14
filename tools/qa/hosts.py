@@ -29,6 +29,7 @@ ALLOWED = {
     "purl.org": "Dublin Core term URLs in the DID proof options, identifiers",
     "schemas.android.com": "Android manifest XML namespaces",
     "www.apache.org": "licence URL in file headers",
+    "scripts.sil.org": "SIL Open Font License URL in the bundled fonts' licence texts",
     "tng-cdn-dev.who.int": "WHO's public GDHCN DEV trust-list URL, named by the testkit's provenance and the did:web signer ids",
     "tng-cdn-uat.who.int": "WHO's public GDHCN UAT trust-list URL, a constant in libs/hcert",
     "tng-cdn.who.int": "WHO's public GDHCN production trust-list URL, a constant in libs/hcert",

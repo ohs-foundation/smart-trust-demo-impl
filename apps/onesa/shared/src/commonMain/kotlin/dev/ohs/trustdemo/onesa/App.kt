@@ -58,6 +58,7 @@ import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
 import dev.ohs.trustdemo.onesa.feature.wallet.IssuedLinksScreen
 import dev.ohs.trustdemo.onesa.feature.wallet.ShareScreen
 import dev.ohs.trustdemo.onesa.feature.wallet.SharedLinksScreen
+import dev.ohs.trustdemo.onesa.ui.theme.OnesaTheme
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import org.koin.compose.koinInject
@@ -68,7 +69,7 @@ fun App() {
   val registry = remember { buildAppViewRegistry() }
 
   CompositionLocalProvider(LocalViewRegistry provides registry) {
-    OhsPlayerTheme {
+    OnesaTheme {
       val authViewModel: AuthViewModel = koinViewModel()
       val launcher = rememberAuthorizationLauncher()
       val authState by authViewModel.state.collectAsStateWithLifecycle()
