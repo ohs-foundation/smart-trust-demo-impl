@@ -121,6 +121,40 @@ android {
   }
 }
 
+/**
+ * Writes the demo stack's CA, from `stack/tls/ca.crt`, to `raw/demo_ca` in a generated resource
+ * directory of the debug variant. Without the CA it writes an empty file and warns: the build
+ * succeeds and the CA is not trusted until the app is built again after `make stack-up`.
+ */
+abstract class GenerateDemoCa : DefaultTask() {
+  @get:Input @get:Optional abstract val ca: Property<String>
+
+  @get:OutputDirectory abstract val outputDir: DirectoryProperty
+
+  @TaskAction
+  fun write() {
+    val raw = outputDir.get().asFile.resolve("raw").apply { mkdirs() }
+    val text = ca.orNull
+    if (text == null) {
+      logger.warn("stack/tls/ca.crt is missing: the debug build does not trust the demo CA.")
+    }
+    raw.resolve("demo_ca.pem").writeText(text.orEmpty())
+  }
+}
+
+val demoCa =
+  providers.fileContents(rootProject.layout.projectDirectory.file("stack/tls/ca.crt")).asText
+
+androidComponents.onVariants(androidComponents.selector().withBuildType("debug")) { variant ->
+  val generate =
+    tasks.register<GenerateDemoCa>(
+      "generate${variant.name.replaceFirstChar(Char::uppercase)}DemoCa"
+    ) {
+      ca.set(demoCa)
+    }
+  variant.sources.res?.addGeneratedSourceDirectory(generate, GenerateDemoCa::outputDir)
+}
+
 dependencies {
   implementation(projects.apps.onesa.shared)
   implementation(libs.compose.uiToolingPreview)

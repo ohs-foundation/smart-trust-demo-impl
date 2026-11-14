@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds also trust the demo stack's TEST ONLY CA, generated into @raw/demo_ca from
+     stack/tls/ca.crt at build time, so the VHL service on its sslip.io name is reachable over
+     HTTPS. The release build keeps the system CAs only. -->
+<network-security-config>
+  <domain-config cleartextTrafficPermitted="true">
+    <domain includeSubdomains="true">sslip.io</domain>
+    <trust-anchors>
+      <certificates src="system" />
+      <certificates src="@raw/demo_ca" />
+    </trust-anchors>
+  </domain-config>
+</network-security-config>
