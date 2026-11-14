@@ -89,7 +89,7 @@ services:
       context: ../apps/taifafeki-client
       additional_contexts:
         hcert: ../build/hcert-js
-    image: trust-demo-taifafeki-client:local
+    image: ${REGISTRY:-trust-demo}/taifafeki-client:${IMAGE_TAG:-local}
     container_name: taifafeki-client
     restart: unless-stopped
     environment:

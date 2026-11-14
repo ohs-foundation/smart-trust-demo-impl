@@ -18,4 +18,11 @@ The VHL service runs from `../services/vhl/Dockerfile`, which packages `services
 
 Taifafeki (Medplum and the facility client) is the add-on `docker-compose.taifafeki.yaml`, started with `./dev.sh up --taifafeki`; it needs `make hcert-js` first and `trust-demo reset` to write its secret files, and it shares nothing with Onesa but public names.
 
+Set `REGISTRY` and `IMAGE_TAG` in `.env` to ship the demo's own images (`fhir-gateway`, `vhl`, `taifafeki-client`, `web-portal`) through a registry (the Portal image bakes in `WEB_HOST` and `KEYCLOAK_HOST`, so push with the server's names); the public images always come from their own.
+
+| Where | Command | Does |
+|---|---|---|
+| Laptop | `./dev.sh push [tag]` | runs `installDist` and `hcert-js`, builds the four images, pushes the git SHA (or tag) and `latest` |
+| Server | `./dev.sh up` | pulls instead of building when `REGISTRY` is set and the repo has no `gradlew`; `up --pull` forces it |
+
 Derived from `ohs-foundation/ohs-player-reference-infrastructure@5c87af6`.

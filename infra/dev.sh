@@ -9,7 +9,9 @@ set -euo pipefail
 #   render    Render the host nginx vhosts from .env
 #   nginx     Install host vhosts and take TLS certificates
 #   up        Render configs and start services (--pipes adds the analytics pipeline and Superset,
-#             --taifafeki adds Medplum and the facility client)
+#             --taifafeki adds Medplum and the facility client; --pull fetches the images from REGISTRY
+#             instead of building, as does a checkout without sources)
+#   push      Build the demo's images and push them to REGISTRY (laptop)
 #   down      Stop all running services
 #   reset     Stop services and wipe named volumes
 #   logs      Tail logs (all services or one)
@@ -243,12 +245,14 @@ compose_profiles() {
 
 parse_profiles() {
     PROFILE_ARGS=()
+    PULL_IMAGES=0
     COMPOSE_FILES=(-f docker-compose.yaml)
     for arg in "$@"; do
         case "$arg" in
             --pipes)     PROFILE_ARGS+=(--profile pipes) ;;
             --taifafeki) COMPOSE_FILES=(-f docker-compose.yaml -f docker-compose.taifafeki.yaml) ;;
-            *)           error "Unknown flag: $arg (expected --pipes or --taifafeki)" ;;
+            --pull)      PULL_IMAGES=1 ;;
+            *)           error "Unknown flag: $arg (expected --pipes, --taifafeki or --pull)" ;;
         esac
     done
 }
@@ -269,12 +273,37 @@ cmd_up() {
     mkdir -p "$secrets"
     touch "$secrets/medplum-client-id" "$secrets/clinic-viewer.key" "$secrets/clinic-viewer.crt"
     chmod 600 "$secrets/clinic-viewer.key"
+    if [[ -n "${REGISTRY:-}" && ( "$PULL_IMAGES" == 1 || ! -f "$SCRIPT_DIR/../gradlew" ) ]]; then
+        info "Pulling images from $REGISTRY..."
+        compose_profiles pull
+        compose_profiles up -d --no-build
+        return
+    fi
     # --ignore-buildable: the gateway is built from source and exists in no registry, so a plain
     # `pull` fails and set -e would abort before anything starts.
     info "Checking for image updates..."
     compose_profiles pull --ignore-buildable
     info "Building images and starting services. The first build takes several minutes..."
     compose_profiles up -d --build
+}
+
+# Builds the demo's own images on this machine and pushes them under the git SHA (or the given tag)
+# and latest. Log in first: gcloud auth configure-docker <region>-docker.pkg.dev.
+cmd_push() {
+    check_prerequisites
+    load_env
+    [[ -n "${REGISTRY:-}" ]] || error "Set REGISTRY in .env to the registry output of infra/gcp."
+    local tag="${1:-$(git -C "$SCRIPT_DIR" rev-parse --short HEAD)}" name
+    local -a names=(fhir-gateway vhl taifafeki-client web-portal)
+    (cd "$SCRIPT_DIR/.." && ./gradlew :services:vhl:installDist && make hcert-js)
+    COMPOSE_FILES=(-f docker-compose.yaml -f docker-compose.taifafeki.yaml)
+    IMAGE_TAG="$tag" compose build "${names[@]}"
+    for name in "${names[@]}"; do
+        docker tag "$REGISTRY/$name:$tag" "$REGISTRY/$name:latest"
+        docker push "$REGISTRY/$name:$tag"
+        docker push "$REGISTRY/$name:latest"
+    done
+    info "Pushed ${names[*]} as $tag and latest."
 }
 
 cmd_down() {
@@ -437,9 +466,12 @@ Commands:
   nginx                       Install the host nginx vhosts and take a TLS
                               certificate per subdomain. Needs sudo, nginx
                               and certbot.
-  up [--pipes] [--taifafeki]  Render configs and start services
+  up [--pipes] [--taifafeki] [--pull]  Render configs and start services
                               --pipes      adds the analytics pipeline + Superset
                               --taifafeki  adds Medplum and the facility client
+                              --pull       pulls from REGISTRY instead of building
+  push [tag]                  Build the demo's images and push them to REGISTRY
+                              as the git SHA (or tag) and latest
   down                        Stop all running services
   reset                       Stop services and wipe named volumes
   logs [service]              Tail logs (all services or one)
@@ -463,6 +495,7 @@ main() {
         render)   cmd_render ;;
         nginx)    cmd_nginx ;;
         up)       cmd_up "$@" ;;
+        push)     cmd_push "$@" ;;
         down)     cmd_down ;;
         reset)    cmd_reset ;;
         logs)     cmd_logs "$@" ;;

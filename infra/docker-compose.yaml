@@ -111,7 +111,7 @@ services:
       additional_contexts:
         gateway: https://github.com/ohs-foundation/fhir-gateway.git#b650129c451840bdf3a382ff11f9deee3fffe532
         plugin: ${GATEWAY_PLUGIN_DIR:?set GATEWAY_PLUGIN_DIR in .env to the backend fork checkout}
-    image: trust-demo-fhir-gateway:local
+    image: ${REGISTRY:-trust-demo}/fhir-gateway:${IMAGE_TAG:-local}
     container_name: ohs-fhir-gateway
     restart: unless-stopped
     environment:
@@ -152,7 +152,7 @@ services:
     build:
       context: ..
       dockerfile: services/vhl/Dockerfile
-    image: trust-demo-vhl:local
+    image: ${REGISTRY:-trust-demo}/vhl:${IMAGE_TAG:-local}
     container_name: trust-demo-vhl
     restart: unless-stopped
     environment:
@@ -212,7 +212,7 @@ services:
         VITE_OIDC_ISSUER: https://${KEYCLOAK_HOST}/realms/${KEYCLOAK_REALM:-onesa}
         VITE_CLIENT_ID: ${WEB_CLIENT_ID:-onesa-web-portal}
         VITE_FHIR_VERSION: ${VITE_FHIR_VERSION:-R4}
-    image: trust-demo-web-portal:local
+    image: ${REGISTRY:-trust-demo}/web-portal:${IMAGE_TAG:-local}
     container_name: web-portal
     restart: unless-stopped
     ports:

@@ -17,4 +17,9 @@ config.yaml ──tofu apply──▶ project ─┬─ Artifact Registry (the d
 
 The VM's service account can only pull from the demo's registry. The project keeps the provider's default `deletion_policy = "PREVENT"`, so `tofu destroy` removes the resources but refuses to delete the project. State stays local in this directory, git-ignored.
 
+| Where | Command |
+|---|---|
+| Laptop | `gcloud auth configure-docker <region>-docker.pkg.dev`, `REGISTRY=<registry output>` in `.env`, then `./dev.sh push` |
+| Server | the same `REGISTRY` and `IMAGE_TAG=<pushed tag or latest>` in `.env`, then `./dev.sh up` pulls instead of building |
+
 The server then runs `../dev.sh` as `../README.md` describes.
