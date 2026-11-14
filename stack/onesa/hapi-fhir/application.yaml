@@ -33,7 +33,7 @@ hapi:
     elasticsearch:
       enabled: false
     use_apache_address_strategy: true
-    use_apache_address_strategy_https: true
+    use_apache_address_strategy_https: false
     subscription:
       resthook_enabled: true
     fhir_version: R4
