@@ -37,6 +37,10 @@ patients=$(status -H "Authorization: Bearer $token" "http://gateway.onesa.${base
 check "gateway serves vilay's Patient search" 200 "$patients"
 [ "$patients" = 403 ] && echo "      vilay has no Practitioner yet: run 'trust-demo reset' before this check"
 
+check "VHL service health over TLS" 200 \
+  "$(status --cacert "$here/tls/ca.crt" "https://vhl.onesa.${STACK_HOST}:${VHL_TLS_PORT}/vhl/health")"
+check "VHL has no plain-HTTP route" 404 "$(status "http://vhl.onesa.${base}/vhl/health")"
+
 check "Medplum health" 200 "$(status "http://medplum.kesaro.${base}/healthcheck")"
 check "Medplum issues the super-admin client a token" yes \
   "$(curl -s --max-time 10 -d grant_type=client_credentials -d "client_id=${MEDPLUM_SUPER_ADMIN_CLIENT_ID}" \

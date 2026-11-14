@@ -117,5 +117,37 @@ services:
       retries: 10
       start_period: 20s
 
+  vhl:
+    build:
+      context: ../..
+      dockerfile: services/vhl/Dockerfile
+    image: trust-demo-vhl:local
+    restart: unless-stopped
+    environment:
+      HAPI_URL: http://hapi:8080/fhir
+      GATEWAY_URL: http://gateway:8080/fhir
+      JWKS_URL: http://keycloak:8080/realms/ohs-player/protocol/openid-connect/certs
+      TOKEN_ISSUER: http://keycloak.onesa.${STACK_HOST}:${PROXY_PORT}/realms/ohs-player
+      STACK_HOST: ${STACK_HOST}
+      VHL_TLS_PORT: ${VHL_TLS_PORT}
+      LINK_KEY_FILE: /run/keys/XXK_LINK.key.pem
+      LINK_CERT_FILE: /run/keys/XXK_LINK.crt.pem
+      JAVA_OPTS: -Xmx200m
+    volumes:
+      - ../../testkit/XXK_LINK.key.pem:/run/keys/XXK_LINK.key.pem:ro
+      - ../../testkit/XXK_LINK.crt.pem:/run/keys/XXK_LINK.crt.pem:ro
+    mem_limit: 384m
+    depends_on:
+      hapi:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
 volumes:
   onesa_postgres:

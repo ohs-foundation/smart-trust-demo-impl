@@ -61,4 +61,6 @@ include(":apps:onesa:desktop")
 
 include(":libs:trustkit")
 
+include(":services:vhl")
+
 include(":tools:control")

@@ -47,6 +47,9 @@ The gateway builds the sibling clone `ohs-player-reference-backend-fork` on bran
 An existing `stack/.env` from before needs `PLUGIN_SRC` updated by hand, or run `make stack-reset`.
 Upstream lacks the household checker and the Subscription policy: family users are denied everything and Subscriptions are unrestricted for the admin. Point `PLUGIN_SRC` at upstream only to compare behaviour.
 
+The VHL endpoint is HTTPS on 8443 (`vhl.onesa.<lan-ip>.sslip.io`) with a local TEST ONLY CA in `stack/tls/`, created by `make stack-up`.
+Clients that fetch manifests (the facility client's server, Phase 6) trust `stack/tls/ca.crt`.
+
 Medplum's super-admin settings in `stack/.env` apply only when its database is first created, so a stack created before them needs `make stack-reset` once.
 
 | Service | Address |

@@ -1,0 +1,82 @@
+/*
+ * Copyright 2026 Open Health Stack Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.ohs.trustdemo.vhl
+
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
+import io.ktor.http.isSuccess
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+
+private val fhirContentType = ContentType.parse("application/fhir+json")
+
+/** A FHIR server the service calls; a caller's bearer token is passed through when given. */
+class FhirBackend(private val baseUrl: String, engine: HttpClientEngine) {
+  private val client = HttpClient(engine)
+
+  suspend fun read(
+    path: String,
+    params: Map<String, String> = emptyMap(),
+    bearer: String? = null,
+  ): JsonObject {
+    val response =
+      client.get("$baseUrl/$path") {
+        header(HttpHeaders.Accept, fhirContentType.toString())
+        bearer?.let { header(HttpHeaders.Authorization, "Bearer $it") }
+        params.forEach { (name, value) -> parameter(name, value) }
+      }
+    return decode(response.status, response.bodyAsText(), "GET $path")
+  }
+
+  suspend fun search(
+    type: String,
+    params: Map<String, String>,
+    bearer: String? = null,
+  ): List<JsonObject> =
+    read(type, params, bearer)["entry"]
+      ?.jsonArray
+      ?.mapNotNull { it.jsonObject["resource"]?.jsonObject }
+      .orEmpty()
+
+  suspend fun transaction(bundle: JsonObject) {
+    val response =
+      client.post(baseUrl) {
+        header(HttpHeaders.Accept, fhirContentType.toString())
+        setBody(TextContent(bundle.toString(), fhirContentType))
+      }
+    decode(response.status, response.bodyAsText(), "POST transaction")
+  }
+
+  private fun decode(status: HttpStatusCode, text: String, what: String): JsonObject {
+    if (!status.isSuccess()) throw BackendRefused(status, "$what answered ${status.value}")
+    return Json.parseToJsonElement(text).jsonObject
+  }
+}
+
+/** A backend answered with a failure; [status] is what it said. */
+class BackendRefused(val status: HttpStatusCode, message: String) : Exception(message)

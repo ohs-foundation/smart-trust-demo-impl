@@ -11,6 +11,8 @@ ig-check:
 
 stack-up:
 	./stack/init-env.sh
+	./stack/init-tls.sh
+	./gradlew :services:vhl:installDist
 	docker compose -f stack/compose.yaml up -d --build --wait
 
 stack-down:

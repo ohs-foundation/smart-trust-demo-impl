@@ -61,3 +61,4 @@ ig-codegen/bin/
 build-logic/bin/
 stack/.env
 stack/taifafeki/secrets/
+stack/tls/
