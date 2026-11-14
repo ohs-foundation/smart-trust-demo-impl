@@ -398,8 +398,8 @@ function DoseCards({ rows, products, birth, onChange }: { rows: DoseDraft[]; pro
         >
           <div className="grid gap-2.5 sm:grid-cols-2">
             <Field id={`${id}-${index}-product`} label="Product">
-              <NativeSelect id={`${id}-${index}-product`} value={row.productCode} onChange={(e) => edit(index, { productCode: e.target.value })} className={cn(CONTROL, "font-mono text-ui md:text-ui")}>
-                {products.map((it) => <NativeSelectOption key={it.code} value={it.code}>{it.code}</NativeSelectOption>)}
+              <NativeSelect id={`${id}-${index}-product`} value={row.productCode} onChange={(e) => edit(index, { productCode: e.target.value })} className={CONTROL}>
+                {products.map((it) => <NativeSelectOption key={it.code} value={it.code}>{it.display}</NativeSelectOption>)}
               </NativeSelect>
             </Field>
             <Field id={`${id}-${index}-lot`} label="Lot">

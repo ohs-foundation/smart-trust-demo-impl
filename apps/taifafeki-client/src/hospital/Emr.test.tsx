@@ -61,6 +61,16 @@ describe("anEmrRecordLandsInTheHospitalOnly", () => {
   });
 });
 
+describe("theDosePickerNamesTheProducts", () => {
+  it("shows display names and keeps codes as values", async () => {
+    mount("hospital-org");
+    const [picker] = (await screen.findAllByLabelText("Product")) as HTMLSelectElement[];
+    const options = Array.from(picker?.options ?? []);
+    expect(options.map((it) => it.textContent)).toEqual(["Hep B", "BCG"]);
+    expect(options.map((it) => it.value)).toEqual(["vp-hepb-peds-monovalent", "vp-bcg-freeze-dried"]);
+  });
+});
+
 describe("aUrlNamingAnotherOrganisationWritesNothing", () => {
   it.each([["the clinic", "clinic-org"], ["nobody", ""], ["an unknown organisation", "elsewhere"]])("shows the workplace picker for a URL naming %s", async (_, organization) => {
     const found = mount(organization);
