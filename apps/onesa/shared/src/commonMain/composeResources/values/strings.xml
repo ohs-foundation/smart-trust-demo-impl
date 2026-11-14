@@ -29,6 +29,12 @@
     <string name="home_sync_cancelled">Sync cancelled.</string>
     <string name="home_select_household">Select a household to view details</string>
 
+    <!-- Role screen -->
+    <string name="role_none_title">No role assigned</string>
+    <string name="role_none_body">Your account has no community health worker, clinician or family role. Ask your administrator to assign one, then sign in again.</string>
+    <string name="role_failed_title">Couldn't load your role</string>
+    <string name="role_retry">Retry</string>
+
     <!-- Initial sync screen -->
     <string name="initial_sync_title">Setting up your data…</string>
     <string name="initial_sync_subtitle">This may take a moment the first time.</string>

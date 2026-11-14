@@ -49,6 +49,8 @@ data class UserInfo(
   @SerialName("preferred_username") val username: String = "",
   @SerialName("name") val fullName: String = "",
   @SerialName("email") val email: String = "",
+  /** Reference to the FHIR resource this user is, e.g. `Patient/p1`; absent for plain accounts. */
+  @SerialName("fhirUser") val fhirUser: String? = null,
 )
 
 /**
@@ -63,6 +65,7 @@ data class Session(
   val expiresInSeconds: Long,
   val obtainedAtEpochSeconds: Long,
   val user: UserInfo,
+  val context: UserContext? = null,
 ) {
   /** True when the access token has expired (with a small safety skew). */
   fun isAccessTokenExpired(nowEpochSeconds: Long, skewSeconds: Long = 30): Boolean =

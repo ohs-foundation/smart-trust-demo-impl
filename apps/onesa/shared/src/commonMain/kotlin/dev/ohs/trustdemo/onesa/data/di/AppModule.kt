@@ -20,6 +20,7 @@ import dev.ohs.trustdemo.onesa.auth.AuthService
 import dev.ohs.trustdemo.onesa.auth.AuthViewModel
 import dev.ohs.trustdemo.onesa.auth.OAuthConfig
 import dev.ohs.trustdemo.onesa.auth.OidcAuthApi
+import dev.ohs.trustdemo.onesa.auth.PractitionerDetailsApi
 import dev.ohs.trustdemo.onesa.auth.SessionRepository
 import dev.ohs.trustdemo.onesa.auth.SessionStore
 import dev.ohs.trustdemo.onesa.data.repository.FhirEngineRepository
@@ -37,6 +38,7 @@ import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileViewModel
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireHostViewModel
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireLaunchContext
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireService
+import dev.ohs.trustdemo.onesa.feature.role.UserContextViewModel
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -80,6 +82,7 @@ internal val authModule = module {
   single<SessionStore> { SessionRepository }
   single { OidcAuthApi(get()) }
   single { AuthService(get(), get(), get()) }
+  single { PractitionerDetailsApi() }
 }
 
 internal val viewModelModule = module {
@@ -92,5 +95,12 @@ internal val viewModelModule = module {
   }
   viewModel { HomeViewModel(get(), get()) }
   viewModel { AuthViewModel(get(), get()) }
+  viewModel {
+    UserContextViewModel(
+      get<PractitionerDetailsApi>()::fetch,
+      get(),
+      resetSync = get<InitialSyncStore>()::reset,
+    )
+  }
   viewModel { InitialSyncViewModel(get(), get()) }
 }

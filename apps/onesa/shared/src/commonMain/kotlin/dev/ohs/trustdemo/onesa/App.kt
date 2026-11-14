@@ -42,6 +42,9 @@ import dev.ohs.trustdemo.onesa.feature.login.LoginScreen
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileScreen
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireHostScreen
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireIds
+import dev.ohs.trustdemo.onesa.feature.role.NoRoleScreen
+import dev.ohs.trustdemo.onesa.feature.role.UserContextState
+import dev.ohs.trustdemo.onesa.feature.role.UserContextViewModel
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncGateState
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncScreen
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
@@ -79,128 +82,149 @@ fun App() {
           val session = (authState as AuthState.Authenticated).session
           val userName =
             session.user.fullName.ifBlank { session.user.username }.ifBlank { session.user.email }
-          val initialSyncViewModel: InitialSyncViewModel = koinViewModel()
-          val gateState by initialSyncViewModel.state.collectAsStateWithLifecycle()
-          LaunchedEffect(Unit) { initialSyncViewModel.start() }
+          val contextViewModel: UserContextViewModel = koinViewModel(key = session.user.subject)
+          val contextState by contextViewModel.state.collectAsStateWithLifecycle()
+          LaunchedEffect(session.accessToken) { contextViewModel.resolve() }
 
-          when (gateState) {
-            InitialSyncGateState.Checking,
-            InitialSyncGateState.Syncing,
-            is InitialSyncGateState.Failed ->
-              InitialSyncScreen(
-                state = gateState,
-                onRetry = { initialSyncViewModel.retry() },
-                onContinueAnyway = { initialSyncViewModel.continueAnyway() },
-              )
-            InitialSyncGateState.Passed -> {
-              val navController = rememberNavController()
-              NavHost(navController = navController, startDestination = "home") {
-
-                // Screen 1: Home (adaptive navigation drawer shell around the household list)
-                composable("home") {
-                  HomeScreen(
-                    userName = userName,
-                    onGroupClick = { id -> navController.navigate("groupProfile/$id") },
-                    onDataCaptureClick = {
-                      navController.navigate(
-                        questionnaireHostRoute(
-                          questionnaireId = QuestionnaireIds.HOUSEHOLD_REGISTRATION
-                        )
-                      )
-                    },
-                    onAddMembers = { groupId ->
-                      navController.navigate(
-                        questionnaireHostRoute(
-                          questionnaireId = QuestionnaireIds.HOUSEHOLD_MEMBERS,
-                          groupId = groupId,
-                        )
-                      )
-                    },
-                    onAddClinicalData = { patientId ->
-                      navController.navigate(
-                        questionnaireHostRoute(
-                          questionnaireId = QuestionnaireIds.PATIENT_CLINICAL_DATA,
-                          patientId = patientId,
-                        )
-                      )
-                    },
-                    onSignOut = { authViewModel.logout() },
-                  )
-                }
-
-                composable(
-                  route =
-                    "questionnaireHost/{questionnaireId}?patientId={patientId}&groupId={groupId}",
-                  arguments =
-                    listOf(
-                      navArgument("questionnaireId") { type = NavType.StringType },
-                      navArgument("patientId") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                      },
-                      navArgument("groupId") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                      },
-                    ),
-                ) { back ->
-                  val questionnaireId =
-                    back.arguments?.read { getStringOrNull("questionnaireId") }.orEmpty()
-                  val patientId = back.arguments?.read { getStringOrNull("patientId") }
-                  val groupId = back.arguments?.read { getStringOrNull("groupId") }
-                  QuestionnaireHostScreen(
-                    questionnaireId = questionnaireId,
-                    patientId = patientId,
-                    groupId = groupId,
-                    onBack = { navController.popBackStack() },
-                  )
-                }
-
-                // Screen 2: Household profile (head + members)
-                composable(
-                  route = "groupProfile/{groupId}",
-                  arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
-                ) { back ->
-                  val groupId = back.arguments?.read { getStringOrNull("groupId") }.orEmpty()
-                  GroupProfileScreen(
-                    groupId = groupId,
-                    onBack = { navController.popBackStack() },
-                    onMemberClick = { id -> navController.navigate("patientProfile/$id") },
-                    onAddMembers = {
-                      navController.navigate(
-                        questionnaireHostRoute(
-                          questionnaireId = QuestionnaireIds.HOUSEHOLD_MEMBERS,
-                          groupId = groupId,
-                        )
-                      )
-                    },
-                  )
-                }
-
-                // Screen 3: Patient IPS summary
-                composable(
-                  route = "patientProfile/{patientId}",
-                  arguments = listOf(navArgument("patientId") { type = NavType.StringType }),
-                ) { back ->
-                  val patientId = back.arguments?.read { getStringOrNull("patientId") }.orEmpty()
-                  PatientProfileScreen(
-                    patientId = patientId,
-                    onBack = { navController.popBackStack() },
-                    onAddClinicalData = {
-                      navController.navigate(
-                        questionnaireHostRoute(
-                          questionnaireId = QuestionnaireIds.PATIENT_CLINICAL_DATA,
-                          patientId = patientId,
-                        )
-                      )
-                    },
-                  )
-                }
+          when (val state = contextState) {
+            UserContextState.Loading ->
+              Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
               }
-            }
+            UserContextState.NoRole ->
+              NoRoleScreen(message = null, onRetry = null, onSignOut = { authViewModel.logout() })
+            is UserContextState.Failed ->
+              NoRoleScreen(
+                message = state.message,
+                onRetry = { contextViewModel.resolve() },
+                onSignOut = { authViewModel.logout() },
+              )
+            is UserContextState.Ready ->
+              SignedInApp(userName = userName, onSignOut = { authViewModel.logout() })
           }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun SignedInApp(userName: String, onSignOut: () -> Unit) {
+  val initialSyncViewModel: InitialSyncViewModel = koinViewModel()
+  val gateState by initialSyncViewModel.state.collectAsStateWithLifecycle()
+  LaunchedEffect(Unit) { initialSyncViewModel.start() }
+
+  when (gateState) {
+    InitialSyncGateState.Checking,
+    InitialSyncGateState.Syncing,
+    is InitialSyncGateState.Failed ->
+      InitialSyncScreen(
+        state = gateState,
+        onRetry = { initialSyncViewModel.retry() },
+        onContinueAnyway = { initialSyncViewModel.continueAnyway() },
+      )
+    InitialSyncGateState.Passed -> {
+      val navController = rememberNavController()
+      NavHost(navController = navController, startDestination = "home") {
+
+        // Screen 1: Home (adaptive navigation drawer shell around the household list)
+        composable("home") {
+          HomeScreen(
+            userName = userName,
+            onGroupClick = { id -> navController.navigate("groupProfile/$id") },
+            onDataCaptureClick = {
+              navController.navigate(
+                questionnaireHostRoute(questionnaireId = QuestionnaireIds.HOUSEHOLD_REGISTRATION)
+              )
+            },
+            onAddMembers = { groupId ->
+              navController.navigate(
+                questionnaireHostRoute(
+                  questionnaireId = QuestionnaireIds.HOUSEHOLD_MEMBERS,
+                  groupId = groupId,
+                )
+              )
+            },
+            onAddClinicalData = { patientId ->
+              navController.navigate(
+                questionnaireHostRoute(
+                  questionnaireId = QuestionnaireIds.PATIENT_CLINICAL_DATA,
+                  patientId = patientId,
+                )
+              )
+            },
+            onSignOut = onSignOut,
+          )
+        }
+
+        composable(
+          route = "questionnaireHost/{questionnaireId}?patientId={patientId}&groupId={groupId}",
+          arguments =
+            listOf(
+              navArgument("questionnaireId") { type = NavType.StringType },
+              navArgument("patientId") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+              },
+              navArgument("groupId") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+              },
+            ),
+        ) { back ->
+          val questionnaireId =
+            back.arguments?.read { getStringOrNull("questionnaireId") }.orEmpty()
+          val patientId = back.arguments?.read { getStringOrNull("patientId") }
+          val groupId = back.arguments?.read { getStringOrNull("groupId") }
+          QuestionnaireHostScreen(
+            questionnaireId = questionnaireId,
+            patientId = patientId,
+            groupId = groupId,
+            onBack = { navController.popBackStack() },
+          )
+        }
+
+        // Screen 2: Household profile (head + members)
+        composable(
+          route = "groupProfile/{groupId}",
+          arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
+        ) { back ->
+          val groupId = back.arguments?.read { getStringOrNull("groupId") }.orEmpty()
+          GroupProfileScreen(
+            groupId = groupId,
+            onBack = { navController.popBackStack() },
+            onMemberClick = { id -> navController.navigate("patientProfile/$id") },
+            onAddMembers = {
+              navController.navigate(
+                questionnaireHostRoute(
+                  questionnaireId = QuestionnaireIds.HOUSEHOLD_MEMBERS,
+                  groupId = groupId,
+                )
+              )
+            },
+          )
+        }
+
+        // Screen 3: Patient IPS summary
+        composable(
+          route = "patientProfile/{patientId}",
+          arguments = listOf(navArgument("patientId") { type = NavType.StringType }),
+        ) { back ->
+          val patientId = back.arguments?.read { getStringOrNull("patientId") }.orEmpty()
+          PatientProfileScreen(
+            patientId = patientId,
+            onBack = { navController.popBackStack() },
+            onAddClinicalData = {
+              navController.navigate(
+                questionnaireHostRoute(
+                  questionnaireId = QuestionnaireIds.PATIENT_CLINICAL_DATA,
+                  patientId = patientId,
+                )
+              )
+            },
+          )
         }
       }
     }
