@@ -1,6 +1,13 @@
 import { useMedplum } from "@medplum/react-hooks";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
+import { Action, ActionBar } from "@/components/ActionBar";
+import { ClientHeader } from "@/components/AppHeader";
+import { CONTROL, Field } from "@/components/Field";
+import { Loading, Problem } from "@/components/Feedback";
+import { Page } from "@/components/Page";
+import { Panel } from "@/components/Panel";
+import { Input } from "@/components/ui/input";
 import { login } from "../auth/oauth";
 import { checkSignIn, exchange } from "../server/settings";
 
@@ -14,6 +21,7 @@ type Ready = { challenge: string; clientId: string; medplumBaseUrl: string };
 function SignIn() {
   const search = Route.useSearch();
   const medplum = useMedplum();
+  const id = useId();
   const [ready, setReady] = useState<Ready>();
   const [failure, setFailure] = useState<string>();
 
@@ -46,30 +54,41 @@ function SignIn() {
 
   if (!ready) {
     return (
-      <main>
+      <Page header={<ClientHeader />} width="narrow">
         {failure ? (
-          <p role="alert">
-            {failure}. <a href="/signin">Sign in again</a>
-          </p>
+          <Problem>
+            {failure}.{" "}
+            <a href="/signin" className="underline">
+              Sign in again
+            </a>
+          </Problem>
         ) : (
-          <p>Checking sign-in</p>
+          <Loading>Checking sign-in</Loading>
         )}
-      </main>
+      </Page>
     );
   }
   return (
-    <main>
-      <h1>Sign in</h1>
-      <form onSubmit={(event) => void submit(event)}>
-        <label>
-          Email <input name="email" type="email" autoComplete="username" required />
-        </label>
-        <label>
-          Password <input name="password" type="password" autoComplete="current-password" required />
-        </label>
-        <button type="submit">Sign in</button>
-        {failure && <p role="alert">{failure}</p>}
-      </form>
-    </main>
+    <Page
+      header={<ClientHeader />}
+      width="narrow"
+      onSubmit={(event) => void submit(event)}
+      actions={
+        <ActionBar notice={failure && <Problem>{failure}</Problem>}>
+          <Action tone="primary" type="submit">
+            Sign In
+          </Action>
+        </ActionBar>
+      }
+    >
+      <Panel title="Sign in">
+        <Field id={`${id}-email`} label="Email">
+          <Input id={`${id}-email`} name="email" type="email" autoComplete="username" required className={CONTROL} />
+        </Field>
+        <Field id={`${id}-password`} label="Password">
+          <Input id={`${id}-password`} name="password" type="password" autoComplete="current-password" required className={CONTROL} />
+        </Field>
+      </Panel>
+    </Page>
   );
 }

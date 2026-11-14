@@ -11,11 +11,8 @@ export interface Workplace {
 const IG_ID_SYSTEM = "http://ohs.dev/fhir/trust-demo/ig-id";
 
 const CONFIGURATIONS: Record<string, { configuration: Configuration; title: string }> = {
-  TrustDemoKesaroHospital: {
-    configuration: "hospital",
-    title: "Hospital EMR & Print Station (J1)",
-  },
-  TrustDemoKesaroClinic: { configuration: "clinic", title: "VHL Viewer (J4.1)" },
+  TrustDemoKesaroHospital: { configuration: "hospital", title: "Hospital EMR & Print Station" },
+  TrustDemoKesaroClinic: { configuration: "clinic", title: "VHL Viewer" },
 };
 
 export function workplaces(roles: PractitionerRole[], organizations: Organization[]): Workplace[] {

@@ -2,6 +2,7 @@ import { ClientStorage, MedplumClient } from "@medplum/core";
 import { MedplumProvider } from "@medplum/react-hooks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
+import { Loading, Problem } from "@/components/Feedback";
 import { getSettings } from "./server/settings";
 
 interface Session {
@@ -28,8 +29,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     })().catch((error: unknown) => setFailure(error instanceof Error ? error.message : String(error)));
   }, []);
 
-  if (failure) return <p role="alert">{failure} <a href="/signin">Sign in again</a></p>;
-  if (!session) return <p>Loading</p>;
+  if (failure) {
+    return (
+      <div className="mx-auto max-w-3xl p-4">
+        <Problem>
+          {failure}{" "}
+          <a href="/signin" className="underline">
+            Sign in again
+          </a>
+        </Problem>
+      </div>
+    );
+  }
+  if (!session) return <Loading />;
   return (
     <QueryClientProvider client={queries}>
       <MedplumProvider medplum={session.medplum}>{children}</MedplumProvider>
