@@ -131,7 +131,7 @@ gcloud auth configure-docker <region>-docker.pkg.dev    # once
 
 `trust-demo` needs only a Java 21 runtime, its install directory and the `.env`. The IG resources and the WHO example card are packed into its jar. It writes the facility client's secrets to `stack/taifafeki/secrets/`, resolved from the `.env` path as `../stack/taifafeki/secrets`, so run it inside the checkout. `stack/check.sh` needs `curl` and `jq`.
 
-Install on a VM that predates this change: `sudo apt-get install -y openjdk-21-jre-headless jq`. New VMs get the JRE from `startup.sh`.
+Install on a VM that predates this change: `sudo apt-get install -y openjdk-21-jre-headless jq`. New VMs get both from `startup.sh`.
 
 Ship the CLI from the laptop:
 
