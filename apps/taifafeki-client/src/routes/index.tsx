@@ -1,9 +1,11 @@
-import { useMedplum } from "@medplum/react-hooks";
 import { createFileRoute } from "@tanstack/react-router";
-import { SignInPrompt, WorkplacePicker } from "../Workplaces";
+import { WorkplaceHome } from "../Workplaces";
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>) => (search.choose === true || search.choose === "true" ? { choose: true } : {}),
+  component: Home,
+});
 
 function Home() {
-  return useMedplum().getProfile() ? <WorkplacePicker /> : <SignInPrompt />;
+  return <WorkplaceHome choose={Route.useSearch().choose === true} />;
 }

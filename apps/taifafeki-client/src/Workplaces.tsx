@@ -2,14 +2,14 @@ import { normalizeErrorString, type MedplumClient } from "@medplum/core";
 import type { Organization, PractitionerRole } from "@medplum/fhirtypes";
 import { useMedplum } from "@medplum/react-hooks";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { Link, Navigate } from "@tanstack/react-router";
+import { useEffect, type ReactNode } from "react";
 import { Action, ActionBar } from "@/components/ActionBar";
 import { ClientHeader } from "@/components/AppHeader";
 import { Loading, Problem } from "@/components/Feedback";
 import { Page } from "@/components/Page";
 import { Panel } from "@/components/Panel";
-import { workplaces, type Configuration, type Workplace } from "./workplace";
+import { lastUsed, recall, remember, workplaces, type Configuration, type Workplace } from "./workplace";
 
 export function useWorkplaces() {
   const medplum = useMedplum();
@@ -25,6 +25,38 @@ async function readWorkplaces(medplum: Pick<MedplumClient, "searchResources">, p
   const roles = await medplum.searchResources("PractitionerRole", { practitioner: `Practitioner/${practitionerId}` });
   const organizations = await medplum.searchResources("Organization", { _id: roles.flatMap(organizationId).join(",") });
   return workplaces(roles, organizations);
+}
+
+export function WorkplaceHome({ choose }: { choose: boolean }) {
+  const medplum = useMedplum();
+  const profileId = medplum.getProfile()?.id;
+  const found = useWorkplaces();
+  if (!medplum.getProfile()) return <SignInPrompt />;
+  if (found.isError) return <Problem>{normalizeErrorString(found.error)}</Problem>;
+  if (!found.data) return <Loading />;
+  if (found.data.length === 0) return <NoWorkplace />;
+  const opens = choose ? undefined : found.data.length === 1 ? found.data[0] : lastUsed(found.data, recall(profileId));
+  if (!opens) return <WorkplacePicker />;
+  return <Navigate to={`/${opens.configuration}`} search={{ organization: opens.organization.id ?? "" }} replace />;
+}
+
+function NoWorkplace() {
+  const medplum = useMedplum();
+  return (
+    <Page
+      header={<ClientHeader />}
+      width="narrow"
+      actions={
+        <ActionBar>
+          <Action onClick={() => void medplum.signOut().then(() => window.location.assign("/"))}>Sign Out</Action>
+        </ActionBar>
+      }
+    >
+      <Panel title="No workplace">
+        <p className="text-xs text-slate-600">No workplace is assigned to you.</p>
+      </Panel>
+    </Page>
+  );
 }
 
 export function WorkplacePicker() {
@@ -49,6 +81,7 @@ export function WorkplacePicker() {
               <Link
                 to={`/${workplace.configuration}`}
                 search={{ organization: workplace.organization.id ?? "" }}
+                onClick={() => remember(medplum.getProfile()?.id, { organization: workplace.organization.id ?? "", configuration: workplace.configuration })}
                 className="group flex flex-wrap items-center gap-x-2.5 gap-y-0.5 rounded-control px-1 py-1.5 text-ui hover:bg-taifa-soft focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
               >
                 <span className="size-4 shrink-0 rounded-full border-2 border-slate-400 group-hover:border-brand-taifa group-hover:bg-brand-taifa group-hover:shadow-[inset_0_0_0_2px_white]" />
@@ -92,10 +125,14 @@ interface GateProps {
 export function WorkplaceGate({ configuration, requested, children }: GateProps) {
   const medplum = useMedplum();
   const found = useWorkplaces();
+  const workplace = found.data?.find((it) => it.configuration === configuration && it.organization.id === requested);
+  const profileId = medplum.getProfile()?.id;
+  useEffect(() => {
+    if (workplace?.organization.id) remember(profileId, { organization: workplace.organization.id, configuration });
+  }, [profileId, workplace, configuration]);
   if (!medplum.getProfile()) return <SignInPrompt />;
   if (found.isError) return <Problem>{normalizeErrorString(found.error)}</Problem>;
   if (!found.data) return <Loading />;
-  const workplace = found.data.find((it) => it.configuration === configuration && it.organization.id === requested);
   return workplace?.organization.id ? children(workplace.organization.id) : <WorkplacePicker />;
 }
 

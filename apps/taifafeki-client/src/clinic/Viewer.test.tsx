@@ -81,7 +81,7 @@ describe("nothingOfTheSummaryReachesStorage", () => {
       ]);
     const stored = () => JSON.stringify([{ ...localStorage }, { ...sessionStorage }]);
     const check = () => {
-      expect(Storage.prototype.setItem).not.toHaveBeenCalled();
+      expect(vi.mocked(Storage.prototype.setItem).mock.calls.filter(([name]) => !name.startsWith("taifafeki.workplace."))).toEqual([]);
       expect(indexedDbOpen).not.toHaveBeenCalled();
       for (const marker of MARKERS) {
         expect(held()).not.toContain(marker);

@@ -134,7 +134,7 @@ function ViewerFor({ organization }: { organization: string }) {
       title="Taifafeki Clinic Point-of-Care VHL Viewer (Country A)"
       subtitle={[practitioner && `Practitioner: ${practitioner}`, clinic].filter(Boolean).join(" • ")}
       chips={chip}
-      links={<a href="/" className="hover:text-white">Change workplace</a>}
+      links={<a href="/?choose=true" className="hover:text-white">Change workplace</a>}
     />
   );
 

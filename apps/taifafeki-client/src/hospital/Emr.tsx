@@ -116,7 +116,7 @@ function HospitalHeader({ hospital, practitioner, subtitle }: { hospital: Organi
       subtitle={subtitle ?? `Practitioner: ${nameOf(practitioner)}`}
       chips={participant && <StatusChip tone="success">GDHCN DEV Participant: {country}</StatusChip>}
       status={<StatusChip tone={online ? "success" : "warning"}>{online ? "Online" : "Offline"}</StatusChip>}
-      links={<a href="/" className="hover:text-white">Change workplace</a>}
+      links={<a href="/?choose=true" className="hover:text-white">Change workplace</a>}
     />
   );
 }

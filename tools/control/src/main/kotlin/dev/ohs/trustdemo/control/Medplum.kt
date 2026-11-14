@@ -544,11 +544,15 @@ class MedplumAdmin(
         "managingOrganization":{"reference":"Organization/$HOSPITAL"}}"""
 
     val PRACTITIONER_ROLES =
-      listOf(role("TrustDemoAnanHospitalRole", HOSPITAL), role("TrustDemoAnanClinicRole", CLINIC))
+      listOf(
+        role("TrustDemoAnanHospitalRole", HOSPITAL, "facility-emr", "Hospital EMR & Print Station"),
+        role("TrustDemoAnanClinicRole", CLINIC, "vhl-viewer", "VHL Viewer"),
+      )
 
-    fun role(id: String, organization: String) =
+    fun role(id: String, organization: String, code: String, display: String) =
       """{"resourceType":"PractitionerRole","id":"$id",
         "practitioner":{"reference":"Practitioner/$ANAN"},
-        "organization":{"reference":"Organization/$organization"}}"""
+        "organization":{"reference":"Organization/$organization"},
+        "code":[{"coding":[{"system":"http://ohs.dev/fhir/CodeSystem/app-role","code":"$code","display":"$display"}]}]}"""
   }
 }
