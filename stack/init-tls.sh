@@ -8,7 +8,7 @@ tls="$here/tls"
 stack_host=$(grep '^STACK_HOST=' "$here/.env" | cut -d= -f2)
 mkdir -p "$tls"
 
-if [ ! -f "$tls/ca.crt" ] || ! openssl x509 -in "$tls/ca.crt" -noout -checkend 2592000 >/dev/null; then
+if [ ! -f "$tls/ca.crt" ] || ! openssl x509 -in "$tls/ca.crt" -noout -checkend 34560000 >/dev/null; then
   openssl ecparam -name prime256v1 -genkey -noout -out "$tls/ca.key"
   openssl req -x509 -new -key "$tls/ca.key" -sha256 -days 730 -out "$tls/ca.crt" \
     -subj "/CN=Trust demo local CA (TEST ONLY)" \
