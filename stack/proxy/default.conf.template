@@ -30,6 +30,8 @@ server {
 server {
   listen 80;
   server_name medplum.kesaro.${STACK_HOST};
+  # Medplum 5.2.13 runs out of memory on any GraphQL call; nothing in the demo uses it.
+  location ~* ^/fhir/R4/\$graphql$ { return 403; }
   location / { set $u http://medplum:8103; proxy_pass $u; }
 }
 
