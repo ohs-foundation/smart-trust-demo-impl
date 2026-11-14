@@ -191,6 +191,22 @@ render_templates() {
            nginx/host/web.conf \
            '${WEB_HOST} ${OHS_PLAYER_WEB_PORT}'
 
+    render nginx/host/vhl.conf.example \
+           nginx/host/vhl.conf \
+           '${VHL_HOST} ${VHL_PORT}'
+
+    render nginx/host/trust.conf.example \
+           nginx/host/trust.conf \
+           '${TRUST_HOST} ${TRUST_PORT}'
+
+    render nginx/host/medplum.conf.example \
+           nginx/host/medplum.conf \
+           '${MEDPLUM_HOST} ${MEDPLUM_PORT}'
+
+    render nginx/host/client.conf.example \
+           nginx/host/client.conf \
+           '${CLIENT_HOST} ${CLIENT_PORT} ${MEDPLUM_HOST}'
+
     # Rendering the analytics vhosts with an unset hostname would write `server_name ;`, which
     # nginx refuses to load, so they are written only when named.
     if [[ -n "${PIPELINE_HOST:-}" ]]; then
@@ -347,8 +363,10 @@ cmd_nginx() {
     render_templates
 
     local -a hosts=("${KEYCLOAK_HOST:-}" "${GATEWAY_HOST:-}" "${WEB_HOST:-}" \
+                    "${VHL_HOST:-}" "${TRUST_HOST:-}" "${MEDPLUM_HOST:-}" "${CLIENT_HOST:-}" \
                     "${PIPELINE_HOST:-}" "${SUPERSET_HOST:-}")
     local -a files=("keycloak.conf" "gateway.conf" "web.conf" \
+                    "vhl.conf" "trust.conf" "medplum.conf" "client.conf" \
                     "pipeline.conf" "superset.conf")
     local -a pending=()
     local i host file
