@@ -22,7 +22,7 @@ Set `REGISTRY` and `IMAGE_TAG` in `.env` to ship the demo's own images (`fhir-ga
 
 | Where | Command | Does |
 |---|---|---|
-| Laptop | `./dev.sh push [tag]` | runs `installDist` and `hcert-js`, builds the four images, pushes the git SHA (or tag) and `latest` |
+| Laptop or CI | `./dev.sh push [tag] [image...]` | runs `installDist` and `hcert-js` as needed, builds the four images (or those named), pushes the git SHA (or tag) and `latest` |
 | Server | `./dev.sh up` | pulls instead of building when `REGISTRY` is set and the repo has no `gradlew`; `up --pull` forces it |
 
 Derived from `ohs-foundation/ohs-player-reference-infrastructure@5c87af6`.

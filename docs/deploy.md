@@ -50,10 +50,14 @@ tofu output
 | --- | --- |
 | `server_ip` | the DNS target |
 | `registry` | `REGISTRY` in `infra/.env` |
+| `github_workload_identity_provider` | `GCP_WORKLOAD_IDENTITY_PROVIDER` repository variable (CI, below) |
+| `github_ci_service_account` | `GCP_CI_SERVICE_ACCOUNT` repository variable (CI, below) |
 | `ssh` | a ready `gcloud compute ssh ... --tunnel-through-iap` command |
 | `dns_records` | the three records of step 2 |
 
 `startup.sh` installs Docker, nginx, certbot and a Java runtime on first boot. SSH is open only through IAP; ports 80 and 443 are public.
+
+Set `github_repository: owner/repo` in `config.yaml` to let that repository's CI push images (no keys; Workload Identity Federation limited to it).
 
 ### 2. DNS
 
@@ -89,7 +93,18 @@ gcloud auth configure-docker <region>-docker.pkg.dev
 ./dev.sh push          # or ./dev.sh push v1; pushes the tag and latest
 ```
 
-`push` runs `./gradlew :services:vhl:installDist` and `make hcert-js`, then builds and pushes `fhir-gateway`, `vhl`, `taifafeki-client` and `web-portal`.
+`push [tag] [image...]` runs `./gradlew :services:vhl:installDist` and `make hcert-js` as the chosen images need, then builds and pushes `fhir-gateway`, `vhl`, `taifafeki-client` and `web-portal`, or only those named.
+
+**CI builds the rest.** `.github/workflows/artifacts.yml` runs on pushes to `seed-from-template` and `main` (and by hand) and pushes `vhl`, `taifafeki-client` and `web-portal` as the short commit SHA and `latest`. Set these repository variables; a job whose variables are missing is skipped with a notice:
+
+| Variable | Value |
+|---|---|
+| `LIVE_BASE_DOMAIN` | the base domain, e.g. `demo.example.org` |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `github_workload_identity_provider` output |
+| `GCP_CI_SERVICE_ACCOUNT` | `github_ci_service_account` output |
+| `REGISTRY` | `registry` output |
+
+CI never builds `fhir-gateway`: its plugin comes from a private fork. Push it from the laptop with `GATEWAY_PLUGIN_DIR` set: `./dev.sh push <sha> fhir-gateway`, using the SHA CI tagged so the server pulls one `IMAGE_TAG` for all four.
 
 ### 4. Server
 
@@ -149,7 +164,9 @@ tools/control/build/install/control/bin/trust-demo --stack-env infra/.env reset
 
 `reset` writes the Taifafeki secrets, so `./dev.sh up --pull --taifafeki` once more afterwards if the facility client started before them. `check.sh` tests every service over HTTPS without the demo CA.
 
-### 6. APK (laptop)
+### 6. APK
+
+CI builds a debug APK for test phones when `LIVE_BASE_DOMAIN` is set: open the Actions run, then Artifacts, `onesa-<short-sha>` (kept 14 days). To build a release APK yourself, on the laptop:
 
 Release signing uses `keystore.properties` (`keystore.properties.template`).
 
@@ -170,12 +187,12 @@ Run `trust-demo --stack-env infra/.env watch` on the server and follow [Walk the
 ## Update
 
 ```
-./dev.sh push v2                          # laptop; rebuild and push
+./dev.sh push v2                          # laptop; rebuild and push (CI does this by commit SHA, except the gateway)
 # server: set IMAGE_TAG=v2 in infra/.env, then
 ./dev.sh up --pull --taifafeki
 ```
 
-A changed CLI is shipped again as in step 5. A realm change needs a fresh Keycloak database (`./dev.sh reset` wipes all volumes, then `up` and `trust-demo reset`).
+With CI images, set `IMAGE_TAG=<sha>` of the pushed commit instead. A changed CLI is shipped again as in step 5. A realm change needs a fresh Keycloak database (`./dev.sh reset` wipes all volumes, then `up` and `trust-demo reset`).
 
 ## Tear down
 

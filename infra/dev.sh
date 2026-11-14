@@ -11,7 +11,7 @@ set -euo pipefail
 #   up        Render configs and start services (--pipes adds the analytics pipeline and Superset,
 #             --taifafeki adds Medplum and the facility client; --pull fetches the images from REGISTRY
 #             instead of building, as does a checkout without sources)
-#   push      Build the demo's images and push them to REGISTRY (laptop)
+#   push      Build the demo's images and push them to REGISTRY (laptop or CI)
 #   down      Stop all running services
 #   reset     Stop services and wipe named volumes
 #   logs      Tail logs (all services or one)
@@ -294,8 +294,15 @@ cmd_push() {
     load_env
     [[ -n "${REGISTRY:-}" ]] || error "Set REGISTRY in .env to the registry output of infra/gcp."
     local tag="${1:-$(git -C "$SCRIPT_DIR" rev-parse --short HEAD)}" name
-    local -a names=(fhir-gateway vhl taifafeki-client web-portal)
-    (cd "$SCRIPT_DIR/.." && ./gradlew :services:vhl:installDist && make hcert-js)
+    shift || true
+    local -a all=(fhir-gateway vhl taifafeki-client web-portal)
+    local -a names=("$@")
+    (( ${#names[@]} )) || names=("${all[@]}")
+    for name in "${names[@]}"; do
+        [[ " ${all[*]} " == *" $name "* ]] || error "Unknown image: $name. Choose from ${all[*]}."
+    done
+    if [[ " ${names[*]} " == *" vhl "* ]]; then (cd "$SCRIPT_DIR/.." && ./gradlew :services:vhl:installDist); fi
+    if [[ " ${names[*]} " == *" taifafeki-client "* ]]; then make -C "$SCRIPT_DIR/.." hcert-js; fi
     COMPOSE_FILES=(-f docker-compose.yaml -f docker-compose.taifafeki.yaml)
     IMAGE_TAG="$tag" compose build "${names[@]}"
     for name in "${names[@]}"; do
@@ -470,8 +477,8 @@ Commands:
                               --pipes      adds the analytics pipeline + Superset
                               --taifafeki  adds Medplum and the facility client
                               --pull       pulls from REGISTRY instead of building
-  push [tag]                  Build the demo's images and push them to REGISTRY
-                              as the git SHA (or tag) and latest
+  push [tag] [image...]       Build the demo's images (all four, or those named) and push
+                              them to REGISTRY as the git SHA (or tag) and latest
   down                        Stop all running services
   reset                       Stop services and wipe named volumes
   logs [service]              Tail logs (all services or one)
