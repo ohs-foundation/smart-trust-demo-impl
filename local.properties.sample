@@ -56,9 +56,9 @@ OAUTH_DESKTOP_REDIRECT_PORT=8765
 # --- FHIR server -------------------------------------------------------------
 # Base URL synced into the on-device FHIR engine. Requests carry the signed-in
 # session's bearer token (FhirBearerAuthenticator), so this server must accept
-# tokens from OAUTH_ISSUER — or, like the public HAPI sandbox, accept anything.
+# tokens from OAUTH_ISSUER.
 # Sync paths resolve against this URL, so it ends in a slash. The build adds one if missing.
-FHIR_BASE_URL=https://hapi.fhir.org/baseR4/
+FHIR_BASE_URL=https://gateway.onesa.example/fhir/
 
 # The Onesa VHL service the family wallet shares through (HTTPS, no trailing slash).
 VHL_BASE_URL=https://vhl.onesa.example.org:8443

@@ -75,7 +75,7 @@ val resolvedTrustListUrl =
 // See kotlin-fhir-engine#90 and issue #84; a base without the slash loses its
 // last segment when the engine resolves paths against it.
 val resolvedFhirBaseUrl =
-  authProp("FHIR_BASE_URL", "https://hapi.fhir.org/baseR4/").let {
+  authProp("FHIR_BASE_URL", "https://gateway.onesa.example/fhir/").let {
     if (it.endsWith("/")) it else "$it/"
   }
 
