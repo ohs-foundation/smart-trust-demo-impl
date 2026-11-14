@@ -59,3 +59,4 @@ CLAUDE.MD
 #bin directories
 ig-codegen/bin/
 build-logic/bin/
+stack/.env

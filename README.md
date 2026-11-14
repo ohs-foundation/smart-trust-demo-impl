@@ -11,6 +11,9 @@ apps/onesa/        Onesa player app (Kotlin Multiplatform)
   desktop/           desktop application
 libs/trustkit/     test keys and trust lists (JVM)
 tools/control/     control CLI (JVM)
+stack/             local stack for both countries (Docker Compose)
+ig/                the IG's FHIR resources, generated at a pinned commit
+testkit/           TEST ONLY keys, certificates and trust lists
 build-logic/       Spotless conventions
 ig-codegen/        Gradle plugin that generates player code from the IG
 ```
@@ -26,5 +29,27 @@ gradle -p <smart-trust-tools>/tools/hcert-kotlin publishToMavenLocal   # Gradle 
 make build
 make test
 ```
+
+## Local stack
+
+Onesa (Keycloak, HAPI FHIR, the OHS FHIR gateway), Taifafeki (Medplum) and a stand-in GDHCN
+trust-list host, behind one proxy. Phones and emulators on the same network reach it at
+`<service>.<country>.<lan-ip>.sslip.io:8480`; HAPI listens on `127.0.0.1:18082` only.
+
+```
+make stack-up      # writes stack/.env on first run, then builds and starts everything
+make stack-check   # every service answers, trust lists served
+make stack-down
+```
+
+| Service | Address |
+| --- | --- |
+| Onesa Keycloak | `keycloak.onesa.<lan-ip>.sslip.io:8480` |
+| Onesa FHIR gateway | `gateway.onesa.<lan-ip>.sslip.io:8480` |
+| Taifafeki Medplum | `medplum.kesaro.<lan-ip>.sslip.io:8480` |
+| Trust-list host | `trust.gdhcn.<lan-ip>.sslip.io:8480` |
+
+Logins `vilay`, `chanthason`, `bounmy` and `trustdemo-admin` share the password in
+`stack/.env` (`TRUSTDEMO_USER_PASSWORD`).
 
 Licensed under Apache-2.0.

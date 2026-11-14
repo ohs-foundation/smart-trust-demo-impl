@@ -1,0 +1,122 @@
+services:
+  onesa-postgres:
+    image: postgres:18.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${ONESA_POSTGRES_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      HAPI_FHIR_DB_PASSWORD: ${HAPI_FHIR_DB_PASSWORD}
+    volumes:
+      - onesa_postgres:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.5.0
+    restart: unless-stopped
+    volumes:
+      - ./keycloak/ohs-player-realm.json:/opt/keycloak/data/import/ohs-player-realm.json:ro
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL_HOST: onesa-postgres
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME: http://keycloak.onesa.${STACK_HOST}:${PROXY_PORT}
+      OHS_PLAYER_APP_HOST: localhost
+      OHS_PLAYER_KEYCLOAK_CLIENT_SECRET: ${OHS_PLAYER_KEYCLOAK_CLIENT_SECRET}
+      HAPI_FHIR_SERVER_KEYCLOAK_CLIENT_SECRET: ${HAPI_FHIR_SERVER_KEYCLOAK_CLIENT_SECRET}
+      FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET: ${FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET}
+      TRUSTDEMO_CLI_CLIENT_SECRET: ${TRUSTDEMO_CLI_CLIENT_SECRET}
+      TRUSTDEMO_USER_PASSWORD: ${TRUSTDEMO_USER_PASSWORD}
+    command:
+      - start
+      - --http-enabled=true
+      - --hostname-strict=false
+      - --health-enabled=true
+      - --import-realm
+    mem_limit: 1200m
+    depends_on:
+      onesa-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && cat <&3 | grep -q UP"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  hapi:
+    image: hapiproject/hapi:v8.8.0-1
+    restart: unless-stopped
+    # No auth of its own: loopback only, for the trust-demo CLI on this machine.
+    ports:
+      - "127.0.0.1:${HAPI_HOST_PORT}:8080"
+    volumes:
+      - ./hapi-fhir/application.yaml:/data/hapi-fhir/config/application.yaml:ro
+      - ./hapi-fhir/health/Healthcheck.class:/healthcheck/Healthcheck.class:ro
+    environment:
+      SPRING_CONFIG_LOCATION: /data/hapi-fhir/config/
+      DB_HOST: onesa-postgres
+      DB_PORT: 5432
+      HAPI_FHIR_DB_PASSWORD: ${HAPI_FHIR_DB_PASSWORD}
+      JAVA_TOOL_OPTIONS: -Xmx1g
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    mem_limit: 1600m
+    depends_on:
+      onesa-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "java", "-cp", "/healthcheck", "Healthcheck"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+
+  gateway:
+    build:
+      dockerfile: gateway.Dockerfile
+      additional_contexts:
+        gateway: https://github.com/ohs-foundation/fhir-gateway.git#b650129c451840bdf3a382ff11f9deee3fffe532
+        plugin: ${PLUGIN_SRC}
+    image: trust-demo-fhir-gateway:local
+    restart: unless-stopped
+    environment:
+      PROXY_TO: http://hapi:8080/fhir
+      TOKEN_ISSUER: http://keycloak.onesa.${STACK_HOST}:${PROXY_PORT}/realms/ohs-player
+      IAM_PROVIDER: keycloak
+      IAM_PROVIDER_CLIENT_ID: fhir-gateway-admin
+      IAM_PROVIDER_CLIENT_SECRET: ${FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET}
+      ACCESS_CHECKER: ohs_player_access
+      ALLOWED_QUERIES_FILE: resources/hapi_page_url_allowed_queries.json
+      SYNC_FILTER_IGNORE_RESOURCES_FILE: resources/hapi_sync_filter_ignored_queries.json
+      BACKEND_TYPE: HAPI
+      RUN_MODE: PROD
+      JAVA_TOOL_OPTIONS: -Xmx512m
+    extra_hosts:
+      - "keycloak.onesa.${STACK_HOST}:host-gateway"
+    mem_limit: 768m
+    depends_on:
+      hapi:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  onesa_postgres:

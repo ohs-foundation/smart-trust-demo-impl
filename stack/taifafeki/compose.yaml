@@ -1,0 +1,73 @@
+services:
+  medplum-postgres:
+    image: postgres:16.15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: medplum
+      POSTGRES_PASSWORD: ${MEDPLUM_DB_PASSWORD}
+    volumes:
+      - medplum_postgres:/var/lib/postgresql/data
+    command:
+      - postgres
+      - -c
+      - statement_timeout=60000
+      - -c
+      - default_transaction_isolation=REPEATABLE READ
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medplum"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  medplum-redis:
+    image: redis:8.2.11-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${MEDPLUM_REDIS_PASSWORD}"]
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${MEDPLUM_REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  medplum:
+    image: medplum/medplum-server:5.2.13
+    restart: unless-stopped
+    command: ["env"]
+    environment:
+      MEDPLUM_PORT: 8103
+      MEDPLUM_BASE_URL: http://medplum.kesaro.${STACK_HOST}:${PROXY_PORT}/
+      MEDPLUM_APP_BASE_URL: http://client.kesaro.${STACK_HOST}:${PROXY_PORT}/
+      MEDPLUM_STORAGE_BASE_URL: http://medplum.kesaro.${STACK_HOST}:${PROXY_PORT}/storage/
+      MEDPLUM_DATABASE_HOST: medplum-postgres
+      MEDPLUM_DATABASE_PORT: 5432
+      MEDPLUM_DATABASE_DBNAME: medplum
+      MEDPLUM_DATABASE_USERNAME: medplum
+      MEDPLUM_DATABASE_PASSWORD: ${MEDPLUM_DB_PASSWORD}
+      MEDPLUM_REDIS_HOST: medplum-redis
+      MEDPLUM_REDIS_PORT: 6379
+      MEDPLUM_REDIS_PASSWORD: ${MEDPLUM_REDIS_PASSWORD}
+      MEDPLUM_BINARY_STORAGE: file:./binary/
+      MEDPLUM_SUPPORT_EMAIL: '"Trust demo" <support@kesaro.example>'
+      MEDPLUM_MAX_JSON_SIZE: 1mb
+      MEDPLUM_MAX_BATCH_SIZE: 50mb
+      MEDPLUM_VM_CONTEXT_BOTS_ENABLED: "false"
+      MEDPLUM_ALLOWED_ORIGINS: http://client.kesaro.${STACK_HOST}:${PROXY_PORT}
+      MEDPLUM_INTROSPECTION_ENABLED: "true"
+      MEDPLUM_SHUTDOWN_TIMEOUT_MILLISECONDS: 30000
+    mem_limit: 1g
+    depends_on:
+      medplum-postgres:
+        condition: service_healthy
+      medplum-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8103/healthcheck').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  medplum_postgres:
