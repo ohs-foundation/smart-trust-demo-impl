@@ -37,6 +37,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
 import io.ktor.http.parameters
+import java.net.URI
 import java.util.Base64
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -113,16 +114,66 @@ class MedplumAdmin(
     }
 
   /**
-   * Searches the project for [type], returning the records as JSON so a rewrite keeps every field.
+   * Searches the project for [type], following next links, returning JSON so a rewrite keeps every
+   * field.
    */
-  suspend fun searchJson(type: String, params: Map<String, String>): List<JsonObject> =
-    search(type, "_project" to project(), *params.toList().toTypedArray())
+  suspend fun searchJson(type: String, params: Map<String, String>): List<JsonObject> {
+    val found = mutableListOf<JsonObject>()
+    var text =
+      send(
+        HttpMethod.Get,
+        "$baseUrl/fhir/R4/$type",
+        params = mapOf("_project" to project()) + params,
+      )
+    while (true) {
+      val bundle = fhirJson.parseToJsonElement(text).jsonObject
+      found +=
+        bundle["entry"]?.jsonArray.orEmpty().map { it.jsonObject.getValue("resource").jsonObject }
+      val next =
+        bundle["link"]
+          ?.jsonArray
+          .orEmpty()
+          .map { it.jsonObject }
+          .firstOrNull { it["relation"]?.jsonPrimitive?.contentOrNull == "next" }
+          ?.get("url")
+          ?.jsonPrimitive
+          ?.contentOrNull ?: break
+      text = send(HttpMethod.Get, "$baseUrl/fhir/R4/$type?${URI(next).rawQuery}")
+    }
+    return found
+  }
 
-  /** Replaces a record of the project with [resource], refusing one that belongs elsewhere. */
-  suspend fun replace(resource: JsonObject) {
-    val owner = resource["meta"]?.jsonObject?.get("project")?.jsonPrimitive?.contentOrNull
-    check(owner == project()) { "${resource.reference()} is not in the $PROJECT_NAME project" }
-    send(HttpMethod.Put, "$baseUrl/fhir/R4/${resource.reference()}", resource.toString())
+  /**
+   * Replaces [resources] in one transaction, so all change or none; each must be in the project.
+   */
+  suspend fun replaceAll(resources: List<JsonObject>) {
+    val project = project()
+    resources.forEach {
+      val owner = it["meta"]?.jsonObject?.get("project")?.jsonPrimitive?.contentOrNull
+      check(owner == project) { "${it.reference()} is not in the $PROJECT_NAME project" }
+    }
+    val bundle = buildJsonObject {
+      put("resourceType", "Bundle")
+      put("type", "transaction")
+      put(
+        "entry",
+        JsonArray(
+          resources.map {
+            buildJsonObject {
+              put("resource", it)
+              put(
+                "request",
+                buildJsonObject {
+                  put("method", "PUT")
+                  put("url", it.reference())
+                },
+              )
+            }
+          }
+        ),
+      )
+    }
+    send(HttpMethod.Post, "$baseUrl/fhir/R4", bundle.toString())
   }
 
   /** Upserts the base records by their IG id, pointing references between them at Medplum's ids. */

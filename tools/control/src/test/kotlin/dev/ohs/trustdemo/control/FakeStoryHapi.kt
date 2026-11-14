@@ -47,10 +47,13 @@ class FakeStoryHapi(records: List<JsonObject> = emptyList()) {
       }
       request.method == HttpMethod.Post -> {
         Json.parseToJsonElement(body).jsonObject.getValue("entry").jsonArray.forEach {
-          val resource = it.jsonObject.getValue("resource").jsonObject
-          val id = UUID.randomUUID().toString()
-          stored["${resource.text("resourceType")}/$id"] =
-            JsonObject(resource + ("id" to JsonPrimitive(id)))
+          val entry = it.jsonObject
+          val resource = entry.getValue("resource").jsonObject
+          val put = entry.getValue("request").jsonObject.text("method") == "PUT"
+          val key =
+            if (put) entry.getValue("request").jsonObject.text("url")!!
+            else "${resource.text("resourceType")}/${UUID.randomUUID()}"
+          stored[key] = JsonObject(resource + ("id" to JsonPrimitive(key.substringAfter('/'))))
         }
         respond("""{"resourceType":"Bundle","type":"transaction-response"}""", headers = fhirJson)
       }

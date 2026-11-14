@@ -31,6 +31,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
+import java.net.URI
 import kotlinx.serialization.json.Json
 
 private val fhirJson = Json { ignoreUnknownKeys = true }
@@ -52,6 +53,18 @@ class FhirServer(
   suspend fun search(type: String, params: Map<String, String>): List<Resource> {
     val response = call(HttpMethod.Get, "$baseUrl/$type", params = params)
     return decode<Bundle>(response).entry.mapNotNull { it.resource }
+  }
+
+  /** Like [search], but follows the bundle's next links until the results run out. */
+  suspend fun searchAll(type: String, params: Map<String, String>): List<Resource> {
+    var page = decode<Bundle>(call(HttpMethod.Get, "$baseUrl/$type", params = params))
+    val found = page.entry.mapNotNull { it.resource }.toMutableList()
+    while (true) {
+      val next = page.link.firstOrNull { it.relation.value == "next" }?.url?.value ?: break
+      page = decode(call(HttpMethod.Get, "$baseUrl?${URI(next).rawQuery}"))
+      found += page.entry.mapNotNull { it.resource }
+    }
+    return found
   }
 
   suspend fun transaction(bundle: Bundle): Bundle =

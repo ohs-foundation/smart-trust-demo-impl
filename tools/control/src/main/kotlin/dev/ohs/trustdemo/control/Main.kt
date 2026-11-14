@@ -130,15 +130,15 @@ class MoveCommand : StackCommand("move") {
 }
 
 class ExpireConsentsCommand : StackCommand("expire-consents") {
-  override fun help(context: Context) = "End the current consents yesterday."
+  override fun help(context: Context) = "End the current consents a minute ago."
 
   override fun run() = runBlocking {
     val stack = Stack(StackEnv.load(stackEnv))
     val move = TimeMove(StepEngine(stack.onesa, stack.kesaro), stack.onesa, stack.kesaro)
-    val ended = move.expireConsents(LocalDate.now())
+    val ended = move.expireConsents()
     echo(
       if (ended.isEmpty()) "No active consents to end."
-      else "Ended ${ended.size} consent(s) yesterday: ${ended.joinToString(", ")}"
+      else "Ended ${ended.size} consent(s): ${ended.joinToString(", ")}"
     )
   }
 }

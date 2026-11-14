@@ -52,10 +52,21 @@ object StoryDates {
       resource.text("id")?.startsWith(IG_ID_PREFIX) == true
 
   /** Each date in [resource] along [paths], as its indexed path and its stored value. */
-  fun datesIn(resource: JsonObject): List<Pair<String, String>> =
-    paths.getValue(resource.text("resourceType")!!).flatMap { path ->
-      buildList { collect(resource, path.split('.'), "", this) }
+  fun datesIn(resource: JsonObject): List<Pair<String, String>> {
+    val type = resource.text("resourceType")!!
+    return paths.getValue(type).flatMap { path ->
+      val segments = path.split('.')
+      buildList { collect(resource, segments, segments, "", this) }
+        .onEach { (at, value) ->
+          if (!DATE_PREFIX.containsMatchIn(value)) {
+            throw MoveRefused(
+              "$type/${resource.text("id")} $at holds the partial date $value; " +
+                "the move shifts whole days only"
+            )
+          }
+        }
     }
+  }
 
   /** [resource] with the date at [path] moved by [days], which must still hold [from]. */
   fun shifted(resource: JsonObject, path: String, from: LocalDate, days: Long): JsonObject =
@@ -66,16 +77,17 @@ object StoryDates {
   fun shift(value: String, days: Long): String =
     dateOf(value).plusDays(days).toString() + value.drop(DATE_LENGTH)
 
-  /** Item groups nest, so a path through `item` is also tried under each item it meets. */
+  /** Items nest, also under answers, so a path through `item` is tried again under each one. */
   private fun collect(
     node: JsonElement,
     segments: List<String>,
+    full: List<String>,
     at: String,
     out: MutableList<Pair<String, String>>,
   ) {
     if (segments.isEmpty()) {
       val value = (node as? JsonPrimitive)?.takeIf { it.isString }?.content
-      if (value != null && DATE_PREFIX.containsMatchIn(value)) out += at to value
+      if (value != null) out += at to value
       return
     }
     val name = segments.first()
@@ -85,8 +97,10 @@ object StoryDates {
       else listOf(name to child)
     elements.forEach { (step, element) ->
       val here = if (at.isEmpty()) step else "$at.$step"
-      collect(element, segments.drop(1), here, out)
-      if (name == "item") collect(element, segments, here, out)
+      collect(element, segments.drop(1), full, here, out)
+      if (full.first() == "item" && name in listOf("item", "answer")) {
+        collect(element, full, full, here, out)
+      }
     }
   }
 

@@ -108,6 +108,7 @@ internal val IG_J3: LocalDate = LocalDate.parse("2025-11-25")
 private val IG_J40 = LocalDate.parse("2026-10-26")
 internal val MOVE_DAYS = ChronoUnit.DAYS.between(IG_J3, IG_J40)
 private const val SOMSAK_ON_ONESA = "Somsak's record on Onesa"
+private const val SOMSAK_ON_KESARO = "Somsak's patient record"
 
 private const val HOSPITAL_NUMBER =
   "http://smart.who.int/trust-demo/sid/xxr-kesaro-hn|CRH-HN-68-104377"
@@ -184,7 +185,7 @@ val expectations: Map<Step, List<Expectation>> =
     Step.J1 to
       listOf(
         Expectation(
-          "Somsak's patient record",
+          SOMSAK_ON_KESARO,
           Server.MEDPLUM,
           Query("Patient", mapOf("identifier" to HOSPITAL_NUMBER)),
           anyFound(),
@@ -394,13 +395,13 @@ data class StoryState(
   val found: Map<String, List<Resource>>,
 ) {
 
-  /** Whether the J3 to J4.0 move is made, read from Somsak's birth date on Onesa. */
-  val moved: Boolean =
-    found[SOMSAK_ON_ONESA].orEmpty().fields().any {
-      it.text("birthDate")?.let(LocalDate::parse) == Dates(resetDay).birthDate.minusDays(MOVE_DAYS)
-    }
+  /** Whether the J3 to J4.0 move is made on Onesa, read from Somsak's birth date there. */
+  val movedOnOnesa: Boolean = bornAfterMove(SOMSAK_ON_ONESA)
 
-  val dates = Dates(resetDay, moved)
+  /** Whether the move is made on Kesaro, read from Somsak's birth date there. */
+  val movedOnKesaro: Boolean = bornAfterMove(SOMSAK_ON_KESARO)
+
+  val dates = Dates(resetDay, movedOnOnesa)
 
   fun recordsFor(expectation: Expectation): List<Resource> = found[expectation.label].orEmpty()
 
@@ -410,6 +411,11 @@ data class StoryState(
   fun metCount(step: Step): Int = expectations.getValue(step).count(::isMet)
 
   fun isDone(step: Step): Boolean = metCount(step) == expectations.getValue(step).size
+
+  private fun bornAfterMove(label: String): Boolean =
+    found[label].orEmpty().fields().any {
+      it.text("birthDate")?.let(LocalDate::parse) == Dates(resetDay).birthDate.minusDays(MOVE_DAYS)
+    }
 
   /** How far the reset day lies from the IG's J3. */
   fun shiftDays(): Long = ChronoUnit.DAYS.between(IG_J3, resetDay)

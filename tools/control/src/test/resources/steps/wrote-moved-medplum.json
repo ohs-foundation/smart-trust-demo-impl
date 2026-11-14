@@ -1,0 +1,9 @@
+{
+  "Somsak's patient record": [
+    {
+      "resourceType": "Patient",
+      "id": "TaifafekiSomsak",
+      "birthDate": "2025-11-16"
+    }
+  ]
+}

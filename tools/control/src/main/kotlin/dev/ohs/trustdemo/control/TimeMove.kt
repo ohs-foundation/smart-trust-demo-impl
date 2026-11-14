@@ -20,7 +20,11 @@ import dev.ohs.fhir.model.r4.Enumeration
 import dev.ohs.fhir.model.r4.Immunization
 import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.fhir.model.r4.Uri
+import java.time.Clock
 import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -80,12 +84,18 @@ class TimeMove(
   private val states: StoryStates,
   private val onesa: FhirServer,
   private val kesaro: MedplumAdmin,
+  private val clock: Clock = Clock.systemDefaultZone(),
 ) {
   suspend fun plan(withYearDoses: Boolean): MovePlan {
     val state = states.state()
-    if (state.moved) {
+    val servers =
+      listOfNotNull(
+        Server.MEDPLUM.takeUnless { state.movedOnKesaro },
+        Server.HAPI.takeUnless { state.movedOnOnesa },
+      )
+    if (servers.isEmpty()) {
       throw MoveRefused(
-        "Already moved: Somsak's birth date on Onesa is ${state.dates.birthDate}, " +
+        "Already moved: Somsak's birth date is ${state.dates.birthDate} on both servers, " +
           "the reset day's less $MOVE_DAYS days"
       )
     }
@@ -94,55 +104,72 @@ class TimeMove(
       throw MoveRefused("J3 is not complete: the story is at ${step.code} · ${step.title}")
     }
     val changes =
-      listOf(Server.MEDPLUM, Server.HAPI).flatMap { server ->
+      servers.flatMap { server ->
         StoryDates.paths.keys.flatMap { type ->
           records(server, type).filterNot(StoryDates::isBase).flatMap { changesIn(server, it) }
         }
       }
-    val doses = if (withYearDoses) yearDoses(state.shiftDays() - MOVE_DAYS) else emptyList()
+    val doses =
+      if (withYearDoses && Server.HAPI in servers) yearDoses(state.shiftDays() - MOVE_DAYS)
+      else emptyList()
     return MovePlan(-MOVE_DAYS, changes, doses)
   }
 
   /**
-   * Writes each changed record once, Medplum then HAPI with Somsak's patient last, then the doses.
+   * Writes one transaction per server, Medplum then HAPI with the year doses in HAPI's, so a server
+   * is either moved whole or untouched and a rerun finishes only the server still to move.
    */
   suspend fun apply(plan: MovePlan) {
-    val byRecord = plan.changes.groupBy { it.server to it.reference }
-    listOf(Server.MEDPLUM, Server.HAPI).forEach { server ->
-      byRecord
-        .filterKeys { it.first == server }
-        .entries
-        .sortedBy { it.key.second.startsWith("Patient/") }
-        .forEach { (key, changes) ->
-          val moved =
-            changes.fold(fetch(server, key.second)) { record, change ->
-              StoryDates.shifted(record, change.path, change.from, plan.shiftDays)
-            }
-          store(server, moved)
-        }
+    val byServer = plan.changes.groupBy { it.server }
+    byServer[Server.MEDPLUM]?.let { kesaro.replaceAll(moved(Server.MEDPLUM, it, plan.shiftDays)) }
+    val updated = byServer[Server.HAPI]?.let { moved(Server.HAPI, it, plan.shiftDays) }.orEmpty()
+    if (updated.isNotEmpty() || plan.yearDoses.isNotEmpty()) {
+      onesa.transaction(
+        transaction(
+          updated.map { Json.decodeFromJsonElement(Resource.serializer(), it) },
+          plan.yearDoses,
+        )
+      )
     }
-    if (plan.yearDoses.isNotEmpty()) onesa.transaction(create(plan.yearDoses))
   }
 
-  /** Ends every active consent on HAPI the day before [today], returning the ones ended. */
-  suspend fun expireConsents(today: LocalDate): List<String> =
-    onesa.search("Consent", mapOf("status" to "active", "_count" to PAGE)).map { consent ->
+  /** Ends every active consent on HAPI a minute before now, returning the ones ended. */
+  suspend fun expireConsents(): List<String> {
+    val end =
+      ZonedDateTime.now(clock)
+        .minusMinutes(1)
+        .truncatedTo(ChronoUnit.SECONDS)
+        .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+    return onesa.searchAll("Consent", mapOf("status" to "active", "_count" to PAGE)).map { consent
+      ->
       val record = consent.fields()
       val provision = record["provision"]?.jsonObject ?: JsonObject(emptyMap())
       val period = provision["period"]?.jsonObject ?: JsonObject(emptyMap())
-      val ended = period + ("end" to JsonPrimitive(today.minusDays(1).toString()))
-      store(
-        Server.HAPI,
-        JsonObject(
-          record + ("provision" to JsonObject(provision + ("period" to JsonObject(ended))))
-        ),
+      val ended = period + ("end" to JsonPrimitive(end))
+      onesa.update(
+        Json.decodeFromJsonElement(
+          Resource.serializer(),
+          JsonObject(
+            record + ("provision" to JsonObject(provision + ("period" to JsonObject(ended))))
+          ),
+        )
       )
       consent.ref()
     }
+  }
+
+  private suspend fun moved(server: Server, changes: List<DateChange>, days: Long) =
+    changes
+      .groupBy { it.reference }
+      .map { (reference, ofRecord) ->
+        ofRecord.fold(fetch(server, reference)) { record, change ->
+          StoryDates.shifted(record, change.path, change.from, days)
+        }
+      }
 
   private suspend fun records(server: Server, type: String): List<JsonObject> =
     when (server) {
-      Server.HAPI -> onesa.search(type, mapOf("_count" to PAGE)).map { it.fields() }
+      Server.HAPI -> onesa.searchAll(type, mapOf("_count" to PAGE)).map { it.fields() }
       Server.MEDPLUM -> kesaro.searchJson(type, mapOf("_count" to PAGE))
     }
 
@@ -152,13 +179,6 @@ class TimeMove(
     return when (server) {
       Server.HAPI -> onesa.search(type, params).single().fields()
       Server.MEDPLUM -> kesaro.searchJson(type, params).single()
-    }
-  }
-
-  private suspend fun store(server: Server, record: JsonObject) {
-    when (server) {
-      Server.HAPI -> onesa.update(Json.decodeFromJsonElement(Resource.serializer(), record))
-      Server.MEDPLUM -> kesaro.replace(record)
     }
   }
 
@@ -190,19 +210,17 @@ class TimeMove(
       }
   }
 
-  private fun create(doses: List<Immunization>) =
+  private fun transaction(updated: List<Resource>, doses: List<Immunization>) =
     Bundle(
       type = Enumeration(value = Bundle.BundleType.Transaction),
       entry =
-        doses.map {
-          Bundle.Entry(
-            resource = it,
-            request =
-              Bundle.Entry.Request(
-                method = Enumeration(value = Bundle.HTTPVerb.Post),
-                url = Uri(value = "Immunization"),
-              ),
-          )
-        },
+        updated.map { entry(it, Bundle.HTTPVerb.Put, "${it.resourceType()}/${it.id}") } +
+          doses.map { entry(it, Bundle.HTTPVerb.Post, "Immunization") },
+    )
+
+  private fun entry(resource: Resource, method: Bundle.HTTPVerb, url: String) =
+    Bundle.Entry(
+      resource = resource,
+      request = Bundle.Entry.Request(method = Enumeration(value = method), url = Uri(value = url)),
     )
 }

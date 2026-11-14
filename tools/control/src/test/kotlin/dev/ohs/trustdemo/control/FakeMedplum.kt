@@ -56,6 +56,17 @@ class FakeMedplum {
         }
         respond(write("ProjectMembership", UUID.randomUUID().toString(), membership.toString()))
       }
+      request.method == HttpMethod.Post && path == "/fhir/R4" -> {
+        Json.parseToJsonElement(body).jsonObject.getValue("entry").jsonArray.forEach {
+          val resource = it.jsonObject.getValue("resource").jsonObject
+          write(
+            resource.getValue("resourceType").jsonPrimitive.content,
+            resource.getValue("id").jsonPrimitive.content,
+            resource.toString(),
+          )
+        }
+        respond("""{"resourceType":"Bundle","type":"transaction-response"}""", headers = json)
+      }
       request.method == HttpMethod.Get -> respond(search(parts[0], url.parameters.entries()))
       request.method == HttpMethod.Post && parts.last() == "\$expunge" -> {
         stored.remove("${parts[0]}/${parts[1]}")
