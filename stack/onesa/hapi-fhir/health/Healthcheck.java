@@ -1,6 +1,4 @@
 // Docker healthcheck for HAPI FHIR (distroless image — no shell, JRE only).
-// Compile: javac healthcheck.java
-// Invoke:  java -cp /healthcheck Healthcheck
 import java.net.HttpURLConnection;
 import java.net.URI;
 
