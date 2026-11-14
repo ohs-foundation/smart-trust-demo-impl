@@ -18,19 +18,117 @@ package dev.ohs.trustdemo.onesa.feature.patient.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.ohs.trustdemo.onesa.data.repository.PatientRepository
+import dev.ohs.trustdemo.onesa.data.schedule.DoseEntry
+import dev.ohs.trustdemo.onesa.data.schedule.DoseProblem
+import dev.ohs.trustdemo.onesa.data.schedule.DoseRecording
+import dev.ohs.trustdemo.onesa.data.schedule.RecordOutcome
+import dev.ohs.trustdemo.onesa.data.verification.EpiDose
+import kotlin.time.Clock
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 
-class PatientProfileViewModel(patientId: String, patientRepository: PatientRepository) :
-  ViewModel() {
+/** The "Record a dose" form: what the nurse has picked and typed, and what the last try came to. */
+data class RecordDoseForm(
+  val doses: List<EpiDose> = emptyList(),
+  val dose: EpiDose? = null,
+  val products: List<EpiDose> = emptyList(),
+  val product: EpiDose? = null,
+  val lotNumber: String = "",
+  val date: String = "",
+  val problem: DoseProblem? = null,
+  val dateUnreadable: Boolean = false,
+  val alreadyRecorded: LocalDate? = null,
+  val busy: Boolean = false,
+  val failed: Boolean = false,
+)
+
+class PatientProfileViewModel(
+  private val patientId: String,
+  patientRepository: PatientRepository,
+  private val recording: DoseRecording,
+) : ViewModel() {
   private val _uiState = MutableStateFlow<ProfileUiState?>(null)
   val uiState: StateFlow<ProfileUiState?> = _uiState.asStateFlow()
+  private val _form = MutableStateFlow<RecordDoseForm?>(null)
+  val form: StateFlow<RecordDoseForm?> = _form.asStateFlow()
 
   init {
     viewModelScope.launch {
       patientRepository.observePatientProfile(patientId).collect { _uiState.value = it }
     }
   }
+
+  fun openForm() {
+    val today = Clock.System.todayIn(TimeZone.currentSystemDefault()).toString()
+    viewModelScope.launch {
+      val doses = attempt { recording.doses() }.orEmpty()
+      _form.value = RecordDoseForm(doses = doses, date = today, failed = doses.isEmpty())
+    }
+  }
+
+  fun closeForm() {
+    _form.value = null
+  }
+
+  fun pickDose(dose: EpiDose) {
+    viewModelScope.launch {
+      val products = attempt { recording.products(dose) }.orEmpty()
+      _form.update {
+        it?.copy(
+          dose = dose,
+          products = products,
+          product = products.singleOrNull(),
+          alreadyRecorded = null,
+        )
+      }
+    }
+  }
+
+  fun pickProduct(product: EpiDose) = edit { it.copy(product = product) }
+
+  fun typeLot(lotNumber: String) = edit { it.copy(lotNumber = lotNumber) }
+
+  fun typeDate(date: String) = edit { it.copy(date = date) }
+
+  /** Records the dose; with [confirmed] a dose that already counts is recorded again. */
+  fun record(confirmed: Boolean = false) {
+    val form = _form.value ?: return
+    val dose = form.dose ?: return
+    val date = runCatching { LocalDate.parse(form.date) }.getOrNull()
+    if (date == null) {
+      _form.update { it?.copy(dateUnreadable = true) }
+      return
+    }
+    _form.update { it?.copy(busy = true, failed = false, problem = null, dateUnreadable = false) }
+    viewModelScope.launch {
+      val entry = DoseEntry(patientId, dose, form.product?.code, form.lotNumber, date)
+      when (val outcome = attempt { recording.record(entry, confirmed) }) {
+        is RecordOutcome.Recorded -> _form.value = null
+        is RecordOutcome.Refused ->
+          _form.update { it?.copy(busy = false, problem = outcome.problem) }
+        is RecordOutcome.AlreadyRecorded ->
+          _form.update { it?.copy(busy = false, alreadyRecorded = outcome.date) }
+        null -> _form.update { it?.copy(busy = false, failed = true) }
+      }
+    }
+  }
+
+  private fun edit(change: (RecordDoseForm) -> RecordDoseForm) =
+    _form.update { it?.let(change)?.copy(problem = null, alreadyRecorded = null) }
+
+  private suspend fun <T : Any> attempt(block: suspend () -> T): T? =
+    try {
+      block()
+    } catch (e: CancellationException) {
+      throw e
+    } catch (_: Exception) {
+      null
+    }
 }

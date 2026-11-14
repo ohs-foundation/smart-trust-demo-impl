@@ -33,6 +33,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -57,6 +58,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_not_found
 import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_reminder
 import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_visit
 import dev.ohs.trustdemo.onesa.generated.resources.patient_profile_visit_dose
+import dev.ohs.trustdemo.onesa.generated.resources.record_dose
 import dev.ohs.trustdemo.onesa.generated.state.AllergyReactionState
 import dev.ohs.trustdemo.onesa.generated.state.PatientAllergyState
 import dev.ohs.trustdemo.onesa.generated.state.PatientConditionState
@@ -76,6 +78,7 @@ fun PatientProfileScreen(patientId: String, onBack: () -> Unit, onAddClinicalDat
   val viewModel =
     koinViewModel<PatientProfileViewModel>(key = patientId) { parametersOf(patientId) }
   val state by viewModel.uiState.collectAsStateWithLifecycle()
+  val form by viewModel.form.collectAsStateWithLifecycle()
   val registry = LocalViewRegistry.current
 
   val headerRenderer =
@@ -155,6 +158,7 @@ fun PatientProfileScreen(patientId: String, onBack: () -> Unit, onAddClinicalDat
       }
     },
   ) { padding ->
+    form?.let { RecordDoseDialog(it, viewModel) }
     val s = state
     if (s == null) {
       Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
@@ -223,6 +227,11 @@ fun PatientProfileScreen(patientId: String, onBack: () -> Unit, onAddClinicalDat
         }
       }
       s.visit?.let { visit -> item(key = "visit") { BookedVisitCard(visit) } }
+      item(key = "record_dose") {
+        OutlinedButton(onClick = viewModel::openForm, modifier = Modifier.fillMaxWidth()) {
+          Text(stringResource(Res.string.record_dose))
+        }
+      }
       if (s.contacts.isNotEmpty()) {
         item(key = "contacts") {
           contactSection.Render(items = s.contacts, component = contactRenderer, onItemClick = {})

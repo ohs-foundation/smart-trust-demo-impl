@@ -30,6 +30,9 @@ import dev.ohs.trustdemo.onesa.data.di.viewModelModule
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.data.repository.InMemorySampleFhirRepository
 import dev.ohs.trustdemo.onesa.data.repository.SamplePatientFixture
+import dev.ohs.trustdemo.onesa.data.schedule.DoseRecording
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -47,7 +50,23 @@ class PatientProfileScreenTest {
     val repository = InMemorySampleFhirRepository()
     SamplePatientFixture.resources.forEach { repository.upsert(it) }
     startKoin {
-      modules(module { single<FhirRepository> { repository } }, repositoryModule, viewModelModule)
+      modules(
+        module {
+          single<FhirRepository> { repository }
+          single {
+            DoseRecording(
+              repository,
+              { emptyList() },
+              { null },
+              HttpClient(MockEngine { error("") }),
+              "",
+              {},
+            )
+          }
+        },
+        repositoryModule,
+        viewModelModule,
+      )
     }
   }
 

@@ -102,6 +102,20 @@
     <string name="immunization_verified">Verified</string>
     <string name="patient_profile_visit">Recommended doses</string>
     <string name="patient_profile_visit_dose">%1$s, due %2$s</string>
+    <string name="record_dose">Record a dose</string>
+    <string name="record_dose_cancel">Cancel</string>
+    <string name="record_dose_save">Record</string>
+    <string name="record_dose_again">Record again</string>
+    <string name="record_dose_schedule">Dose</string>
+    <string name="record_dose_product">Product</string>
+    <string name="record_dose_lot">Lot number</string>
+    <string name="record_dose_date">Date given (yyyy-mm-dd)</string>
+    <string name="record_dose_lot_missing">Enter the lot number.</string>
+    <string name="record_dose_future">That date has not come yet.</string>
+    <string name="record_dose_before_birth">That date is before the child was born.</string>
+    <string name="record_dose_unreadable_date">Enter the date as yyyy-mm-dd.</string>
+    <string name="record_dose_already">This dose was already recorded on %1$s. Record it again?</string>
+    <string name="record_dose_failed">The dose could not be recorded. Try again.</string>
     <string name="patient_profile_reminder">Reminder: visit between %1$s and %2$s</string>
 
     <string name="scan_title">Read a vaccination card</string>

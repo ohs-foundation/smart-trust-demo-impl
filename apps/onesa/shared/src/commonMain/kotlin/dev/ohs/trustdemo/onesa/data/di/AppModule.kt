@@ -38,6 +38,7 @@ import dev.ohs.trustdemo.onesa.data.repository.FhirEngineRepository
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.data.repository.GroupRepository
 import dev.ohs.trustdemo.onesa.data.repository.PatientRepository
+import dev.ohs.trustdemo.onesa.data.schedule.DoseRecording
 import dev.ohs.trustdemo.onesa.data.schedule.SchedulePlans
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
 import dev.ohs.trustdemo.onesa.data.schedule.VisitBooking
@@ -144,6 +145,16 @@ internal val serviceModule = module {
       refresh = { get<SyncManager>().syncNow() },
     )
   }
+  single {
+    DoseRecording(
+      repository = get(),
+      choices = get<DoseMatchService>()::choices,
+      session = ::registrationSession,
+      httpClient = OidcAuthApi.defaultHttpClient(),
+      baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
+      refresh = { get<SyncManager>().syncNow() },
+    )
+  }
   factory { QuestionnaireService(get(), get()) }
 }
 
@@ -194,7 +205,7 @@ internal val hcertModule = module {
 
 internal val viewModelModule = module {
   viewModel { PatientListViewModel(get()) }
-  viewModel { (patientId: String) -> PatientProfileViewModel(patientId, get()) }
+  viewModel { (patientId: String) -> PatientProfileViewModel(patientId, get(), get()) }
   viewModel { GroupListViewModel(get()) }
   viewModel { (groupId: String) -> GroupProfileViewModel(groupId, get()) }
   viewModel { (questionnaireId: String, launchContext: QuestionnaireLaunchContext) ->
