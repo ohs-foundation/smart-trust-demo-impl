@@ -28,6 +28,7 @@ import java.time.LocalDate
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
+import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -68,6 +69,7 @@ class FakeHapi {
 }
 
 private const val WATCH_PORT = 18090
+private const val CLIENT_ORIGIN = "http://client.test:8480"
 
 class ResetTest {
   private val today = LocalDate.of(2026, 11, 14)
@@ -77,13 +79,19 @@ class ResetTest {
     val hapi = FakeHapi()
     val medplum = FakeMedplum()
     val secrets = createTempDirectory()
-    repeat(2) { Reset(hapi.server, medplum.admin, "password", secrets, WATCH_PORT).run(today) }
+    repeat(2) {
+      Reset(hapi.server, medplum.admin, "password", secrets, WATCH_PORT, CLIENT_ORIGIN).run(today)
+    }
     assertEquals(2, hapi.expunges)
     assertEquals(Seed.onesaBase(ig).entry.size + 1, hapi.stored.size)
     assertEquals(2, medplum.stored.values.count { it.hasIdentifier("CRH-HN-68-104377") })
     assertEquals(1, medplum.invites)
     assertEquals(
-      setOf("clinic-viewer.crt", "clinic-viewer.key"),
+      medplum.stored.keys.single { it.startsWith("ClientApplication/") }.substringAfter('/'),
+      secrets.resolve("medplum-client-id").readText(),
+    )
+    assertEquals(
+      setOf("clinic-viewer.crt", "clinic-viewer.key", "medplum-client-id"),
       secrets.listDirectoryEntries().map { it.name }.toSet(),
     )
   }
@@ -92,7 +100,14 @@ class ResetTest {
   fun resetRegistersOneSubscriptionWithNoPayload() = runTest {
     val hapi = FakeHapi()
     repeat(2) {
-      Reset(hapi.server, FakeMedplum().admin, "password", createTempDirectory(), WATCH_PORT)
+      Reset(
+          hapi.server,
+          FakeMedplum().admin,
+          "password",
+          createTempDirectory(),
+          WATCH_PORT,
+          CLIENT_ORIGIN,
+        )
         .run(today)
     }
     val subscription = hapi.stored.values.filterIsInstance<Subscription>().single()

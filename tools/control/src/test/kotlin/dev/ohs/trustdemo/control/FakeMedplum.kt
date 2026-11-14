@@ -55,6 +55,7 @@ class FakeMedplum {
         invites++
         val invite = Json.parseToJsonElement(body).jsonObject
         val membership = buildJsonObject {
+          put("resourceType", "ProjectMembership")
           put("project", buildJsonObject { put("reference", "Project/$projectId") })
           put("profile", invite["membership"]!!.jsonObject["profile"]!!)
         }

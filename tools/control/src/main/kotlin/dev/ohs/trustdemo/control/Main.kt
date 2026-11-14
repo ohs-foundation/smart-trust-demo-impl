@@ -41,6 +41,8 @@ class TrustDemo : CliktCommand(name = "trust-demo") {
 private class Stack(env: StackEnv) {
   val hapiUrl = "http://127.0.0.1:${env.require("HAPI_HOST_PORT")}/fhir"
   val medplumUrl = "http://medplum.kesaro.${env.require("STACK_HOST")}:${env.require("PROXY_PORT")}"
+  val clientOrigin =
+    "http://client.kesaro.${env.require("STACK_HOST")}:${env.require("PROXY_PORT")}"
   val watchPort = env.require("WATCH_PORT").toInt()
   val onesa = FhirServer(hapiUrl, { null }, CIO.create())
   val kesaro =
@@ -74,6 +76,7 @@ class ResetCommand : StackCommand("reset") {
         env.require("TRUSTDEMO_USER_PASSWORD"),
         secrets,
         stack.watchPort,
+        stack.clientOrigin,
       )
       .run(LocalDate.now())
     echo(

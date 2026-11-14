@@ -81,6 +81,7 @@ class StepsTest {
     val somsak = ig.filterIsInstance<Patient>().single { it.id == "TrustDemoTaifafekiSomsak" }
     val dose = ig.filterIsInstance<Immunization>().single { it.id == "TrustDemoJ1HepB" }
     val hc1 = CardSigner.sign(dose, somsak, StoryClock(IG_J3, resetDay))
+    medplum.admin.seedBase(ig)
     medplum.admin.uploadCard("urn:hn", "CRH-HN-68-104377", "TrustDemoJ1HepB", hc1)
     val (key, card) = medplum.stored.entries.single { it.key.startsWith("DocumentReference/") }
     val meta =

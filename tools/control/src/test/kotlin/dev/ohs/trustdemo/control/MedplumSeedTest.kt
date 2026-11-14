@@ -22,6 +22,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.jsonPrimitive
 
 class MedplumSeedTest {
   @Test
@@ -33,5 +34,14 @@ class MedplumSeedTest {
     assertTrue(medplum.stored.values.none { r -> r.references().any { it.contains("TrustDemo") } })
     assertNotEquals("TrustDemoKesaroClinic", clinic.id)
     assertNotNull(anan.id)
+    val roles =
+      medplum.stored.values.filter {
+        it["resourceType"]?.jsonPrimitive?.content == "PractitionerRole"
+      }
+    assertTrue(
+      roles.all {
+        it.references().all { reference -> Regex("[A-Z]\\w+/[\\w-]+").matches(reference) }
+      }
+    )
   }
 }

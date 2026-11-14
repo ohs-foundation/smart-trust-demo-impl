@@ -57,6 +57,8 @@ private const val CLINIC = "TrustDemoKesaroClinic"
 private const val ANAN = "TrustDemoAnan"
 private const val PROJECT_NAME = "Taifafeki"
 private const val POLICY_NAME = "Taifafeki clinician"
+private const val CLIENT_NAME = "Taifafeki facility client"
+private const val TENANT_PARAMETER = "organization"
 private const val ANAN_EMAIL = "anan@kesaro.example"
 private const val PAGE = "1000"
 private const val MAX_WIPE_ROUNDS = 50
@@ -74,6 +76,16 @@ private val READ_ONLY =
   )
 private val READ_WRITE =
   listOf("Patient", "Immunization", "Provenance", "DocumentReference", "Binary")
+private val IN_COMPARTMENT =
+  listOf(
+    "Patient",
+    "Immunization",
+    "Provenance",
+    "DocumentReference",
+    "Location",
+    "PractitionerRole",
+    "Device",
+  )
 
 private val fhirJson = Json { ignoreUnknownKeys = true }
 private val fhirContentType = ContentType.parse("application/fhir+json")
@@ -210,7 +222,8 @@ class MedplumAdmin(
     base.forEach { resource ->
       val igId = resource.getValue("id").jsonPrimitive.content
       val type = resource.getValue("resourceType").jsonPrimitive.content
-      ids["$type/$igId"] = upsert(type, igId, relink(resource, ids))
+      val linked = relink(resource, ids)
+      ids["$type/$igId"] = "$type/${upsert(type, igId, linked, owner(type, linked, ids))}"
     }
   }
 
@@ -221,29 +234,72 @@ class MedplumAdmin(
     val project = project()
     val policy = upsertPolicy(project)
     val anan = checkNotNull(findByIgId("Practitioner", ANAN)) { "seedBase must run first" }.id()
+    val access =
+      JsonArray(
+        listOf(HOSPITAL, CLINIC).map { igId ->
+          val organization =
+            checkNotNull(findByIgId("Organization", igId)) { "seedBase must run first" }
+          buildJsonObject {
+            put("policy", reference("AccessPolicy/$policy"))
+            put(
+              "parameter",
+              JsonArray(
+                listOf(
+                  buildJsonObject {
+                    put("name", TENANT_PARAMETER)
+                    put("valueReference", reference("Organization/${organization.id()}"))
+                  }
+                )
+              ),
+            )
+          }
+        }
+      )
     val member =
-      search(
+      membership(project, anan)
+        ?: run {
+          val invite = buildJsonObject {
+            put("resourceType", "Practitioner")
+            put("firstName", "Anan")
+            put("lastName", "Kesaro")
+            put("email", ANAN_EMAIL)
+            put("password", password)
+            put("sendEmail", false)
+            put("membership", buildJsonObject { put("profile", reference("Practitioner/$anan")) })
+          }
+          send(HttpMethod.Post, "$baseUrl/admin/projects/$project/invite", invite.toString())
+          checkNotNull(membership(project, anan)) { "Medplum did not create Dr Anan's membership" }
+        }
+    write(
+      "ProjectMembership",
+      member.id(),
+      JsonObject(member - "accessPolicy" + ("access" to access)),
+    )
+  }
+
+  private suspend fun membership(project: String, practitioner: String): JsonObject? =
+    search(
         "ProjectMembership",
         "project" to "Project/$project",
-        "profile" to "Practitioner/$anan",
+        "profile" to "Practitioner/$practitioner",
       )
-    if (member.isNotEmpty()) return
-    val invite = buildJsonObject {
-      put("resourceType", "Practitioner")
-      put("firstName", "Anan")
-      put("lastName", "Kesaro")
-      put("email", ANAN_EMAIL)
-      put("password", password)
-      put("sendEmail", false)
-      put(
-        "membership",
-        buildJsonObject {
-          put("profile", reference("Practitioner/$anan"))
-          put("accessPolicy", reference("AccessPolicy/$policy"))
-        },
-      )
+      .firstOrNull()
+
+  /** Creates or updates the public client that Dr Anan signs in through, returning its id. */
+  suspend fun ensureClientApplication(redirectUri: String): String {
+    val application = buildJsonObject {
+      put("resourceType", "ClientApplication")
+      put("meta", buildJsonObject { put("project", project()) })
+      put("name", CLIENT_NAME)
+      put("redirectUri", redirectUri)
     }
-    send(HttpMethod.Post, "$baseUrl/admin/projects/$project/invite", invite.toString())
+    return write(
+      "ClientApplication",
+      search("ClientApplication", "_project" to project(), "name" to CLIENT_NAME)
+        .firstOrNull()
+        ?.id(),
+      application,
+    )
   }
 
   /** Stores a signed card as text, found by the patient's [hospitalNumber] and the [doseId]. */
@@ -253,9 +309,10 @@ class MedplumAdmin(
     doseId: String,
     hc1: String,
   ) {
+    val hospital = checkNotNull(findByIgId("Organization", HOSPITAL)) { "seedBase must run first" }
     val card = buildJsonObject {
       put("resourceType", "DocumentReference")
-      put("meta", buildJsonObject { put("project", project()) })
+      put("meta", meta("Organization/${hospital.id()}"))
       put("status", "current")
       put(
         "identifier",
@@ -324,12 +381,8 @@ class MedplumAdmin(
       put(
         "resource",
         JsonArray(
-          READ_ONLY.map {
-            buildJsonObject {
-              put("resourceType", it)
-              put("readonly", true)
-            }
-          } + READ_WRITE.map { buildJsonObject { put("resourceType", it) } }
+          READ_ONLY.map { rule(it, readonly = true) } +
+            READ_WRITE.map { rule(it, readonly = false) }
         ),
       )
     }
@@ -340,12 +393,39 @@ class MedplumAdmin(
     )
   }
 
-  private suspend fun upsert(type: String, igId: String, resource: JsonObject): String {
+  private fun rule(type: String, readonly: Boolean) = buildJsonObject {
+    put("resourceType", type)
+    if (type in IN_COMPARTMENT) put("criteria", "$type?_compartment=%$TENANT_PARAMETER")
+    if (readonly) put("readonly", true)
+  }
+
+  private suspend fun meta(account: String?) = buildJsonObject {
+    put("project", project())
+    if (account != null) put("accounts", JsonArray(listOf(reference(account))))
+  }
+
+  private fun owner(type: String, resource: JsonObject, ids: Map<String, String>): String? =
+    when (type) {
+      "Location" -> resource.referenceAt("managingOrganization")
+      "PractitionerRole" -> resource.referenceAt("organization")
+      "Device" -> ids["Organization/$CLINIC"]
+      else -> null
+    }
+
+  private fun JsonObject.referenceAt(name: String) =
+    this[name]?.jsonObject?.get("reference")?.jsonPrimitive?.contentOrNull
+
+  private suspend fun upsert(
+    type: String,
+    igId: String,
+    resource: JsonObject,
+    account: String?,
+  ): String {
     val body =
       JsonObject(
         resource - "id" +
           mapOf(
-            "meta" to buildJsonObject { put("project", project()) },
+            "meta" to meta(account),
             "identifier" to
               JsonArray(
                 resource["identifier"]?.jsonArray.orEmpty() + identifier(IG_ID_SYSTEM, igId)

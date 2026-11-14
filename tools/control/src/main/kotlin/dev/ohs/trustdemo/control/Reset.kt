@@ -39,8 +39,8 @@ private val J3_IN_IG = LocalDate.parse("2025-11-25")
 
 /**
  * Puts both countries into the story's starting state, before journey J1: Onesa's HAPI server and
- * Taifafeki's Medplum project, with Somsak's signed cards uploaded and the clinic certificate in
- * [secretsDir].
+ * Taifafeki's Medplum project, with Somsak's signed cards uploaded, and in [secretsDir] the clinic
+ * certificate and the facility client's id.
  */
 class Reset(
   private val onesa: FhirServer,
@@ -48,6 +48,7 @@ class Reset(
   private val ananPassword: String,
   private val secretsDir: Path,
   private val watchPort: Int,
+  private val clientOrigin: String,
 ) {
   suspend fun run(today: LocalDate) {
     val ig = IgResources.all()
@@ -62,6 +63,7 @@ class Reset(
       kesaro.ensureClinician(ananPassword)
       uploadCards(ig, StoryClock(J3_IN_IG, today))
       writeClinicCertificate()
+      writeClientId(kesaro.ensureClientApplication(clientOrigin))
     } catch (failure: CancellationException) {
       throw failure
     } catch (failure: Exception) {
@@ -116,6 +118,11 @@ class Reset(
     Files.createDirectories(secretsDir)
     writePem(secretsDir.resolve("clinic-viewer.key"), "PRIVATE KEY", key.encoded)
     writePem(secretsDir.resolve("clinic-viewer.crt"), "CERTIFICATE", certificate.encoded)
+  }
+
+  private fun writeClientId(id: String) {
+    Files.createDirectories(secretsDir)
+    Files.writeString(secretsDir.resolve("medplum-client-id"), id)
   }
 
   private fun writePem(path: Path, label: String, der: ByteArray) {
