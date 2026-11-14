@@ -351,6 +351,11 @@ as_root() {
     if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then "$@"; else sudo "$@"; fi
 }
 
+# Let's Encrypt keeps live/ readable by root only.
+has_certificate() {
+    as_root test -f "$LETSENCRYPT_LIVE/$1/fullchain.pem"
+}
+
 # A vhost serving nothing but the ACME challenge. The rendered vhosts reference certificates that
 # do not exist yet, so nginx would refuse to load them and certbot could never obtain the very
 # certificates they need. This breaks that cycle for the port 80 phase.
@@ -412,7 +417,7 @@ cmd_nginx() {
     for i in "${!hosts[@]}"; do
         host="${hosts[$i]}"
         [[ -n "$host" ]] || { warn "Skipping ${files[$i]}, its hostname is unset in .env."; continue; }
-        if [[ -f "$LETSENCRYPT_LIVE/$host/fullchain.pem" ]]; then
+        if has_certificate "$host"; then
             info "Certificate already present for $host."
         else
             pending+=("$i")
@@ -451,7 +456,7 @@ cmd_nginx() {
     for i in "${!hosts[@]}"; do
         host="${hosts[$i]}"; file="$SCRIPT_DIR/nginx/host/${files[$i]}"
         [[ -n "$host" && -f "$file" ]] || continue
-        if [[ -f "$LETSENCRYPT_LIVE/$host/fullchain.pem" ]]; then
+        if has_certificate "$host"; then
             enable_site "$file"
             echo "    $host -> ${files[$i]}"
         else
