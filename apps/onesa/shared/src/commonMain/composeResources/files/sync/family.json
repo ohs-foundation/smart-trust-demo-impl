@@ -1,0 +1,10 @@
+{
+  "resources": [
+    { "type": "Group", "params": { "member": "Patient/{patient}", "_count": "100" } },
+    { "type": "Patient", "params": { "_count": "100" } },
+    { "type": "Immunization", "params": { "_count": "100" } },
+    { "type": "ImmunizationRecommendation", "params": { "_count": "100" } },
+    { "type": "Consent", "params": { "_count": "100" } },
+    { "type": "AuditEvent", "params": { "_count": "100" } }
+  ]
+}

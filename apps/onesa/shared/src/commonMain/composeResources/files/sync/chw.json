@@ -1,0 +1,13 @@
+{
+  "resources": [
+    { "type": "Group", "params": { "_count": "100" } },
+    { "type": "Patient", "params": { "_count": "100" } },
+    { "type": "RelatedPerson", "params": { "_count": "100" } },
+    { "type": "Immunization", "params": { "_count": "100" } },
+    { "type": "ServiceRequest", "params": { "_count": "100" } },
+    { "type": "QuestionnaireResponse", "params": { "_count": "100" } },
+    { "type": "Organization", "params": { "_count": "100" } },
+    { "type": "Location", "params": { "_count": "100" } },
+    { "type": "Practitioner", "params": { "_count": "100" } }
+  ]
+}
