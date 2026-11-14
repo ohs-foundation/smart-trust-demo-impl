@@ -153,9 +153,14 @@ class GenerateVhlTest {
       }
       .toString()
 
-  private suspend fun ApplicationTestBuilder.generate(token: String?, body: String): HttpResponse =
+  private suspend fun ApplicationTestBuilder.generate(
+    token: String?,
+    body: String,
+    key: String? = null,
+  ): HttpResponse =
     client.post("/vhl/\$generate-vhl") {
       token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
+      key?.let { header("Idempotency-Key", it) }
       header(HttpHeaders.ContentType, ContentType.parse("application/fhir+json").toString())
       setBody(body)
     }
@@ -284,6 +289,30 @@ class GenerateVhlTest {
       payload,
       (Hcert.vhl.fromVhlink(Hcert.vhl.toVhlink(payload)) as HcertResult.Ok).value,
     )
+  }
+
+  @Test
+  fun aRetriedShareReturnsTheSameLinks() = withService {
+    val body = parameters("bounmy", "somsak")
+    val first = generate(bounmyToken(), body, key = "share-1")
+    val retried = generate(bounmyToken(), body, key = "share-1")
+
+    assertEquals(HttpStatusCode.OK, retried.status)
+    assertEquals(first.bodyAsText(), retried.bodyAsText())
+    assertEquals(1, hapi.transactions.size)
+    assertEquals(2, written().count { it.type() == "Consent" })
+
+    generate(bounmyToken(), body)
+    assertEquals(2, hapi.transactions.size)
+  }
+
+  @Test
+  fun aReusedKeyWithAnotherBodyIsRefused() = withService {
+    generate(bounmyToken(), parameters("bounmy"), key = "share-1")
+    val refused = generate(bounmyToken(), parameters("bounmy", "somsak"), key = "share-1")
+
+    assertEquals(HttpStatusCode.UnprocessableEntity, refused.status)
+    assertEquals(1, hapi.transactions.size)
   }
 
   @Test

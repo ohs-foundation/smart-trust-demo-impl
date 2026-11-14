@@ -43,6 +43,7 @@ import kotlinx.serialization.json.putJsonObject
 import org.slf4j.LoggerFactory
 
 private const val AUTH = "keycloak"
+private const val MAX_KEY = 255
 internal val FHIR_JSON = ContentType.parse("application/fhir+json")
 private val PATIENT_REFERENCE = Regex("""Patient/([A-Za-z0-9][A-Za-z0-9\-.]{0,63})""")
 
@@ -52,6 +53,7 @@ private fun fhirUser(claim: Claim): String? =
 
 fun Application.vhlModule(deps: VhlDeps) {
   val service = VhlService(deps)
+  val shares = IdempotencyStore(deps.clock)
   install(Authentication) {
     jwt(AUTH) {
       verifier(deps.jwks, deps.issuer)
@@ -72,10 +74,21 @@ fun Application.vhlModule(deps: VhlDeps) {
           fhirUser(checkNotNull(call.principal<JWTPrincipal>()).payload.getClaim("fhirUser"))!!
         val bearer = call.request.header(HttpHeaders.Authorization).orEmpty().substringAfter(' ')
         try {
-          val request = ShareRequest.parse(call.receiveText())
-          call.respondText(service.generate(caller, bearer, request).toString(), FHIR_JSON)
+          val body = call.receiveText()
+          val key = call.request.header("Idempotency-Key")
+          if (key != null && key.length !in 1..MAX_KEY) {
+            throw BadRequest("the Idempotency-Key is 1 to $MAX_KEY characters")
+          }
+          suspend fun generate() =
+            service.generate(caller, bearer, ShareRequest.parse(body)).toString()
+          call.respondText(
+            if (key == null) generate() else shares.once(caller, key, body, ::generate),
+            FHIR_JSON,
+          )
         } catch (e: BadRequest) {
           call.respondOutcome(HttpStatusCode.BadRequest, "invalid", e)
+        } catch (e: KeyReused) {
+          call.respondOutcome(HttpStatusCode.UnprocessableEntity, "processing", e)
         } catch (e: NotYourHousehold) {
           call.respondOutcome(HttpStatusCode.Forbidden, "forbidden", e)
         } catch (e: BackendRefused) {

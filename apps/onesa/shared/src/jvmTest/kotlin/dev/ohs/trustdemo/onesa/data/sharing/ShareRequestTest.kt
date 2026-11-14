@@ -61,7 +61,7 @@ class ShareRequestTest {
     val engine = MockEngine { request ->
       sent = (request.body as TextContent).text
       respond(
-        """{"resourceType":"Parameters","parameter":[]}""",
+        replyFor(people),
         HttpStatusCode.OK,
         headersOf(HttpHeaders.ContentType, "application/fhir+json"),
       )
@@ -73,11 +73,16 @@ class ShareRequestTest {
         httpClient = HttpClient(engine),
         baseUrl = "https://vhl.test:8443",
         links = InMemoryLinks(),
-        today = { today },
+        expiry = { null },
+        now = { 0 },
       )
 
     val outcome =
-      service.share(ShareEntry(people, LocalDate.parse("2026-11-28"), "0482", again = "0482"))
+      service.share(
+        ShareEntry(people, LocalDate.parse("2026-11-28"), "0482", again = "0482"),
+        today,
+        "key-1",
+      )
 
     assertIs<ShareOutcome.Issued>(outcome)
     assertTrue(""""valueString": "0482"""" in sent || """"valueString":"0482"""" in sent)
@@ -94,6 +99,16 @@ class ShareRequestTest {
   }
 }
 
+internal fun replyFor(people: List<String>): String =
+  """{"resourceType":"Parameters","parameter":[${
+    people.joinToString(",") { id ->
+      """{"name":"link","part":[
+        {"name":"person","valueReference":{"reference":"Patient/$id"}},
+        {"name":"link","valueString":"HC1:$id"},
+        {"name":"consent","valueReference":{"reference":"Consent/c-$id"}}]}"""
+    }
+  }]}"""
+
 internal class InMemoryLinks : LinkStore {
   val kept = mutableMapOf<String, IssuedLink>()
 
@@ -105,8 +120,8 @@ internal class InMemoryLinks : LinkStore {
     kept.remove(consentId)
   }
 
-  override suspend fun purgeExpired(today: LocalDate) {
-    kept.values.removeAll { LocalDate.parse(it.expires) < today }
+  override suspend fun purgeExpired(nowEpochSeconds: Long) {
+    kept.values.removeAll { it.exp <= nowEpochSeconds }
   }
 
   override suspend fun clear() = kept.clear()
