@@ -66,11 +66,11 @@ class TrustKitTest {
   @Test
   fun aTamperedListIsRefused() {
     val tampered = TrustListWriter.localTestList().replace("DEMO-VHL", "DEMO-DVC")
-    assertIs<HcertResult.Err<*>>(
+    val result =
       Hcert.trust
         .newTrustStore()
         .addVerifiedDidDocument(tampered, TestKeys.gdhcnSignerDidDocument())
-    )
+    assertIs<TrustError.ProofInvalid>((result as HcertResult.Err).error)
   }
 
   @Test
