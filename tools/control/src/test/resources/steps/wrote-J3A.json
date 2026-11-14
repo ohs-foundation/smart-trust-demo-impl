@@ -1,0 +1,159 @@
+{
+  "Verified doses": [
+    {
+      "resourceType": "Immunization",
+      "id": "J3HepB",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-HEPB-BD"
+          },
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+            "code": "vp-hepb-peds-monovalent"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    },
+    {
+      "resourceType": "Immunization",
+      "id": "J3Bcg",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-BCG"
+          },
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+            "code": "vp-bcg-freeze-dried"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    }
+  ],
+  "Reported doses replaced": [
+    {
+      "resourceType": "Immunization",
+      "id": "J3HepB",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-HEPB-BD"
+          },
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+            "code": "vp-hepb-peds-monovalent"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    },
+    {
+      "resourceType": "Immunization",
+      "id": "J3Bcg",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-BCG"
+          },
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+            "code": "vp-bcg-freeze-dried"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    }
+  ],
+  "Reported doses": [
+    {
+      "resourceType": "Immunization",
+      "id": "J3HepB",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-HEPB-BD"
+          },
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+            "code": "vp-hepb-peds-monovalent"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    },
+    {
+      "resourceType": "Immunization",
+      "id": "J3Bcg",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-BCG"
+          },
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+            "code": "vp-bcg-freeze-dried"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    }
+  ],
+  "Verification provenance": [
+    {
+      "resourceType": "Provenance",
+      "id": "Verification",
+      "recorded": "2026-11-14T10:14:22Z",
+      "agent": [
+        {
+          "who": {
+            "reference": "Practitioner/Chanthason"
+          }
+        }
+      ],
+      "target": [
+        {
+          "reference": "Immunization/J3HepB"
+        }
+      ]
+    }
+  ]
+}

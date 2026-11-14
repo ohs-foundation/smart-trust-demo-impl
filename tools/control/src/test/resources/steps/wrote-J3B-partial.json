@@ -1,0 +1,59 @@
+{
+  "Adjudication provenance": [
+    {
+      "resourceType": "Provenance",
+      "id": "Adjudication",
+      "recorded": "2026-11-14T10:21:00Z",
+      "agent": [
+        {
+          "who": {
+            "reference": "Practitioner/Chanthason"
+          }
+        }
+      ],
+      "target": [
+        {
+          "reference": "Immunization/J3HepB"
+        }
+      ]
+    }
+  ],
+  "Hep B entry in the concept map": [
+    {
+      "resourceType": "ConceptMap",
+      "id": "TrustDemoProductToOnesaEpi",
+      "status": "draft",
+      "group": [
+        {
+          "element": [
+            {
+              "code": "vp-bcg-freeze-dried"
+            },
+            {
+              "code": "vp-hepb-peds-monovalent"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "Referral completed": [
+    {
+      "resourceType": "ServiceRequest",
+      "id": "Referral",
+      "status": "active",
+      "intent": "order",
+      "subject": {
+        "reference": "Patient/Somsak"
+      },
+      "code": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "3457005"
+          }
+        ]
+      }
+    }
+  ]
+}

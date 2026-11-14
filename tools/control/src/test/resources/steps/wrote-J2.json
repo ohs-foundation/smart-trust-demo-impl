@@ -1,0 +1,110 @@
+{
+  "Registration questionnaire response": [
+    {
+      "resourceType": "QuestionnaireResponse",
+      "id": "Registration",
+      "status": "completed",
+      "questionnaire": "http://smart.who.int/trust-demo/Questionnaire/TrustDemoHouseholdRegistration"
+    }
+  ],
+  "Somsak's record on Onesa": [
+    {
+      "resourceType": "Patient",
+      "id": "Somsak",
+      "birthDate": "2026-10-17"
+    }
+  ],
+  "Mother and father as related persons": [
+    {
+      "resourceType": "RelatedPerson",
+      "id": "Khamla",
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "relationship": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+              "code": "MTH"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resourceType": "RelatedPerson",
+      "id": "Bounmy",
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "relationship": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+              "code": "FTH"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "Reported doses": [
+    {
+      "resourceType": "Immunization",
+      "id": "J2HepBReported",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+            "code": "vp-hepb-peds-monovalent"
+          }
+        ]
+      },
+      "primarySource": false,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    },
+    {
+      "resourceType": "Immunization",
+      "id": "J2BcgReported",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+            "code": "vp-bcg-freeze-dried"
+          }
+        ]
+      },
+      "primarySource": false,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    }
+  ],
+  "Referral to the health centre": [
+    {
+      "resourceType": "ServiceRequest",
+      "id": "Referral",
+      "status": "active",
+      "intent": "order",
+      "subject": {
+        "reference": "Patient/Somsak"
+      },
+      "code": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "3457005"
+          }
+        ]
+      }
+    }
+  ]
+}

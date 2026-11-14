@@ -1,0 +1,120 @@
+{
+  "Four Onesan doses": [
+    {
+      "resourceType": "Immunization",
+      "id": "J3HepB",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-HEPB-BD"
+          },
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+            "code": "vp-hepb-peds-monovalent"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    },
+    {
+      "resourceType": "Immunization",
+      "id": "J3Bcg",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-BCG"
+          },
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+            "code": "vp-bcg-freeze-dried"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    },
+    {
+      "resourceType": "Immunization",
+      "id": "Penta1",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-PENTA-1"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    },
+    {
+      "resourceType": "Immunization",
+      "id": "Bopv1",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-OPV-1"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    },
+    {
+      "resourceType": "Immunization",
+      "id": "Pcv1",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-PCV-1"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    },
+    {
+      "resourceType": "Immunization",
+      "id": "Mr1",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+            "code": "XXK-EPI-MR-1"
+          }
+        ]
+      },
+      "primarySource": true,
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17"
+    }
+  ]
+}

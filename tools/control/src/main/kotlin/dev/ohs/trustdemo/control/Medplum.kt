@@ -106,6 +106,12 @@ class MedplumAdmin(
     }
   }
 
+  /** Searches the project for [type], returning the records as FHIR resources. */
+  suspend fun searchResources(type: String, params: Map<String, String>): List<Resource> =
+    search(type, "_project" to project(), *params.toList().toTypedArray()).map {
+      fhirJson.decodeFromJsonElement(Resource.serializer(), it)
+    }
+
   /** Upserts the base records by their IG id, pointing references between them at Medplum's ids. */
   suspend fun seedBase(ig: List<Resource>) {
     val ids = mutableMapOf<String, String>()

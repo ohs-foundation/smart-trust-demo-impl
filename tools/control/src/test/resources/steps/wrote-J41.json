@@ -1,0 +1,42 @@
+{
+  "Access audit event, released": [
+    {
+      "resourceType": "AuditEvent",
+      "id": "Access",
+      "outcome": "0",
+      "recorded": "2026-11-14T14:30:15Z",
+      "type": {
+        "code": "110112"
+      },
+      "agent": [
+        {
+          "requestor": true
+        }
+      ],
+      "source": {
+        "observer": {
+          "display": "gateway"
+        }
+      }
+    }
+  ],
+  "Receipt provenance": [
+    {
+      "resourceType": "Provenance",
+      "id": "Receipt",
+      "recorded": "2026-11-14T14:30:20Z",
+      "target": [
+        {
+          "reference": "Bundle/Ips"
+        }
+      ],
+      "agent": [
+        {
+          "who": {
+            "reference": "Practitioner/Anan"
+          }
+        }
+      ]
+    }
+  ]
+}

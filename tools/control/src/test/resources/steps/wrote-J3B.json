@@ -1,0 +1,120 @@
+{
+  "Adjudication provenance": [
+    {
+      "resourceType": "Provenance",
+      "id": "Adjudication",
+      "recorded": "2026-11-14T10:21:00Z",
+      "agent": [
+        {
+          "who": {
+            "reference": "Practitioner/Chanthason"
+          }
+        }
+      ],
+      "target": [
+        {
+          "reference": "Immunization/J3HepB"
+        }
+      ]
+    }
+  ],
+  "Hep B entry in the concept map": [
+    {
+      "resourceType": "ConceptMap",
+      "id": "TrustDemoProductToOnesaEpi",
+      "status": "draft",
+      "group": [
+        {
+          "element": [
+            {
+              "code": "vp-bcg-freeze-dried"
+            },
+            {
+              "code": "vp-hepb-peds-monovalent"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "Referral completed": [
+    {
+      "resourceType": "ServiceRequest",
+      "id": "Referral",
+      "status": "completed",
+      "intent": "order",
+      "subject": {
+        "reference": "Patient/Somsak"
+      },
+      "code": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "3457005"
+          }
+        ]
+      }
+    }
+  ],
+  "Immunization recommendation": [
+    {
+      "resourceType": "ImmunizationRecommendation",
+      "id": "Recommendation",
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "recommendation": [
+        {
+          "vaccineCode": [
+            {
+              "coding": [
+                {
+                  "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+                  "code": "XXK-EPI-PENTA-1"
+                }
+              ]
+            }
+          ],
+          "forecastStatus": {
+            "coding": [
+              {
+                "code": "due"
+              }
+            ]
+          }
+        }
+      ],
+      "date": "2026-11-14T10:22:00Z"
+    }
+  ],
+  "Reminder task": [
+    {
+      "resourceType": "Task",
+      "id": "Reminder",
+      "status": "requested",
+      "intent": "plan",
+      "focus": {
+        "reference": "ImmunizationRecommendation/Recommendation"
+      }
+    }
+  ],
+  "Referral to the health centre": [
+    {
+      "resourceType": "ServiceRequest",
+      "id": "Referral",
+      "status": "completed",
+      "intent": "order",
+      "subject": {
+        "reference": "Patient/Somsak"
+      },
+      "code": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "3457005"
+          }
+        ]
+      }
+    }
+  ]
+}
