@@ -1,31 +1,36 @@
 import { createHash, randomBytes } from "node:crypto";
-import { PKCE_COOKIE, type PkceState } from "./cookie";
+import { pkceCookie } from "./cookie";
+import { SCOPE } from "./scope";
 
 export interface SignInSettings {
   clientId: string;
   medplumBaseUrl: string;
+  medplumInternalUrl: string;
   clientOrigin: string;
 }
 
-// The SDK's own startPkce needs a browser's window and silently falls back to a plain challenge.
+export function isSecure(settings: SignInSettings) {
+  return settings.clientOrigin.startsWith("https:");
+}
+
+export function challengeFor(verifier: string) {
+  return createHash("sha256").update(verifier).digest("base64url");
+}
+
 export function beginSignIn(settings: SignInSettings) {
-  const state = randomBytes(24).toString("base64url");
-  const verifier = randomBytes(64).toString("base64url");
-  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  const pending = {
+    state: randomBytes(24).toString("base64url"),
+    verifier: randomBytes(64).toString("base64url"),
+  };
 
   const location = new URL("oauth2/authorize", `${settings.medplumBaseUrl}/`);
   location.searchParams.set("response_type", "code");
-  location.searchParams.set("state", state);
+  location.searchParams.set("state", pending.state);
   location.searchParams.set("client_id", settings.clientId);
   location.searchParams.set("redirect_uri", settings.clientOrigin);
   location.searchParams.set("code_challenge_method", "S256");
-  location.searchParams.set("code_challenge", challenge);
-  location.searchParams.set("scope", "openid profile");
+  location.searchParams.set("code_challenge", challengeFor(pending.verifier));
+  location.searchParams.set("scope", SCOPE);
 
-  // Readable by the page so the SDK, which keeps its verifier in storage, can finish the exchange.
-  const value = encodeURIComponent(JSON.stringify({ state, verifier } satisfies PkceState));
-  return {
-    location: location.toString(),
-    cookie: `${PKCE_COOKIE}=${value}; Path=/; SameSite=Lax; Max-Age=600`,
-  };
+  return { location: location.toString(), cookie: pkceCookie(pending, isSecure(settings)) };
 }

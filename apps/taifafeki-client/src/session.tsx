@@ -2,7 +2,6 @@ import { ClientStorage, MedplumClient } from "@medplum/core";
 import { MedplumProvider } from "@medplum/react-hooks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
-import { completeSignIn } from "./auth/complete";
 import { getSettings } from "./server/settings";
 
 interface Session {
@@ -25,12 +24,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         storage,
         onUnauthenticated: () => window.location.assign("/signin"),
       });
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
-      if (code && !medplum.getActiveLogin()) {
-        await completeSignIn(medplum, storage, document.cookie, code, params.get("state") ?? "");
-        window.history.replaceState(null, "", "/");
-      }
       setSession({ medplum, storage });
     })().catch((error: unknown) => setFailure(error instanceof Error ? error.message : String(error)));
   }, []);

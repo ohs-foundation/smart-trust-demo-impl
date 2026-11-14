@@ -1,15 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { authorizeParams, login } from "./oauth";
 
-const params = authorizeParams({
-  response_type: "code",
-  client_id: "client-1",
-  redirect_uri: "http://client.test:8480",
-  state: "s1",
-  scope: "openid profile",
-  code_challenge: "chal",
-  code_challenge_method: "S256",
-});
+const search = { client_id: "client-1", state: "s1", scope: "openid profile" };
 
 function fakeMedplum(replies: Record<string, unknown>, calls: { url: string; body: unknown }[]) {
   return async (url: string | URL | Request, init?: RequestInit) => {
@@ -19,12 +11,19 @@ function fakeMedplum(replies: Record<string, unknown>, calls: { url: string; bod
   };
 }
 
+const membership = (id: string, project: string) => ({ id, project: { display: project } });
+
 describe("login", () => {
-  it("sends the PKCE challenge with the credentials and returns to the client with the code", async () => {
+  it("reads the authorize query", () => {
+    expect(authorizeParams(search).clientId).toBe("client-1");
+  });
+
+  it("sends the server's S256 challenge with the credentials and returns the code", async () => {
     const calls: { url: string; body: unknown }[] = [];
-    const to = await login(
+    const code = await login(
       "http://medplum.test:8480",
-      params,
+      "client-1",
+      "chal",
       "anan@kesaro.example",
       "pw",
       fakeMedplum({ "/auth/login": { code: "abc" } }, calls),
@@ -35,31 +34,42 @@ describe("login", () => {
       codeChallenge: "chal",
       codeChallengeMethod: "S256",
     });
-    expect(to).toBe("http://client.test:8480/?code=abc&state=s1");
+    expect(code).toBe("abc");
   });
 
-  it("picks the only membership when Medplum asks which profile", async () => {
+  it("picks the Taifafeki membership, not the first", async () => {
     const calls: { url: string; body: unknown }[] = [];
-    const to = await login(
+    const code = await login(
       "http://medplum.test:8480",
-      params,
-      "anan@kesaro.example",
+      "client-1",
+      "chal",
+      "a@b.c",
       "pw",
       fakeMedplum(
         {
-          "/auth/login": { login: "l1", memberships: [{ id: "m1" }] },
+          "/auth/login": { login: "l1", memberships: [membership("m0", "Other"), membership("m1", "Taifafeki")] },
           "/auth/profile": { code: "def" },
         },
         calls,
       ),
     );
     expect(calls[1]).toEqual({ url: "/auth/profile", body: { login: "l1", profile: "m1" } });
-    expect(to).toBe("http://client.test:8480/?code=def&state=s1");
+    expect(code).toBe("def");
+  });
+
+  it("refuses a user with no Taifafeki membership", async () => {
+    await expect(
+      login("http://m", "c", "x", "a@b.c", "pw", fakeMedplum({ "/auth/login": { login: "l", memberships: [membership("m0", "Other")] } }, [])),
+    ).rejects.toThrow("Sign-in failed");
+  });
+
+  it("says plainly that MFA is not supported", async () => {
+    await expect(
+      login("http://m", "c", "x", "a@b.c", "pw", fakeMedplum({ "/auth/login": { login: "l", mfaRequired: true } }, [])),
+    ).rejects.toThrow("this account needs MFA, which this demo client does not support");
   });
 
   it("refuses when Medplum offers no code", async () => {
-    await expect(
-      login("http://medplum.test:8480", params, "a@b.c", "bad", fakeMedplum({ "/auth/login": {} }, [])),
-    ).rejects.toThrow("Sign-in failed");
+    await expect(login("http://m", "c", "x", "a@b.c", "bad", fakeMedplum({ "/auth/login": {} }, []))).rejects.toThrow("Sign-in failed");
   });
 });

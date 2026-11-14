@@ -1,26 +1,28 @@
+import { SCOPE } from "./scope";
+
 export interface AuthorizeParams {
   clientId: string;
-  redirectUri: string;
-  state: string;
-  scope: string;
-  codeChallenge: string;
-  codeChallengeMethod: string;
-  nonce?: string;
 }
 
 type Fetch = typeof fetch;
 
+interface Membership {
+  id: string;
+  project?: { display?: string };
+}
+
+interface LoginReply {
+  code?: string;
+  login?: string;
+  memberships?: Membership[];
+  mfaRequired?: boolean;
+  enrollQrCode?: string;
+}
+
+const PROJECT = "Taifafeki";
+
 export function authorizeParams(search: Record<string, unknown>): AuthorizeParams {
-  const text = (name: string) => (typeof search[name] === "string" ? search[name] : "");
-  return {
-    clientId: text("client_id"),
-    redirectUri: text("redirect_uri"),
-    state: text("state"),
-    scope: text("scope") || "openid",
-    codeChallenge: text("code_challenge"),
-    codeChallengeMethod: text("code_challenge_method"),
-    nonce: text("nonce") || undefined,
-  };
+  return { clientId: typeof search.client_id === "string" ? search.client_id : "" };
 }
 
 async function post(fetcher: Fetch, url: string, body: unknown) {
@@ -29,12 +31,13 @@ async function post(fetcher: Fetch, url: string, body: unknown) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  return (await response.json()) as { code?: string; login?: string; memberships?: { id: string }[] };
+  return (await response.json()) as LoginReply;
 }
 
 export async function login(
   medplumBaseUrl: string,
-  params: AuthorizeParams,
+  clientId: string,
+  codeChallenge: string,
   email: string,
   password: string,
   fetcher: Fetch = fetch,
@@ -42,13 +45,15 @@ export async function login(
   let reply = await post(fetcher, `${medplumBaseUrl}/auth/login`, {
     email,
     password,
-    clientId: params.clientId,
-    scope: params.scope,
-    nonce: params.nonce,
-    codeChallenge: params.codeChallenge,
-    codeChallengeMethod: params.codeChallengeMethod,
+    clientId,
+    scope: SCOPE,
+    codeChallenge,
+    codeChallengeMethod: "S256",
   });
-  const membership = reply.memberships?.[0];
+  if (reply.mfaRequired || reply.enrollQrCode) {
+    throw new Error("Sign-in failed: this account needs MFA, which this demo client does not support");
+  }
+  const membership = reply.memberships?.find((it) => it.project?.display === PROJECT);
   if (!reply.code && reply.login && membership) {
     reply = await post(fetcher, `${medplumBaseUrl}/auth/profile`, {
       login: reply.login,
@@ -56,8 +61,5 @@ export async function login(
     });
   }
   if (!reply.code) throw new Error("Sign-in failed");
-  const back = new URL(params.redirectUri);
-  back.searchParams.set("code", reply.code);
-  back.searchParams.set("state", params.state);
-  return back.toString();
+  return reply.code;
 }
