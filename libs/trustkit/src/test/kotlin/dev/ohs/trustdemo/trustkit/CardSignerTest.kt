@@ -104,4 +104,17 @@ class CardSignerTest {
       )
     assertEquals("2026-10-16", decodedVaccinationDate(hc1))
   }
+
+  @Test
+  fun cardNamesTheIssuingParticipantNotTheHospitalId() {
+    val hc1 =
+      CardSigner.sign(
+        igImmunization("TrustDemoJ1HepB"),
+        igPatient("TrustDemoTaifafekiSomsak"),
+        clock13Nov,
+      )
+    val verified = assertIs<VerificationResult.Verified>(verification(hc1, localStore()))
+    val dvc = assertIs<Payload.DvcMin>(verified.value.entries.single().payload).value
+    assertEquals("XXR", dvc.vx.`is`)
+  }
 }

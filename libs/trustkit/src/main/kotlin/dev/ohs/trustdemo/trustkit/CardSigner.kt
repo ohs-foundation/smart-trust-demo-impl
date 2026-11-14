@@ -36,6 +36,7 @@ object CardSigner {
   private const val PRODUCT_SYSTEM =
     "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
   private const val NATIONALITY = "XXR"
+  private const val PARTICIPANT = "XXR"
   private const val ISSUING_COUNTRY = "XR"
   private const val VALID_DAYS = 365L
 
@@ -91,7 +92,7 @@ object CardSigner {
         DvcMinVaccineDetails(
           vp = dose.vaccineCode.coding.first { it.system?.value == PRODUCT_SYSTEM }.code!!.value!!,
           dv = clock.real(given).toString(),
-          `is` = patient.managingOrganization!!.reference!!.value!!.substringAfter('/'),
+          `is` = PARTICIPANT,
           bo = dose.lotNumber!!.value!!,
         ),
       v = "1.0.0",
