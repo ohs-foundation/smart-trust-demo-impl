@@ -20,6 +20,7 @@ while IFS= read -r line; do
   case "$line" in
     STACK_HOST=) echo "STACK_HOST=$STACK_HOST" ;;
     *_PASSWORD= | *_SECRET=) echo "${line}$(openssl rand -hex 24)" ;;
+    *_CLIENT_ID=) echo "${line}$(python3 -c 'import uuid; print(uuid.uuid4())')" ;;
     *) echo "$line" ;;
   esac >>"$env_file"
 done <"$here/.env.example"

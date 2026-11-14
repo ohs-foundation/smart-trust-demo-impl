@@ -36,6 +36,10 @@ check "gateway serves vilay's Patient search" 200 \
   "$(status -H "Authorization: Bearer $token" "http://gateway.onesa.${base}/fhir/Patient")"
 
 check "Medplum health" 200 "$(status "http://medplum.kesaro.${base}/healthcheck")"
+check "Medplum issues the super-admin client a token" yes \
+  "$(curl -s --max-time 10 -d grant_type=client_credentials -d "client_id=${MEDPLUM_SUPER_ADMIN_CLIENT_ID}" \
+    -d "client_secret=${MEDPLUM_SUPER_ADMIN_CLIENT_SECRET}" "http://medplum.kesaro.${base}/oauth2/token" |
+    jq -e '.access_token' >/dev/null && echo yes || echo no)"
 
 served=$(curl -s --max-time 10 "http://trust.gdhcn.${base}/local-test-list.json")
 check "trust host serves the local test list" same \

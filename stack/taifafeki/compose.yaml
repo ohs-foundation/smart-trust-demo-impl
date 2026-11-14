@@ -56,6 +56,11 @@ services:
       MEDPLUM_ALLOWED_ORIGINS: http://client.kesaro.${STACK_HOST}:${PROXY_PORT}
       MEDPLUM_INTROSPECTION_ENABLED: "true"
       MEDPLUM_SHUTDOWN_TIMEOUT_MILLISECONDS: 30000
+      # Applied when the database is first seeded, so Medplum never has its public default login.
+      MEDPLUM_DEFAULT_SUPER_ADMIN_EMAIL: admin@kesaro.example
+      MEDPLUM_DEFAULT_SUPER_ADMIN_PASSWORD: ${MEDPLUM_SUPER_ADMIN_PASSWORD}
+      MEDPLUM_DEFAULT_SUPER_ADMIN_CLIENT_ID: ${MEDPLUM_SUPER_ADMIN_CLIENT_ID}
+      MEDPLUM_DEFAULT_SUPER_ADMIN_CLIENT_SECRET: ${MEDPLUM_SUPER_ADMIN_CLIENT_SECRET}
     mem_limit: 1g
     depends_on:
       medplum-postgres:
