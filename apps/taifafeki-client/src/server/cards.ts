@@ -1,14 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
+import { checkCardRequest, type CardRequest, type CardText } from "./cardReads";
 
-export interface CardText {
-  doseId: string;
-  hc1: string;
-}
+export type { CardText };
 
 // hcert-core needs node:zlib, which the browser bundle does not have.
 export const readCardTexts = createServerFn({ method: "POST" })
-  .validator((input: CardText[]) => input)
+  .validator((input: CardRequest) => checkCardRequest(input))
   .handler(async ({ data }) => {
     const { readCard } = await import("./readCard");
-    return data.map((card) => readCard(card.doseId, card.hc1));
+    const { runtime } = await import("./runtime");
+    const { readCardsFor } = await import("./cardReads");
+    return readCardsFor(runtime(), readCard, data);
   });

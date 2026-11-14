@@ -19,21 +19,23 @@ export function PrintStation({ patientId, onBack }: { patientId: string; onBack:
     queryKey: ["print", patientId],
     queryFn: async () => {
       const { patient, doses } = await readChart(medplum, patientId);
-      const cards = await readCards(medplum, hospitalNumberOf(patient));
-      return { cards, warnings: compareDoses(cards, doses) };
+      const hospitalNumber = hospitalNumberOf(patient);
+      const cards = await readCards(medplum, hospitalNumber, medplum.getAccessToken() ?? "");
+      return { hospitalNumber, cards, warnings: compareDoses(cards, doses) };
     },
   });
 
   if (print.isError) return <p role="alert">{normalizeErrorString(print.error)}</p>;
   if (!print.data) return <p>Loading</p>;
-  const { cards, warnings } = print.data;
+  const { hospitalNumber, cards, warnings } = print.data;
   return (
     <section>
       <style>{PRINT_STYLE}</style>
       <div className="no-print">
         <p><button onClick={onBack}>Back</button></p>
         <h2>Print cards</h2>
-        {cards.length === 0 && <p>No signed cards for this hospital number</p>}
+        {!hospitalNumber.trim() && <p role="alert">This patient has no hospital number, so no cards can be looked up.</p>}
+        {hospitalNumber.trim() && cards.length === 0 && <p>No signed cards for this hospital number</p>}
         {warnings.length > 0 && (
           <ul role="alert">
             {warnings.map((warning) => <li key={warning}>{warning}</li>)}

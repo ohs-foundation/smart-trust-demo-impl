@@ -78,7 +78,7 @@ export function buildImmunization(dose: Dose, patient: string, context: Context)
       ],
     },
     patient: { reference: patient },
-    occurrenceDateTime: new Date(dose.occurredAt).toISOString(),
+    occurrenceDateTime: withOffset(dose.occurredAt),
     primarySource: true,
     location: { reference: `Location/${context.locationId}` },
     performer: [{ actor: { reference: `Practitioner/${context.practitionerId}` } }],
@@ -114,6 +114,14 @@ function doseEntries(doses: Dose[], patient: string, context: Context): BundleEn
     resource: buildImmunization(dose, patient, context),
     request: { method: "POST", url: "Immunization" },
   }));
+}
+
+function withOffset(local: string): string {
+  const at = new Date(local);
+  const minutes = -at.getTimezoneOffset();
+  const pad = (value: number) => String(Math.trunc(Math.abs(value))).padStart(2, "0");
+  const offset = `${minutes < 0 ? "-" : "+"}${pad(minutes / 60)}:${pad(minutes % 60)}`;
+  return `${local.slice(0, 16)}:00${offset}`;
 }
 
 function organization(context: Context) {

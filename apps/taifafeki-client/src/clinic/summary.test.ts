@@ -54,6 +54,28 @@ describe("aJweWithAnotherAlgorithmIsRefused", () => {
   });
 });
 
+describe("aJweIsStrictCompactBase64url", () => {
+  const key = vhl.newKey();
+  const jwe = vhl.encrypt(Buffer.from(JSON.stringify(IPS)), "application/fhir+json", key);
+  const [header = "", encryptedKey, iv, text = "", tag] = jwe.split(".");
+  const rebuilt = (part: string) => [header, encryptedKey, iv, part, tag].join(".");
+
+  it.each([
+    ["padding", `${text}=`],
+    ["a plus", `${text}+`],
+    ["a slash", `${text}/`],
+    ["whitespace", `${text.slice(0, 4)} ${text.slice(4)}`],
+  ])("refuses %s in a part", async (_, part) => {
+    await expect(openSummary(document(rebuilt(part)), key)).rejects.toBeInstanceOf(Unreadable);
+  });
+
+  it("refuses a crit header", async () => {
+    const content = Buffer.from(JSON.stringify(IPS));
+    const crit = seal({ alg: "dir", enc: "A256GCM", crit: ["exp"], exp: 1 }, key, content);
+    await expect(openSummary(document(crit), key)).rejects.toBeInstanceOf(Unreadable);
+  });
+});
+
 describe("aSummaryThatDoesNotOpen", () => {
   const key = vhl.newKey();
   const jwe = vhl.encrypt(Buffer.from(JSON.stringify(IPS)), "application/fhir+json", key);

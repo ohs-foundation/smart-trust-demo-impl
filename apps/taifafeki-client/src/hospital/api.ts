@@ -118,8 +118,10 @@ function birthInstant(patient: TimedPatient): string {
 export async function readCards(
   medplum: Pick<MedplumClient, "searchResources">,
   hospitalNumber: string,
-  read: (texts: CardText[]) => Promise<Card[]> = (texts) => readCardTexts({ data: texts }),
+  token: string,
+  read: (texts: CardText[]) => Promise<Card[]> = (texts) => readCardTexts({ data: { token, hospitalNumber, texts } }),
 ): Promise<Card[]> {
+  if (!hospitalNumber.trim()) return [];
   const found = await medplum.searchResources("DocumentReference", {
     identifier: `${HOSPITAL_NUMBER_SYSTEM}|${hospitalNumber}`,
   });

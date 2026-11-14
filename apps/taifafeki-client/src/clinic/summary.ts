@@ -2,6 +2,7 @@ import type { Bundle, Composition, HumanName, Immunization, Patient } from "@med
 
 const MAX_DOCUMENT_BYTES = 64 * 1024 * 1024;
 const KEY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const BASE64URL = /^[A-Za-z0-9_-]*$/;
 
 export class Unreadable extends Error {}
 
@@ -13,6 +14,7 @@ export interface SummaryView {
 }
 
 function decoded(part: string): Uint8Array<ArrayBuffer> {
+  if (!BASE64URL.test(part)) throw new Unreadable("a JWE part is not base64url");
   try {
     return Uint8Array.from(atob(part.replaceAll("-", "+").replaceAll("_", "/")), (char) => char.charCodeAt(0));
   } catch {
@@ -46,12 +48,13 @@ async function decrypt(jwe: string, key: string): Promise<unknown> {
   const parts = jwe.trim().split(".");
   const [protectedHeader, encryptedKey, iv, text, tag] = parts;
   if (parts.length !== 5 || !protectedHeader || encryptedKey !== "" || !iv || !text || !tag) throw new Unreadable("not a JWE compact serialization with a direct key");
-  let header: { alg?: unknown; enc?: unknown; zip?: unknown };
+  let header: { alg?: unknown; enc?: unknown; zip?: unknown; crit?: unknown };
   try {
     header = JSON.parse(new TextDecoder().decode(decoded(protectedHeader)));
   } catch {
     throw new Unreadable("the protected header is not base64url JSON");
   }
+  if (header.crit !== undefined) throw new Unreadable("a critical header is not understood");
   if (header.alg !== "dir" || header.enc !== "A256GCM") throw new Unreadable("only dir / A256GCM is accepted");
   if (header.zip !== undefined && header.zip !== "DEF") throw new Unreadable("only zip DEF is accepted");
   const [nonce, body, mac] = [decoded(iv), decoded(text), decoded(tag)];

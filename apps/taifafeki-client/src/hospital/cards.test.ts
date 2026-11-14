@@ -1,8 +1,8 @@
 import type { Immunization } from "@medplum/fhirtypes";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { readCard } from "../server/readCard";
 import { compareDoses } from "./cards";
-import { PRODUCT_SYSTEM } from "./records";
+import { PRODUCT_SYSTEM, buildImmunization } from "./records";
 
 const HEPB = "HC1:NCFOXN%TSMAHN-H9M4QZQHPSVLEB3H-D47X5JU9V21HJI NRYVN:X9P TLV5AN9I6TSQL H2STU/YU8QHZSMSLG84WY F20W8L2WOATK2-GAUVPIY1VS1NQ1GSUGLIEG43PICH5SP420TI30:NNW 2./GMA5*CBVZ0I:CK.G5QN35TZJJM/S9 8O-OK+5:MNV6SY/O3%89-3$+OAGJTFHOC9OX0VYCVNNOGLJE99W0SC5BRNAOVZNVF48DDGJ4LR.4S739NSE+L$M66NP%1I.4PJT3Y:5I6OK98LYHO697BBSOPN3FRPFJ8BR/M00KT075LKU1O1E8HRN3-9WMH1VT.-S+MNWHEJLDIU1.A1SH8-.6*32EFC";
 const BCG = "HC1:NCFOXN%TSMAHN-H9M4QZQHPSVLEB3HOI47X5JU9V21HJI NR%4F:X9P TC/TAN9I6TSQL H2STU/YU8QHZSMSLG84WY F20W8L2WOATK2-GAUVPIY1VS1NQ1GSUGLIEG43PICH5SP420TI30LQN5$0%*8MA5*CBVZ0I:CK.G5QN35TZJJM/S9 8O-OK+5:MNV6SY/O3%89-3$+OAGJTFHOC9$W0VYCYONTNPLPND 8EILPKLZ957JJWC5ZD5+B9TZ0:577/S6.C$ZI285JDB3*UI%EE+14VS*JL6XBYMD2SNLGS+CC-AJCO9*93FXVQL6TZR2$VJE1+O48KFLMJ+3L-C1R6VGLEJFWN%S04H050FVOE1";
@@ -52,5 +52,20 @@ describe("aDifferentDoseWarns", () => {
 
   it("ignores doses that are not completed", () => {
     expect(compareDoses(cards, [hepB, bcg, { ...bcg, status: "entered-in-error" }])).toEqual([]);
+  });
+});
+
+describe("aDoseIsRecordedWithTheBrowsersOffset", () => {
+  const zone = process.env.TZ;
+  afterEach(() => {
+    process.env.TZ = zone;
+  });
+
+  it("gives no warning for an early-morning dose in a +07:00 zone", () => {
+    process.env.TZ = "Asia/Bangkok";
+    const dose = { productCode: "vp-hepb-peds-monovalent", productDisplay: "Hep B", occurredAt: "2026-10-17T01:00", lot: "XXR-4821" };
+    const recorded = buildImmunization(dose, "Patient/p1", { hospitalId: "h", practitionerId: "p", locationId: "l" });
+    expect(recorded.occurrenceDateTime).toBe("2026-10-17T01:00:00+07:00");
+    expect(compareDoses(cards, [recorded, bcg])).toEqual([]);
   });
 });
