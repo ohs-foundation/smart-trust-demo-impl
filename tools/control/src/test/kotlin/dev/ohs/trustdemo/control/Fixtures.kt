@@ -20,12 +20,16 @@ import dev.ohs.fhir.model.r4.ConceptMap
 import dev.ohs.fhir.model.r4.Group
 import dev.ohs.fhir.model.r4.Patient
 import dev.ohs.fhir.model.r4.Resource
+import java.time.LocalDate
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 val ig: List<Resource> = IgResources.all()
 
@@ -61,3 +65,27 @@ fun JsonElement.references(): List<String> =
   }
 
 fun Patient.managingOrganizationRef(): String? = managingOrganization?.reference?.value
+
+fun fixtureJson(path: String): JsonObject =
+  Json.parseToJsonElement(
+      checkNotNull(StoryState::class.java.getResource("/$path")) { "no fixture $path" }.readText()
+    )
+    .jsonObject
+
+fun fixtureState(path: String): StoryState {
+  val fixture = fixtureJson(path)
+  val today = LocalDate.parse(fixture.getValue("today").jsonPrimitive.content)
+  val found =
+    fixture
+      .getValue("fragments")
+      .jsonArray
+      .map { fixtureJson("steps/${it.jsonPrimitive.content}.json") }
+      .fold(emptyMap<String, List<Resource>>()) { all, fragment ->
+        all +
+          fragment.mapValues { (_, records) ->
+            records.jsonArray.map { Json.decodeFromJsonElement(Resource.serializer(), it) }
+          }
+      }
+  val resetDay = fixture["resetDay"]?.jsonPrimitive?.content?.let(LocalDate::parse) ?: today
+  return StoryState(today, resetDay, found)
+}

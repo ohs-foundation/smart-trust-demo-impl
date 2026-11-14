@@ -102,6 +102,7 @@ class FakeMedplum {
 
   private fun JsonObject.matches(name: String, value: String): Boolean =
     when (name) {
+      "_id" -> this["id"]?.jsonPrimitive?.contentOrNull == value
       "_project" -> this["meta"]?.jsonObject?.get("project")?.jsonPrimitive?.contentOrNull == value
       "identifier" -> identifiers().any { it == value || it.substringAfter('|') == value }
       else -> {

@@ -112,6 +112,19 @@ class MedplumAdmin(
       fhirJson.decodeFromJsonElement(Resource.serializer(), it)
     }
 
+  /**
+   * Searches the project for [type], returning the records as JSON so a rewrite keeps every field.
+   */
+  suspend fun searchJson(type: String, params: Map<String, String>): List<JsonObject> =
+    search(type, "_project" to project(), *params.toList().toTypedArray())
+
+  /** Replaces a record of the project with [resource], refusing one that belongs elsewhere. */
+  suspend fun replace(resource: JsonObject) {
+    val owner = resource["meta"]?.jsonObject?.get("project")?.jsonPrimitive?.contentOrNull
+    check(owner == project()) { "${resource.reference()} is not in the $PROJECT_NAME project" }
+    send(HttpMethod.Put, "$baseUrl/fhir/R4/${resource.reference()}", resource.toString())
+  }
+
   /** Upserts the base records by their IG id, pointing references between them at Medplum's ids. */
   suspend fun seedBase(ig: List<Resource>) {
     val ids = mutableMapOf<String, String>()
@@ -369,6 +382,8 @@ class MedplumAdmin(
   private fun reference(target: String) = buildJsonObject { put("reference", target) }
 
   private fun JsonObject.id() = getValue("id").jsonPrimitive.content
+
+  private fun JsonObject.reference() = "${getValue("resourceType").jsonPrimitive.content}/${id()}"
 
   private companion object {
     val HOSPITAL_LOCATION =

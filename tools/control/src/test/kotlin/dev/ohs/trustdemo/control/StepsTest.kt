@@ -17,7 +17,6 @@ package dev.ohs.trustdemo.control
 
 import dev.ohs.fhir.model.r4.Immunization
 import dev.ohs.fhir.model.r4.Patient
-import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.trustkit.CardSigner
 import dev.ohs.trustdemo.trustkit.StoryClock
 import io.ktor.client.engine.mock.MockEngine
@@ -33,36 +32,9 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-
-private fun fixtureJson(path: String): JsonObject =
-  Json.parseToJsonElement(
-      checkNotNull(StepsTest::class.java.getResource("/$path")) { "no fixture $path" }.readText()
-    )
-    .jsonObject
-
-private fun fixtureState(path: String): StoryState {
-  val fixture = fixtureJson(path)
-  val today = LocalDate.parse(fixture.getValue("today").jsonPrimitive.content)
-  val found =
-    fixture
-      .getValue("fragments")
-      .jsonArray
-      .map { fixtureJson("steps/${it.jsonPrimitive.content}.json") }
-      .fold(emptyMap<String, List<Resource>>()) { all, fragment ->
-        all +
-          fragment.mapValues { (_, records) ->
-            records.jsonArray.map { Json.decodeFromJsonElement(Resource.serializer(), it) }
-          }
-      }
-  val resetDay = fixture["resetDay"]?.jsonPrimitive?.content?.let(LocalDate::parse) ?: today
-  return StoryState(today, resetDay, found)
-}
 
 class StepsTest {
   @Test

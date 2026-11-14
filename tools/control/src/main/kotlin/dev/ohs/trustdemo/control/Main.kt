@@ -16,6 +16,7 @@
 package dev.ohs.trustdemo.control
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.main
@@ -96,5 +97,58 @@ class InspectCommand : StackCommand("inspect") {
   }
 }
 
+class TimeCommand : CliktCommand(name = "time") {
+  override fun help(context: Context) = "Move the story's clock."
+
+  override fun run() = Unit
+}
+
+class MoveCommand : StackCommand("move") {
+  private val target by argument(help = "The only supported move: J4.0")
+  private val withYearDoses by
+    option("--with-year-doses", help = "Also write the year's Onesan doses").flag()
+  private val dryRun by option("--dry-run", help = "Print the move and write nothing").flag()
+
+  override fun help(context: Context) = "Shift every story date so J4.0 falls today."
+
+  override fun run() = runBlocking {
+    if (target != "J4.0") throw UsageError("only the move to J4.0 is supported, not $target")
+    val stack = Stack(StackEnv.load(stackEnv))
+    val move = TimeMove(StepEngine(stack.onesa, stack.kesaro), stack.onesa, stack.kesaro)
+    try {
+      val plan = move.plan(withYearDoses)
+      echo(plan.describe())
+      if (dryRun) echo("Dry run: nothing written.")
+      else {
+        move.apply(plan)
+        echo("Moved ${plan.changes.size} dates; wrote ${plan.yearDoses.size} year doses.")
+      }
+    } catch (refused: MoveRefused) {
+      throw CliktError(refused.message)
+    }
+  }
+}
+
+class ExpireConsentsCommand : StackCommand("expire-consents") {
+  override fun help(context: Context) = "End the current consents yesterday."
+
+  override fun run() = runBlocking {
+    val stack = Stack(StackEnv.load(stackEnv))
+    val move = TimeMove(StepEngine(stack.onesa, stack.kesaro), stack.onesa, stack.kesaro)
+    val ended = move.expireConsents(LocalDate.now())
+    echo(
+      if (ended.isEmpty()) "No active consents to end."
+      else "Ended ${ended.size} consent(s) yesterday: ${ended.joinToString(", ")}"
+    )
+  }
+}
+
 fun main(args: Array<String>) =
-  TrustDemo().subcommands(ResetCommand(), StatusCommand(), InspectCommand()).main(args)
+  TrustDemo()
+    .subcommands(
+      ResetCommand(),
+      StatusCommand(),
+      InspectCommand(),
+      TimeCommand().subcommands(MoveCommand(), ExpireConsentsCommand()),
+    )
+    .main(args)

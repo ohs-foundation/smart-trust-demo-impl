@@ -68,4 +68,5 @@ private fun incompleteBeforeWritten(state: StoryState): List<Pair<Step, List<Ste
 
 private fun dateShift(state: StoryState) =
   "Dates: the IG's dates shifted by ${state.shiftDays()} days; " +
-    "reset on ${state.resetDay}, today ${state.today}"
+    "reset on ${state.resetDay}, today ${state.today}" +
+    if (state.moved) "\nmoved: story dates −$MOVE_DAYS days" else ""

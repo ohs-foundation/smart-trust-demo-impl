@@ -1,0 +1,322 @@
+{
+  "hapi": [
+    {
+      "resourceType": "Patient",
+      "id": "Somsak",
+      "name": [
+        {
+          "family": "Sengmany",
+          "given": [
+            "Somsak"
+          ]
+        }
+      ],
+      "birthDate": "2026-10-17"
+    },
+    {
+      "resourceType": "Patient",
+      "id": "TrustDemoBounmyPatient",
+      "birthDate": "1990-01-01"
+    },
+    {
+      "resourceType": "Immunization",
+      "id": "J3HepB",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "code": "vp-hepb-peds-monovalent"
+          }
+        ]
+      },
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "occurrenceDateTime": "2026-10-17",
+      "recorded": "2026-11-14T09:00:00+07:00"
+    },
+    {
+      "resourceType": "QuestionnaireResponse",
+      "id": "Registration",
+      "status": "completed",
+      "authored": "2026-11-14T08:00:00Z",
+      "item": [
+        {
+          "linkId": "child",
+          "item": [
+            {
+              "linkId": "birth",
+              "answer": [
+                {
+                  "valueDate": "2026-10-17"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resourceType": "ServiceRequest",
+      "id": "Referral",
+      "status": "active",
+      "intent": "order",
+      "subject": {
+        "reference": "Patient/Somsak"
+      },
+      "authoredOn": "2026-11-14"
+    },
+    {
+      "resourceType": "Provenance",
+      "id": "Verification",
+      "target": [
+        {
+          "reference": "Immunization/J3HepB"
+        }
+      ],
+      "recorded": "2026-11-14T10:00:00Z",
+      "agent": [
+        {
+          "who": {
+            "display": "Chanthason"
+          }
+        }
+      ]
+    },
+    {
+      "resourceType": "ImmunizationRecommendation",
+      "id": "Recommendation",
+      "patient": {
+        "reference": "Patient/Somsak"
+      },
+      "date": "2026-11-14",
+      "recommendation": [
+        {
+          "forecastStatus": {
+            "coding": [
+              {
+                "code": "due"
+              }
+            ]
+          },
+          "dateCriterion": [
+            {
+              "code": {
+                "coding": [
+                  {
+                    "code": "due"
+                  }
+                ]
+              },
+              "value": "2026-11-28"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resourceType": "Task",
+      "id": "Reminder",
+      "status": "requested",
+      "intent": "order",
+      "authoredOn": "2026-11-14",
+      "restriction": {
+        "period": {
+          "start": "2026-11-28",
+          "end": "2026-12-19"
+        }
+      }
+    },
+    {
+      "resourceType": "Group",
+      "id": "TrustDemoHousehold",
+      "type": "person",
+      "actual": true,
+      "member": [
+        {
+          "entity": {
+            "reference": "Patient/TrustDemoBounmyPatient"
+          }
+        },
+        {
+          "entity": {
+            "reference": "Patient/Somsak"
+          },
+          "period": {
+            "start": "2026-11-14"
+          }
+        }
+      ]
+    },
+    {
+      "resourceType": "Consent",
+      "id": "ActiveConsent",
+      "status": "active",
+      "scope": {
+        "coding": [
+          {
+            "code": "patient-privacy"
+          }
+        ]
+      },
+      "category": [
+        {
+          "coding": [
+            {
+              "code": "59284-0"
+            }
+          ]
+        }
+      ],
+      "dateTime": "2026-10-26",
+      "provision": {
+        "period": {
+          "start": "2026-10-26",
+          "end": "2026-11-09"
+        }
+      }
+    },
+    {
+      "resourceType": "Consent",
+      "id": "RejectedConsent",
+      "status": "rejected",
+      "scope": {
+        "coding": [
+          {
+            "code": "patient-privacy"
+          }
+        ]
+      },
+      "category": [
+        {
+          "coding": [
+            {
+              "code": "59284-0"
+            }
+          ]
+        }
+      ],
+      "provision": {
+        "period": {
+          "end": "2026-11-09"
+        }
+      }
+    },
+    {
+      "resourceType": "Composition",
+      "id": "Summary",
+      "status": "final",
+      "type": {
+        "coding": [
+          {
+            "code": "60591-5"
+          }
+        ]
+      },
+      "date": "2026-10-26T09:00:00Z",
+      "author": [
+        {
+          "display": "Anan"
+        }
+      ],
+      "title": "Summary"
+    },
+    {
+      "resourceType": "Bundle",
+      "id": "Ips",
+      "type": "document",
+      "timestamp": "2026-10-26T09:00:00Z"
+    },
+    {
+      "resourceType": "AuditEvent",
+      "id": "Access",
+      "type": {
+        "code": "110112"
+      },
+      "recorded": "2026-10-28T09:00:00Z",
+      "agent": [
+        {
+          "requestor": true
+        }
+      ],
+      "source": {
+        "observer": {
+          "display": "gateway"
+        }
+      }
+    }
+  ],
+  "medplum": [
+    {
+      "resourceType": "Patient",
+      "id": "TaifafekiSomsak",
+      "birthDate": "2026-10-17"
+    },
+    {
+      "resourceType": "Immunization",
+      "id": "J1HepB",
+      "status": "completed",
+      "vaccineCode": {
+        "coding": [
+          {
+            "code": "vp-hepb-peds-monovalent"
+          }
+        ]
+      },
+      "patient": {
+        "reference": "Patient/TaifafekiSomsak"
+      },
+      "occurrenceDateTime": "2026-10-17",
+      "recorded": "2026-10-17"
+    },
+    {
+      "resourceType": "Provenance",
+      "id": "Receipt",
+      "target": [
+        {
+          "reference": "Bundle/Ips"
+        }
+      ],
+      "recorded": "2026-11-14T14:30:20Z",
+      "agent": [
+        {
+          "who": {
+            "display": "Anan"
+          }
+        }
+      ]
+    },
+    {
+      "resourceType": "AuditEvent",
+      "id": "Login",
+      "type": {
+        "code": "110114"
+      },
+      "recorded": "2026-11-14T08:00:00Z",
+      "agent": [
+        {
+          "requestor": true
+        }
+      ],
+      "source": {
+        "observer": {
+          "display": "medplum"
+        }
+      }
+    },
+    {
+      "resourceType": "DocumentReference",
+      "id": "Card",
+      "status": "current",
+      "date": "2026-11-14T07:00:00Z",
+      "content": [
+        {
+          "attachment": {
+            "contentType": "text/plain",
+            "data": "SEMxOg=="
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "Somsak's record on Onesa": [
+    {
+      "resourceType": "Patient",
+      "id": "Somsak",
+      "name": [{"family": "Sengmany", "given": ["Somsak"]}],
+      "birthDate": "2026-10-16"
+    }
+  ]
+}

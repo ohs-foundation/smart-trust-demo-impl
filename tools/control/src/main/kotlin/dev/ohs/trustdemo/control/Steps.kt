@@ -84,11 +84,11 @@ enum class Server {
 data class Query(val type: String, val params: Map<String, String> = emptyMap())
 
 /** The story's dates, which move with the reset day and with the one J3 to J4.0 move. */
-data class Dates(val resetDay: LocalDate) {
+data class Dates(val resetDay: LocalDate, val moved: Boolean = false) {
   private val unmoved = resetDay.minusDays(ChronoUnit.DAYS.between(IG_BIRTH, IG_J3))
 
-  /** Somsak's birth date as the apps enter it: before the move, or after it. */
-  val birthDates = setOf(unmoved, unmoved.minusDays(MOVE_DAYS))
+  /** Somsak's birth date as the apps enter it, less the move's days once the move is made. */
+  val birthDate: LocalDate = if (moved) unmoved.minusDays(MOVE_DAYS) else unmoved
 }
 
 /**
@@ -106,7 +106,8 @@ data class Expectation(
 internal val IG_BIRTH: LocalDate = LocalDate.parse("2025-10-28")
 internal val IG_J3: LocalDate = LocalDate.parse("2025-11-25")
 private val IG_J40 = LocalDate.parse("2026-10-26")
-private val MOVE_DAYS = ChronoUnit.DAYS.between(IG_J3, IG_J40)
+internal val MOVE_DAYS = ChronoUnit.DAYS.between(IG_J3, IG_J40)
+private const val SOMSAK_ON_ONESA = "Somsak's record on Onesa"
 
 private const val HOSPITAL_NUMBER =
   "http://smart.who.int/trust-demo/sid/xxr-kesaro-hn|CRH-HN-68-104377"
@@ -131,12 +132,12 @@ private val json = Json
 /** `Type/id`, as a record is named in the output. */
 fun Resource.ref(): String = "${resourceType()}/$id"
 
-private fun Resource.fields(): JsonObject =
+internal fun Resource.fields(): JsonObject =
   json.encodeToJsonElement(Resource.serializer(), this).jsonObject
 
 private fun List<Resource>.fields(): List<JsonObject> = map { it.fields() }
 
-private fun JsonObject.text(name: String): String? = this[name]?.jsonPrimitive?.contentOrNull
+internal fun JsonObject.text(name: String): String? = this[name]?.jsonPrimitive?.contentOrNull
 
 private fun JsonObject.flag(name: String): Boolean? = text(name)?.toBooleanStrictOrNull()
 
@@ -208,15 +209,15 @@ val expectations: Map<Step, List<Expectation>> =
           statusMiss("completed", "amended"),
         ),
         Expectation(
-          "Somsak's record on Onesa",
+          SOMSAK_ON_ONESA,
           Server.HAPI,
           Query("Patient", mapOf("family" to "Sengmany", "given" to "Somsak")),
           { found, dates ->
-            found.fields().any { it.text("birthDate")?.let(LocalDate::parse) in dates.birthDates }
+            found.fields().any { it.text("birthDate")?.let(LocalDate::parse) == dates.birthDate }
           },
           { found, dates ->
             found.fields().firstOrNull()?.text("birthDate")?.let { born ->
-              "birth date $born, expected ${dates.birthDates.joinToString(" or ")}"
+              "birth date $born, expected ${dates.birthDate}"
             }
           },
         ),
@@ -392,7 +393,14 @@ data class StoryState(
   val resetDay: LocalDate,
   val found: Map<String, List<Resource>>,
 ) {
-  val dates = Dates(resetDay)
+
+  /** Whether the J3 to J4.0 move is made, read from Somsak's birth date on Onesa. */
+  val moved: Boolean =
+    found[SOMSAK_ON_ONESA].orEmpty().fields().any {
+      it.text("birthDate")?.let(LocalDate::parse) == Dates(resetDay).birthDate.minusDays(MOVE_DAYS)
+    }
+
+  val dates = Dates(resetDay, moved)
 
   fun recordsFor(expectation: Expectation): List<Resource> = found[expectation.label].orEmpty()
 
@@ -407,6 +415,11 @@ data class StoryState(
   fun shiftDays(): Long = ChronoUnit.DAYS.between(IG_J3, resetDay)
 }
 
+/** Something that can say where the story stands. */
+fun interface StoryStates {
+  suspend fun state(): StoryState
+}
+
 /**
  * Works out the story's step from the records on both servers, one parallel round of searches per
  * call, with nothing stored between calls.
@@ -415,12 +428,12 @@ class StepEngine(
   private val onesa: FhirServer,
   private val kesaro: MedplumAdmin,
   private val clock: Clock = Clock.systemDefaultZone(),
-) {
+) : StoryStates {
   /**
    * The reset day is the IG's J3 moved by the shift in the signed Hep B card's vaccination date,
    * which reset signs once; before the card exists it is today.
    */
-  suspend fun state(): StoryState = coroutineScope {
+  override suspend fun state(): StoryState = coroutineScope {
     val today = LocalDate.now(clock)
     val cards = async { kesaro.searchResources(anchorQuery.type, anchorQuery.params) }
     val searches =
