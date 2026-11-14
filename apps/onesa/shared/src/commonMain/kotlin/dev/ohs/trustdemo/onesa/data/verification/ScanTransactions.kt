@@ -46,7 +46,23 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 /** A dose Vilay reported at J2, which a verified card of the same product replaces. */
-data class ReportedDose(val id: String, val product: String)
+data class ReportedDose(val id: String, val product: String, val date: String? = null) {
+  /** Whether this is the dose [dvc] documents: the same product given on the same day. */
+  fun isDoseOf(dvc: DvcMin): Boolean =
+    product == dvc.vx.vp && date != null && date == dvc.vx.dv.substringBefore('T')
+}
+
+/** Why a verified card was still not imported, in `TrustDemoScanRefusal`. */
+enum class Refusal(val code: String, val description: String) {
+  HolderMismatch(
+    "holder-mismatch",
+    "Card verified; its holder's birth date differs from the child's",
+  ),
+  ImportedForAnotherChild(
+    "imported-for-another-child",
+    "Card verified; already imported for another child",
+  ),
+}
 
 /** One scan of one card at the clinic, for the patient the referral is about. */
 data class ScanRequest(
@@ -82,6 +98,7 @@ val FailureReason.code: String
 object ScanTransactions {
   const val PRODUCT_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
   const val EPI_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule"
+  const val REFUSAL_SYSTEM = "http://ohs.dev/fhir/trust-demo/CodeSystem/TrustDemoScanRefusal"
   const val EPI_MAP = "http://smart.who.int/trust-demo/ConceptMap/TrustDemoProductToOnesaEpi"
 
   private const val IG = "http://smart.who.int/trust-demo/CodeSystem"
@@ -89,6 +106,21 @@ object ScanTransactions {
   private const val OBJECT_ROLE = "http://terminology.hl7.org/CodeSystem/object-role"
 
   private val json = FhirJson.instance
+
+  /** The Immunization's id, fixed by the card so that importing it twice writes one record. */
+  fun immunizationId(hc1: String): String = idFrom(CertificateFingerprint.of(hc1))
+
+  private fun provenanceId(hc1: String): String =
+    idFrom(CertificateFingerprint.of("provenance:${CertificateFingerprint.of(hc1)}"))
+
+  private fun idFrom(digest: String): String {
+    val hex = digest.take(32).toCharArray()
+    hex[12] = '5'
+    hex[16] = "89ab"[hex[16].digitToInt(16) and 3]
+    val text = hex.concatToString()
+    return "${text.take(8)}-${text.substring(8, 12)}-${text.substring(12, 16)}-" +
+      "${text.substring(16, 20)}-${text.substring(20)}"
+  }
 
   /**
    * The verified Immunization with both codings (the Onesan schedule code from [epiCodes] when the
@@ -102,8 +134,7 @@ object ScanTransactions {
     epiCodes: Map<String, String>,
   ): JsonObject {
     val dvc = card.dvc
-    val replaced = reported.filter { it.product == dvc.vx.vp }
-    val immunizationId = request.newId()
+    val immunizationId = immunizationId(request.hc1)
     val unverified =
       DvcFhirMapper.map(
           dvc,
@@ -131,16 +162,21 @@ object ScanTransactions {
       createEntry("Immunization", immunizationId, immunization(verified, dvc.vx.vp, epiCodes)),
       createEntry(
         "Provenance",
-        provenance.id!!,
-        provenance(provenance, request.patientId, card, replaced),
+        provenanceId(request.hc1),
+        provenance(provenance, request.patientId, card, reported),
       ),
       createEntry("AuditEvent", request.newId(), audit(request, Result.Imported)),
-      *replaced.map { deleteEntry("Immunization/${it.id}") }.toTypedArray(),
+      *reported.map { deleteEntry("Immunization/${it.id}") }.toTypedArray(),
     )
   }
 
   fun alreadyImported(request: ScanRequest): JsonObject =
     transaction(createEntry("AuditEvent", request.newId(), audit(request, Result.AlreadyImported)))
+
+  fun refused(request: ScanRequest, refusal: Refusal): JsonObject =
+    transaction(
+      createEntry("AuditEvent", request.newId(), audit(request, Result.Declined(refusal)))
+    )
 
   fun refused(request: ScanRequest, failure: VerificationFailure): JsonObject =
     transaction(createEntry("AuditEvent", request.newId(), audit(request, Result.Refused(failure))))
@@ -218,19 +254,23 @@ object ScanTransactions {
     data object AlreadyImported : Result
 
     data class Refused(val failure: VerificationFailure) : Result
+
+    data class Declined(val refusal: Refusal) : Result
   }
 
   private fun audit(request: ScanRequest, result: Result): JsonObject {
     val refused = (result as? Result.Refused)?.failure
+    val declined = (result as? Result.Declined)?.refusal
     val subtypes =
       listOfNotNull(
         coding(
           "$IG/TrustDemoVerificationResult",
-          if (refused == null) "verified" else "failed",
+          if (refused == null && declined == null) "verified" else "failed",
           null,
         ),
         refused?.let { coding("$IG/TrustDemoVerificationStep", it.step.code, null) },
         refused?.let { coding("$IG/TrustDemoVerificationFailureReason", it.reason.code, null) },
+        declined?.let { coding(REFUSAL_SYSTEM, it.code, null) },
       )
     return buildJsonObject {
       put("resourceType", "AuditEvent")
@@ -238,12 +278,13 @@ object ScanTransactions {
       put("subtype", JsonArray(subtypes))
       put("action", "E")
       put("recorded", request.now.toString())
-      put("outcome", if (refused == null) "0" else "4")
+      put("outcome", if (refused == null && declined == null) "0" else "4")
       put(
         "outcomeDesc",
         when (result) {
           Result.Imported -> "Card verified; its dose imported"
           Result.AlreadyImported -> "Card verified; already imported, nothing written"
+          is Result.Declined -> result.refusal.description
           is Result.Refused ->
             "Verification failed at ${result.failure.step.code}: ${result.failure.reason.code}"
         },

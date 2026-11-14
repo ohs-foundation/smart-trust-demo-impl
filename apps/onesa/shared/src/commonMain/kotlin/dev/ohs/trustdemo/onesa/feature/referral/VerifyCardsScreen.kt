@@ -25,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,11 +56,19 @@ import dev.ohs.trustdemo.onesa.generated.resources.scan_back
 import dev.ohs.trustdemo.onesa.generated.resources.scan_error_camera
 import dev.ohs.trustdemo.onesa.generated.resources.scan_paste_label
 import dev.ohs.trustdemo.onesa.generated.resources.verify_already_imported
+import dev.ohs.trustdemo.onesa.generated.resources.verify_birth_dates
+import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm
+import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm_card
+import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm_child
+import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm_title
 import dev.ohs.trustdemo.onesa.generated.resources.verify_could_not_save
+import dev.ohs.trustdemo.onesa.generated.resources.verify_decline
 import dev.ohs.trustdemo.onesa.generated.resources.verify_failed
 import dev.ohs.trustdemo.onesa.generated.resources.verify_failed_reason
 import dev.ohs.trustdemo.onesa.generated.resources.verify_imported
+import dev.ohs.trustdemo.onesa.generated.resources.verify_imported_elsewhere
 import dev.ohs.trustdemo.onesa.generated.resources.verify_nothing_imported
+import dev.ohs.trustdemo.onesa.generated.resources.verify_other_child
 import dev.ohs.trustdemo.onesa.generated.resources.verify_replaced
 import dev.ohs.trustdemo.onesa.generated.resources.verify_results
 import dev.ohs.trustdemo.onesa.generated.resources.verify_title
@@ -148,6 +157,40 @@ fun VerifyCardsScreen(referralId: String, onBack: () -> Unit) {
         )
       }
 
+      state.pending?.let { pending ->
+        Card(Modifier.fillMaxWidth()) {
+          Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+              stringResource(Res.string.verify_confirm_title),
+              style = MaterialTheme.typography.labelLarge,
+            )
+            Text(
+              stringResource(
+                Res.string.verify_confirm_card,
+                pending.holderName,
+                pending.holderBirthDate,
+              )
+            )
+            Text(stringResource(Res.string.verify_confirm_child, pending.childName))
+            Text(pending.dose)
+            Button(
+              onClick = viewModel::confirm,
+              enabled = !state.busy,
+              modifier = Modifier.fillMaxWidth(),
+            ) {
+              Text(stringResource(Res.string.verify_confirm, pending.childName))
+            }
+            OutlinedButton(
+              onClick = viewModel::decline,
+              enabled = !state.busy,
+              modifier = Modifier.fillMaxWidth(),
+            ) {
+              Text(stringResource(Res.string.verify_decline))
+            }
+          }
+        }
+      }
+
       if (state.results.isNotEmpty()) {
         Text(
           stringResource(Res.string.verify_results),
@@ -178,6 +221,30 @@ private fun Outcome(outcome: ScanOutcome) {
             style = MaterialTheme.typography.labelLarge,
           )
           Text(outcome.dose)
+        }
+        is ScanOutcome.HolderMismatch -> {
+          Text(
+            stringResource(Res.string.verify_other_child),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.error,
+          )
+          Text(
+            stringResource(
+              Res.string.verify_birth_dates,
+              outcome.cardBirthDate,
+              outcome.childBirthDate ?: "-",
+            )
+          )
+          Text(stringResource(Res.string.verify_nothing_imported))
+        }
+        is ScanOutcome.ImportedForAnotherChild -> {
+          Text(
+            stringResource(Res.string.verify_imported_elsewhere),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.error,
+          )
+          Text(outcome.dose)
+          Text(stringResource(Res.string.verify_nothing_imported))
         }
         is ScanOutcome.Failed -> {
           Text(

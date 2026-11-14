@@ -43,6 +43,7 @@ import io.ktor.http.headersOf
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -90,18 +91,38 @@ class CardVerificationTest {
   private val bcg = SignedCards.dvc(StandIn.XXR_CARD, nowSeconds, "vp-bcg-freeze-dried")
 
   private suspend fun withReportedDoses() {
-    gateway.immunizations["reported-hepb"] =
-      reported("reported-hepb", "vp-hepb-peds-monovalent", hepB)
-    gateway.immunizations["reported-bcg"] = reported("reported-bcg", "vp-bcg-freeze-dried", bcg)
-    gateway.immunizations.values.forEach { repository.upsert(decode(it)) }
+    reportDose("reported-hepb", "vp-hepb-peds-monovalent", hepB, "2026-03-01")
+    reportDose("reported-bcg", "vp-bcg-freeze-dried", bcg, "2026-03-01")
+    repository.upsert(
+      decode(
+        FhirJson.instance
+          .parseToJsonElement(
+            """{"resourceType":"Patient","id":"$patientId","birthDate":"2026-01-01",
+            "name":[{"family":"Sengmany","given":["Somsak"]}]}"""
+          )
+          .jsonObject
+      )
+    )
   }
+
+  private suspend fun reportDose(id: String, product: String, card: String, date: String) {
+    val dose = reported(id, product, card, date)
+    gateway.immunizations[id] = dose
+    repository.upsert(decode(dose))
+  }
+
+  private suspend fun scan(card: String, text: String = card): ScanOutcome =
+    when (val checked = service.check(referral, text)) {
+      is ScanCheck.Settled -> checked.outcome
+      is ScanCheck.Pending -> service.import(checked.pending)
+    }
 
   @Test
   fun theSameCardScannedTwiceGivesOneVerifiedImmunization() = runTest {
     withReportedDoses()
 
-    assertIs<ScanOutcome.Imported>(service.scan(referral, hepB))
-    assertIs<ScanOutcome.AlreadyImported>(service.scan(referral, hepB))
+    assertIs<ScanOutcome.Imported>(scan(hepB))
+    assertIs<ScanOutcome.AlreadyImported>(scan(hepB))
 
     val verified = gateway.immunizations.values.filter { it.flag("primarySource") == true }
     assertEquals(1, verified.size)
@@ -111,6 +132,13 @@ class CardVerificationTest {
       listOf("0", "0"),
       gateway.auditEvents.map { it.getValue("outcome").jsonPrimitive.content },
     )
+
+    gateway.loseNextResponse = true
+    assertFailsWith<IllegalStateException> { scan(bcg) }
+    assertIs<ScanOutcome.AlreadyImported>(scan(bcg))
+    assertEquals(2, gateway.immunizations.values.count { it.flag("primarySource") == true })
+    assertEquals(2, gateway.provenances.size)
+    assertEquals(emptyList(), gateway.reportedIds())
   }
 
   @Test
@@ -118,7 +146,7 @@ class CardVerificationTest {
     withReportedDoses()
     val linkCard = SignedCards.dvc(StandIn.XXK_LINK, nowSeconds, "vp-hepb-peds-monovalent")
 
-    val outcome = assertIs<ScanOutcome.Failed>(service.scan(referral, linkCard))
+    val outcome = assertIs<ScanOutcome.Failed>(scan(linkCard))
 
     assertEquals(
       VerifyStep.TRUST_LOOKUP to FailureReason.KID_NOT_FOUND,
@@ -139,17 +167,17 @@ class CardVerificationTest {
   @Test
   fun aVerifiedImportSatisfiesTheJ3aContract() = runTest {
     withReportedDoses()
-    service.scan(referral, hepB)
-    service.scan(referral, bcg)
+    scan(hepB)
+    scan(bcg)
 
     val gatewayScope = "Patient/$patientId"
-    gateway.provenances.forEach {
+    gateway.provenances.values.forEach {
       assertTrue(gatewayScope in it.references("target"), "the Provenance names the patient")
     }
     val stored =
       mapOf(
         "Immunization" to gateway.immunizations.values.toList(),
-        "Provenance" to gateway.provenances,
+        "Provenance" to gateway.provenances.values.toList(),
       )
     val dates = Dates(LocalDate.parse("2026-11-14"))
     for (expectation in expectations.getValue(Step.J3A)) {
@@ -158,26 +186,82 @@ class CardVerificationTest {
     }
   }
 
-  private fun reported(id: String, product: String, card: String): JsonObject = buildJsonObject {
-    put("resourceType", "Immunization")
-    put("id", id)
-    put("status", "completed")
-    put("primarySource", false)
-    put(
-      "identifier",
-      FhirJson.instance.parseToJsonElement(
-        """[{"system":"${CertificateFingerprint.SYSTEM}","value":"${CertificateFingerprint.of(card)}"}]"""
-      ),
+  @Test
+  fun aCardForAnotherChildImportsNothing() = runTest {
+    withReportedDoses()
+    repository.upsert(
+      decode(
+        FhirJson.instance
+          .parseToJsonElement(
+            """{"resourceType":"Patient","id":"$patientId","birthDate":"2026-02-02"}"""
+          )
+          .jsonObject
+      )
     )
-    put("patient", buildJsonObject { put("reference", "Patient/$patientId") })
-    put(
-      "vaccineCode",
-      FhirJson.instance.parseToJsonElement(
-        """{"coding":[{"system":"http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct","code":"$product"}]}"""
-      ),
+
+    val outcome = assertIs<ScanOutcome.HolderMismatch>(scan(hepB))
+
+    assertEquals("2026-01-01" to "2026-02-02", outcome.cardBirthDate to outcome.childBirthDate)
+    assertEquals(setOf("AuditEvent"), gateway.transactions.single().map { it.type }.toSet())
+    assertEquals(0, gateway.immunizations.values.count { it.flag("primarySource") == true })
+    assertEquals(listOf("reported-bcg", "reported-hepb"), gateway.reportedIds().sorted())
+    val subtypes =
+      gateway.auditEvents.single().getValue("subtype").jsonArray.map {
+        it.jsonObject.getValue("system").jsonPrimitive.content to
+          it.jsonObject.getValue("code").jsonPrimitive.content
+      }
+    assertTrue(
+      "http://ohs.dev/fhir/trust-demo/CodeSystem/TrustDemoScanRefusal" to "holder-mismatch" in
+        subtypes,
+      "$subtypes",
     )
-    put("occurrenceDateTime", "2026-11-14")
   }
+
+  @Test
+  fun nothingIsWrittenBeforeTheNurseConfirms() = runTest {
+    withReportedDoses()
+
+    val pending = assertIs<ScanCheck.Pending>(service.check(referral, hepB)).pending
+
+    assertEquals(0, gateway.transactions.size)
+    assertEquals("2026-01-01", pending.holderBirthDate)
+    assertEquals("Test Child", pending.holderName)
+    assertEquals("Somsak Sengmany", pending.childName)
+    assertIs<ScanOutcome.Imported>(service.import(pending))
+    assertEquals(1, gateway.transactions.size)
+  }
+
+  @Test
+  fun aCardReplacesOnlyItsOwnReportedDose() = runTest {
+    withReportedDoses()
+    reportDose("reported-hepb-later", "vp-hepb-peds-monovalent", hepB, "2026-04-01")
+
+    scan(hepB)
+
+    assertEquals(listOf("reported-bcg", "reported-hepb-later"), gateway.reportedIds().sorted())
+  }
+
+  private fun reported(id: String, product: String, card: String, date: String): JsonObject =
+    buildJsonObject {
+      put("resourceType", "Immunization")
+      put("id", id)
+      put("status", "completed")
+      put("primarySource", false)
+      put(
+        "identifier",
+        FhirJson.instance.parseToJsonElement(
+          """[{"system":"${CertificateFingerprint.SYSTEM}","value":"${CertificateFingerprint.of(card)}"}]"""
+        ),
+      )
+      put("patient", buildJsonObject { put("reference", "Patient/$patientId") })
+      put(
+        "vaccineCode",
+        FhirJson.instance.parseToJsonElement(
+          """{"coding":[{"system":"http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct","code":"$product"}]}"""
+        ),
+      )
+      put("occurrenceDateTime", date)
+    }
 
   private fun JsonObject.references(name: String): List<String> =
     getValue(name).jsonArray.map { it.jsonObject.getValue("reference").jsonPrimitive.content }
@@ -192,7 +276,7 @@ class CardVerificationTest {
     checkNotNull(CardVerificationTest::class.java.getResource(path)) { "missing $path" }.readText()
 }
 
-/** The gateway as the app sees it: it applies each transaction and answers the dedup search. */
+/** The gateway as the app sees it: it applies each transaction and answers reads by id. */
 private class FakeGateway {
   class Entry(val method: String, val url: String, val resource: JsonObject?) {
     val type: String
@@ -200,9 +284,10 @@ private class FakeGateway {
   }
 
   val immunizations = linkedMapOf<String, JsonObject>()
-  val provenances = mutableListOf<JsonObject>()
+  val provenances = linkedMapOf<String, JsonObject>()
   val auditEvents = mutableListOf<JsonObject>()
   val transactions = mutableListOf<List<Entry>>()
+  var loseNextResponse = false
 
   fun reportedIds(): List<String> =
     immunizations
@@ -213,14 +298,9 @@ private class FakeGateway {
   val engine = MockEngine { request ->
     val ok = headersOf(HttpHeaders.ContentType, "application/fhir+json")
     if (request.method == HttpMethod.Get) {
-      val wanted = request.url.parameters["identifier"].orEmpty().substringAfter('|')
-      val found = immunizations.values.filter { dose -> wanted in dose.toString() }
-      val entries = found.joinToString(",") { """{"resource":$it}""" }
-      respond(
-        """{"resourceType":"Bundle","type":"searchset","total":${found.size},"entry":[$entries]}""",
-        HttpStatusCode.OK,
-        ok,
-      )
+      val dose = immunizations[request.url.encodedPath.substringAfterLast('/')]
+      if (dose == null) respond("", HttpStatusCode.NotFound, ok)
+      else respond(dose.toString(), HttpStatusCode.OK, ok)
     } else {
       val bundle =
         FhirJson.instance.parseToJsonElement((request.body as TextContent).text).jsonObject
@@ -240,11 +320,19 @@ private class FakeGateway {
         when {
           entry.method == "DELETE" -> immunizations.remove(id)
           entry.type == "Immunization" -> immunizations[id] = entry.resource!!
-          entry.type == "Provenance" -> provenances += entry.resource!!
+          entry.type == "Provenance" -> provenances[id] = entry.resource!!
           entry.type == "AuditEvent" -> auditEvents += entry.resource!!
         }
       }
-      respond("""{"resourceType":"Bundle","type":"transaction-response"}""", HttpStatusCode.OK, ok)
+      val lost = loseNextResponse
+      loseNextResponse = false
+      if (lost) respond("", HttpStatusCode.InternalServerError, ok)
+      else
+        respond(
+          """{"resourceType":"Bundle","type":"transaction-response"}""",
+          HttpStatusCode.OK,
+          ok,
+        )
     }
   }
 }

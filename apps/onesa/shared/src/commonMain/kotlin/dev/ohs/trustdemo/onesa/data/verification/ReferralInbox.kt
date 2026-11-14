@@ -35,6 +35,9 @@ data class Referral(
   val reportedDoses: List<String> = emptyList(),
 )
 
+/** A referred child as the synced record names them. */
+data class Child(val name: String, val birthDate: String?)
+
 /** The referrals waiting at this clinic, read from the synced copy. */
 class ReferralInbox(private val repository: FhirRepository) {
   private val json = FhirJson.instance
@@ -54,7 +57,8 @@ class ReferralInbox(private val repository: FhirRepository) {
       .mapNotNull { dose ->
         val id = dose["id"]?.jsonPrimitive?.contentOrNull
         val product = dose.product()
-        if (id != null && product != null) ReportedDose(id, product) else null
+        val date = dose["occurrenceDateTime"]?.jsonPrimitive?.contentOrNull?.substringBefore('T')
+        if (id != null && product != null) ReportedDose(id, product, date) else null
       }
 
   private suspend fun waiting(): List<Referral> =
@@ -75,6 +79,12 @@ class ReferralInbox(private val repository: FhirRepository) {
         )
       }
       .sortedByDescending { it.authoredOn }
+
+  /** The child as the synced record has them: the name to show and the date of birth. */
+  suspend fun child(patientId: String): Child {
+    val patient = repository.get("Patient", patientId)?.toJson()
+    return Child(patientName(patientId), patient?.get("birthDate")?.jsonPrimitive?.contentOrNull)
+  }
 
   private suspend fun patientName(patientId: String): String =
     repository.get("Patient", patientId)?.toJson()?.get("name")?.jsonArray?.firstOrNull()?.let {

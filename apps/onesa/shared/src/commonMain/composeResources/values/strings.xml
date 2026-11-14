@@ -142,4 +142,12 @@
     <string name="verify_failed_reason">%1$s: %2$s</string>
     <string name="verify_nothing_imported">Nothing was imported. The scan was logged.</string>
     <string name="verify_could_not_save">The scan could not be saved. Check the connection and scan again.</string>
+    <string name="verify_confirm_title">Card verified. Is it the right child?</string>
+    <string name="verify_confirm_card">Card: %1$s, born %2$s</string>
+    <string name="verify_confirm_child">Child: %1$s</string>
+    <string name="verify_confirm">This card is %1$s\'s</string>
+    <string name="verify_decline">Not this child</string>
+    <string name="verify_other_child">This card is for another child</string>
+    <string name="verify_birth_dates">Card born %1$s, child born %2$s</string>
+    <string name="verify_imported_elsewhere">Already imported for another child</string>
 </resources>

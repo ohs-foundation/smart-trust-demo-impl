@@ -16,7 +16,8 @@
 package dev.ohs.trustdemo.onesa.data.verification
 
 import dev.ohs.fhir.model.r4.Resource
-import dev.ohs.trustdemo.hcert.CertificateFingerprint
+import dev.ohs.trustdemo.hcert.DvcFhirMapper
+import dev.ohs.trustdemo.hcert.DvcMin
 import dev.ohs.trustdemo.hcert.FailureReason
 import dev.ohs.trustdemo.hcert.VerificationFailure
 import dev.ohs.trustdemo.hcert.VerificationResult
@@ -29,11 +30,11 @@ import dev.ohs.trustdemo.onesa.util.FhirJson
 import io.ktor.client.HttpClient
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
-import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlin.time.Clock
@@ -52,17 +53,44 @@ sealed interface ScanOutcome {
   /** The card verified, but its dose was imported by an earlier scan. */
   data class AlreadyImported(val dose: String) : ScanOutcome
 
+  /** The card verified, but its dose is on another child's record. */
+  data class ImportedForAnotherChild(val dose: String) : ScanOutcome
+
+  /** The card verified, but its holder was born on another day than the child. */
+  data class HolderMismatch(val cardBirthDate: String, val childBirthDate: String?) : ScanOutcome
+
   data class Failed(val step: VerifyStep, val reason: FailureReason) : ScanOutcome
 }
 
+/** A verified card waiting for the nurse to say it is the child's; nothing is written for it. */
+class PendingImport
+internal constructor(
+  internal val referral: Referral,
+  val hc1: String,
+  internal val card: VerifiedCard,
+  val holderName: String,
+  val holderBirthDate: String,
+  val childName: String,
+  val dose: String,
+)
+
+/** What checking a scanned card found: an outcome already settled, or a card to confirm. */
+sealed interface ScanCheck {
+  data class Settled(val outcome: ScanOutcome) : ScanCheck
+
+  data class Pending(val pending: PendingImport) : ScanCheck
+}
+
 /**
- * Verifies each card the nurse scans against the `DEMO-DVC` store and, when it verifies, imports
- * its dose: the verified Immunization, its Provenance and the audit go in one transaction with the
- * delete of the reported dose it replaces. A card that fails writes only its audit.
+ * Verifies each card the nurse scans against the `DEMO-DVC` store and, when it verifies for the
+ * referred child, imports its dose once the nurse confirms: the verified Immunization, its
+ * Provenance and the audit go in one transaction with the delete of the reported dose it replaces.
+ * Every other scan writes only its audit.
  *
- * Like [dev.ohs.trustdemo.onesa.data.registration.RegistrationService] it posts straight to the
- * gateway: the delete and the writes must be judged, and land, together. Whether a card was already
- * imported is asked of the local copy and of the gateway, because the local copy lags a sync.
+ * The Immunization and its Provenance take their ids from the card, so importing a card twice, or
+ * from two devices, rewrites one record; the id is read before the card is offered for import. Like
+ * [dev.ohs.trustdemo.onesa.data.registration.RegistrationService] it posts straight to the gateway:
+ * the delete and the writes must be judged, and land, together.
  */
 class VerificationService(
   private val repository: FhirRepository,
@@ -76,39 +104,64 @@ class VerificationService(
   private val json = FhirJson.instance
   private val inbox = ReferralInbox(repository)
 
-  suspend fun scan(referral: Referral, text: String): ScanOutcome {
+  suspend fun check(referral: Referral, text: String): ScanCheck {
     val current = session() ?: error("Sign in again to verify a card.")
     val hc1 = text.trim()
-    val now = clock()
-    val request =
-      ScanRequest(hc1, referral.patientId, current.practitionerId, current.organizationId, now)
+    val request = request(current, referral, hc1)
 
     val verified =
-      when (val result = hcert.verifyCard(hc1, now.epochSeconds)) {
-        is VerificationResult.Failed -> return refuse(current, request, result.failure)
+      when (val result = hcert.verifyCard(hc1, request.now.epochSeconds)) {
+        is VerificationResult.Failed -> return settled(refuse(current, request, result.failure))
         is VerificationResult.Verified -> result.hcert
       }
     val dvc =
       verified.dvc
-        ?: return refuse(
-          current,
-          request,
-          VerificationFailure(VerifyStep.PAYLOAD, FailureReason.PAYLOAD_INVALID),
+        ?: return settled(
+          refuse(
+            current,
+            request,
+            VerificationFailure(VerifyStep.PAYLOAD, FailureReason.PAYLOAD_INVALID),
+          )
         )
     val dose = "${NewbornRegistration.PRODUCTS[dvc.vx.vp] ?: dvc.vx.vp}, ${dvc.vx.dv}"
 
-    if (alreadyImported(current, referral.patientId, CertificateFingerprint.of(hc1))) {
-      post(current, ScanTransactions.alreadyImported(request))
-      return ScanOutcome.AlreadyImported(dose)
+    val existing = readImmunization(current, ScanTransactions.immunizationId(hc1))
+    if (existing != null) {
+      return if (existing.reference("patient") == "Patient/${referral.patientId}") {
+        purgeReplacedLocally(current, referral, dvc)
+        post(current, ScanTransactions.alreadyImported(request))
+        settled(ScanOutcome.AlreadyImported(dose))
+      } else {
+        post(current, ScanTransactions.refused(request, Refusal.ImportedForAnotherChild))
+        settled(ScanOutcome.ImportedForAnotherChild(dose))
+      }
     }
 
-    val replaced = inbox.reportedDoses(referral.patientId).filter { it.product == dvc.vx.vp }
+    val child = inbox.child(referral.patientId)
+    if (child.birthDate != dvc.dob) {
+      post(current, ScanTransactions.refused(request, Refusal.HolderMismatch))
+      return settled(ScanOutcome.HolderMismatch(dvc.dob, child.birthDate))
+    }
     val card = VerifiedCard(dvc, verified, hcert.trustListSource(verified.dsc))
-    post(current, ScanTransactions.imported(request, card, replaced, epiCodes()))
+    val holder = DvcFhirMapper.humanName(dvc.n).text?.value ?: dvc.n
+    return ScanCheck.Pending(PendingImport(referral, hc1, card, holder, dvc.dob, child.name, dose))
+  }
+
+  suspend fun import(pending: PendingImport): ScanOutcome {
+    val current = session() ?: error("Sign in again to verify a card.")
+    val request = request(current, pending.referral, pending.hc1)
+    val replaced =
+      inbox.reportedDoses(pending.referral.patientId).filter { it.isDoseOf(pending.card.dvc) }
+    post(current, ScanTransactions.imported(request, pending.card, replaced, epiCodes()))
     replaced.forEach { repository.remove("Immunization", it.id) }
     refresh()
-    return ScanOutcome.Imported(dose, replacedReported = replaced.isNotEmpty())
+    return ScanOutcome.Imported(pending.dose, replacedReported = replaced.isNotEmpty())
   }
+
+  private fun request(current: RegistrationSession, referral: Referral, hc1: String) =
+    ScanRequest(hc1, referral.patientId, current.practitionerId, current.organizationId, clock())
+
+  private fun settled(outcome: ScanOutcome) = ScanCheck.Settled(outcome)
 
   private suspend fun refuse(
     current: RegistrationSession,
@@ -119,44 +172,31 @@ class VerificationService(
     return ScanOutcome.Failed(failure.step, failure.reason)
   }
 
-  private suspend fun alreadyImported(
-    current: RegistrationSession,
-    patientId: String,
-    fingerprint: String,
-  ): Boolean {
-    val local =
-      repository.all("Immunization").map { it.toJson() }.any { it.isVerifiedImportOf(fingerprint) }
-    if (local) return true
-
-    val reply =
-      httpClient.get("$baseUrl/Immunization") {
-        bearerAuth(current.accessToken)
-        parameter("patient", patientId)
-        parameter("identifier", "${CertificateFingerprint.SYSTEM}|$fingerprint")
-        // HAPI serves a repeated search from its cache for a minute, and the gateway drops
-        // Cache-Control; a bound that moves with the clock keeps the search from being repeated.
-        parameter("_lastUpdated", "le${clock()}")
-      }
+  /** The Immunization under [id], or null when the gateway has none in this clinic's scope. */
+  private suspend fun readImmunization(current: RegistrationSession, id: String): JsonObject? {
+    val reply = httpClient.get("$baseUrl/Immunization/$id") { bearerAuth(current.accessToken) }
+    if (reply.status == HttpStatusCode.NotFound || reply.status == HttpStatusCode.Forbidden)
+      return null
     check(reply.status.isSuccess()) {
       "The gateway could not say whether the card was imported (HTTP ${reply.status.value})."
     }
-    return json
-      .parseToJsonElement(reply.bodyAsText())
-      .jsonObject["entry"]
-      ?.jsonArray
-      .orEmpty()
-      .any { it.jsonObject.getValue("resource").jsonObject.isVerifiedImportOf(fingerprint) }
+    return json.parseToJsonElement(reply.bodyAsText()).jsonObject
   }
 
-  /**
-   * The dose a card was reported as at J2 carries the same fingerprint; only a verified one counts.
-   */
-  private fun JsonObject.isVerifiedImportOf(fingerprint: String): Boolean =
-    this["primarySource"]?.jsonPrimitive?.contentOrNull == "true" &&
-      this["identifier"]?.jsonArray.orEmpty().any {
-        it.jsonObject["system"]?.jsonPrimitive?.contentOrNull == CertificateFingerprint.SYSTEM &&
-          it.jsonObject["value"]?.jsonPrimitive?.contentOrNull == fingerprint
-      }
+  /** An import that committed but never reached this device leaves its reported doses behind. */
+  private suspend fun purgeReplacedLocally(
+    current: RegistrationSession,
+    referral: Referral,
+    dvc: DvcMin,
+  ) {
+    inbox
+      .reportedDoses(referral.patientId)
+      .filter { it.isDoseOf(dvc) && readImmunization(current, it.id) == null }
+      .forEach { repository.remove("Immunization", it.id) }
+  }
+
+  private fun JsonObject.reference(name: String): String? =
+    this[name]?.jsonObject?.get("reference")?.jsonPrimitive?.contentOrNull
 
   private suspend fun epiCodes(): Map<String, String> =
     repository
@@ -164,6 +204,10 @@ class VerificationService(
       .map { it.toJson() }
       .filter { it["url"]?.jsonPrimitive?.contentOrNull == ScanTransactions.EPI_MAP }
       .flatMap { it["group"]?.jsonArray.orEmpty() }
+      .filter {
+        it.jsonObject["source"]?.jsonPrimitive?.contentOrNull == ScanTransactions.PRODUCT_SYSTEM &&
+          it.jsonObject["target"]?.jsonPrimitive?.contentOrNull == ScanTransactions.EPI_SYSTEM
+      }
       .flatMap { it.jsonObject["element"]?.jsonArray.orEmpty() }
       .mapNotNull { element ->
         val target = element.jsonObject["target"]?.jsonArray?.firstOrNull()?.jsonObject?.get("code")
