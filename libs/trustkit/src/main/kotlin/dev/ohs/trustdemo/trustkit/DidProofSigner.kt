@@ -111,8 +111,8 @@ object DidProofSigner {
     return pretty.encodeToString(JsonElement.serializer(), signed)
   }
 
-  internal fun parse(json: String): Map<String, Any?> =
-    toValue(Json.parseToJsonElement(json)) as Map<String, Any?>
+  internal fun parse(json: String): Map<*, *> =
+    toValue(Json.parseToJsonElement(json)) as? Map<*, *> ?: fail("not a JSON object")
 
   private fun toValue(e: JsonElement): Any? =
     when (e) {

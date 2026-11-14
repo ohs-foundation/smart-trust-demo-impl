@@ -42,7 +42,7 @@ object ClinicCertificates {
     val now = Instant.now()
     val cert =
       certificate(
-        issuer = anchor.subjectX500Principal.name,
+        issuer = anchor.subjectX500Principal.encoded,
         subject = subject,
         subjectKey = key,
         signer = TestKeys.privateKey(StandIn.XXR_CLINIC_ANCHOR),
@@ -59,7 +59,7 @@ object ClinicCertificates {
       .generateKeyPair()
 
   internal fun certificate(
-    issuer: String,
+    issuer: ByteArray,
     subject: String,
     subjectKey: KeyPair,
     signer: PrivateKey,
@@ -69,7 +69,7 @@ object ClinicCertificates {
   ): X509Certificate {
     val builder =
       JcaX509v3CertificateBuilder(
-        X500Name(issuer),
+        X500Name.getInstance(issuer),
         BigInteger.valueOf(Instant.now().toEpochMilli()),
         Date.from(notBefore),
         Date.from(notAfter),

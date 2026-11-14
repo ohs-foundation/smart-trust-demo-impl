@@ -25,6 +25,7 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Base64
+import org.bouncycastle.asn1.x500.X500Name
 
 private val CREATED = Instant.parse("2026-11-14T00:00:00Z")
 private const val NONCE = "tRuStDeMoLoCaLtEsTlIsTnOnCe00001"
@@ -58,7 +59,7 @@ fun main(args: Array<String>) {
       pem(
         "CERTIFICATE",
         ClinicCertificates.certificate(
-            issuer = subject,
+            issuer = X500Name(subject).encoded,
             subject = subject,
             subjectKey = pair,
             signer = pair.private,
