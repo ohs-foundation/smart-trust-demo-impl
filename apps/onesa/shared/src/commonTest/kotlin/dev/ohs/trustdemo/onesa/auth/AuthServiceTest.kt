@@ -75,8 +75,6 @@ class AuthServiceTest {
     private val onAuthorize: suspend (String) -> AuthResult,
   ) : AuthorizationLauncherApi {
     override suspend fun authorize(authUrl: String): AuthResult = onAuthorize(authUrl)
-
-    override fun consumeRedirectCallback(): String? = null
   }
 
   private val jsonHeaders = headersOf(HttpHeaders.ContentType, "application/json")

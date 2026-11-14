@@ -62,12 +62,9 @@ class AuthViewModelTest {
 
   private class FakeLauncher(
     override val redirectUri: String,
-    private val redirectCallback: String? = null,
     private val onAuthorize: suspend (String) -> AuthResult,
   ) : AuthorizationLauncherApi {
     override suspend fun authorize(authUrl: String): AuthResult = onAuthorize(authUrl)
-
-    override fun consumeRedirectCallback(): String? = redirectCallback
   }
 
   private val jsonHeaders = headersOf(HttpHeaders.ContentType, "application/json")
@@ -135,9 +132,7 @@ class AuthViewModelTest {
         apiThatNeverGetsCalled(),
       )
     val viewModel = AuthViewModel(service, FakeSyncManager())
-    val launcher = FakeLauncher("app://callback") { AuthResult.Canceled }
-
-    viewModel.bootstrapForTest(launcher)
+    viewModel.bootstrapForTest()
 
     assertEquals(AuthState.Unauthenticated, viewModel.state.value)
   }
@@ -151,32 +146,9 @@ class AuthViewModelTest {
         apiThatNeverGetsCalled(),
       )
     val viewModel = AuthViewModel(service, FakeSyncManager())
-    val launcher = FakeLauncher("app://callback") { AuthResult.Canceled }
-
-    viewModel.bootstrapForTest(launcher)
+    viewModel.bootstrapForTest()
 
     assertIs<AuthState.Authenticated>(viewModel.state.value)
-  }
-
-  @Test
-  fun bootstrap_withRedirectCallback_completesRedirectLoginBranch() = runTest {
-    val service =
-      AuthService(
-        OAuthConfig("https://idp.example.org", "c", "openid"),
-        FakeSessionStore(null),
-        apiThatNeverGetsCalled(),
-      )
-    val viewModel = AuthViewModel(service, FakeSyncManager())
-    // A callback with no matching pending auth is rejected as a CSRF mismatch — proving bootstrap
-    // ran the redirect-completion branch rather than only ensureFreshSession().
-    val launcher =
-      FakeLauncher("app://callback", redirectCallback = "app://callback?code=abc&state=xyz") {
-        AuthResult.Canceled
-      }
-
-    viewModel.bootstrapForTest(launcher)
-
-    assertEquals("Invalid state — possible CSRF, please try again", viewModel.error.value)
   }
 
   @Test

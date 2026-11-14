@@ -31,12 +31,6 @@ internal interface AuthorizationLauncherApi {
   val redirectUri: String
 
   suspend fun authorize(authUrl: String): AuthResult
-
-  /**
-   * Web only: if this page load is a redirect back from the provider, returns the callback URL (and
-   * clears it from the address bar). Returns null otherwise and on every non-web platform.
-   */
-  fun consumeRedirectCallback(): String?
 }
 
 expect class AuthorizationLauncher : AuthorizationLauncherApi {
@@ -47,8 +41,6 @@ expect class AuthorizationLauncher : AuthorizationLauncherApi {
    * platforms that can await it.
    */
   override suspend fun authorize(authUrl: String): AuthResult
-
-  override fun consumeRedirectCallback(): String?
 }
 
 /** Obtains a launcher, wiring in any platform context (e.g. the Android Activity). */

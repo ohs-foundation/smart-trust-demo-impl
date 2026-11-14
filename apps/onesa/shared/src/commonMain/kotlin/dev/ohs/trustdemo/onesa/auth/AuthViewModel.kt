@@ -45,27 +45,17 @@ internal class AuthViewModel(
 
   private var bootstrapped = false
 
-  /** Restores any saved session and completes a web redirect login. Runs once. */
-  fun bootstrap(launcher: AuthorizationLauncher) {
+  /** Restores any saved session. Runs once. */
+  fun bootstrap() {
     if (bootstrapped) return
     bootstrapped = true
-    viewModelScope.launch { runBootstrap(launcher) }
+    viewModelScope.launch { runBootstrap() }
   }
 
-  /**
-   * Test seam: same bootstrap logic, but against [AuthorizationLauncherApi] so tests can fake it.
-   */
-  internal suspend fun bootstrapForTest(launcher: AuthorizationLauncherApi) = runBootstrap(launcher)
+  /** Test seam: the same bootstrap logic, awaited. */
+  internal suspend fun bootstrapForTest() = runBootstrap()
 
-  private suspend fun runBootstrap(launcher: AuthorizationLauncherApi) {
-    when (val redirect = service.completeRedirectLoginIfPresent(launcher)) {
-      is LoginOutcome.Authenticated -> {
-        _state.value = AuthState.Authenticated(redirect.session)
-        return
-      }
-      is LoginOutcome.Error -> _error.value = redirect.message
-      else -> Unit
-    }
+  private suspend fun runBootstrap() {
     val session = service.ensureFreshSession()
     if (session != null) {
       _state.value = AuthState.Authenticated(session)

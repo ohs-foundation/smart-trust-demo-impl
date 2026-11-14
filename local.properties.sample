@@ -52,12 +52,6 @@ OAUTH_REDIRECT_HOST=auth
 # Register: http://127.0.0.1:8765/callback
 OAUTH_DESKTOP_REDIRECT_PORT=8765
 
-# Web (JS/Wasm): a full-page redirect back to the app, read on the next load.
-# Register this URL verbatim. It must be a path the server actually serves —
-# the webpack dev server serves the app at the origin root, so prefer
-# http://localhost:8080/ there unless you have configured a fallback.
-OAUTH_WEB_REDIRECT_URL=http://localhost:8080/callback
-
 
 # --- FHIR server -------------------------------------------------------------
 # Base URL synced into the on-device FHIR engine. Requests carry the signed-in

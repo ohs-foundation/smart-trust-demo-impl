@@ -67,7 +67,6 @@ val resolvedIssuer = authProp("OAUTH_ISSUER", "https://keycloak.example.org/real
 val resolvedClientId = authProp("OAUTH_CLIENT_ID", "ohs-player-reference-app")
 val resolvedRedirectScheme = authProp("OAUTH_REDIRECT_SCHEME", "dev.ohs.trustdemo.onesa")
 val resolvedRedirectHost = authProp("OAUTH_REDIRECT_HOST", "auth")
-val resolvedWebRedirectUrl = authProp("OAUTH_WEB_REDIRECT_URL", "http://localhost:8080/callback")
 val resolvedDesktopPort = authProp("OAUTH_DESKTOP_REDIRECT_PORT", "8765")
 val resolvedScopes = authProp("OAUTH_SCOPES", "openid profile email offline_access")
 // The FHIR Engine resolves sync paths against this URL, so it must end in a slash.
@@ -171,7 +170,6 @@ val generateAuthConfig =
     val clientId = resolvedClientId
     val redirectScheme = resolvedRedirectScheme
     val redirectHost = resolvedRedirectHost
-    val webRedirectUrl = resolvedWebRedirectUrl
     val desktopPort = resolvedDesktopPort
     val scopes = resolvedScopes
     val fhirBaseUrl = resolvedFhirBaseUrl
@@ -182,7 +180,6 @@ val generateAuthConfig =
     inputs.property("clientId", clientId)
     inputs.property("redirectScheme", redirectScheme)
     inputs.property("redirectHost", redirectHost)
-    inputs.property("webRedirectUrl", webRedirectUrl)
     inputs.property("desktopPort", desktopPort)
     inputs.property("scopes", scopes)
     inputs.property("fhirBaseUrl", fhirBaseUrl)
@@ -190,8 +187,7 @@ val generateAuthConfig =
     inputs.property("versionCode", versionCode)
     outputs.dir(outDir)
     doLast {
-      val pkgDir =
-        outDir.get().asFile.resolve("dev/ohs/player/reference/app/auth").apply { mkdirs() }
+      val pkgDir = outDir.get().asFile.resolve("dev/ohs/trustdemo/onesa/auth").apply { mkdirs() }
       pkgDir
         .resolve("GeneratedAuthConfig.kt")
         .writeText(
@@ -205,7 +201,6 @@ val generateAuthConfig =
         |  const val CLIENT_ID: String = "$clientId"
         |  const val REDIRECT_SCHEME: String = "$redirectScheme"
         |  const val REDIRECT_HOST: String = "$redirectHost"
-        |  const val WEB_REDIRECT_URL: String = "$webRedirectUrl"
         |  const val DESKTOP_REDIRECT_PORT: Int = $desktopPort
         |  const val SCOPES: String = "$scopes"
         |  const val FHIR_BASE_URL: String = "$fhirBaseUrl"

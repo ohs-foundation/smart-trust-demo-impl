@@ -61,7 +61,7 @@ fun App() {
       val signingIn by authViewModel.signingIn.collectAsStateWithLifecycle()
       val authError by authViewModel.error.collectAsStateWithLifecycle()
 
-      LaunchedEffect(launcher) { authViewModel.bootstrap(launcher) }
+      LaunchedEffect(Unit) { authViewModel.bootstrap() }
 
       when (authState) {
         is AuthState.Loading ->

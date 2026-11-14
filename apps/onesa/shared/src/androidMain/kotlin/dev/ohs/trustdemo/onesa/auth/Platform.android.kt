@@ -94,8 +94,6 @@ actual class AuthorizationLauncher(
       }
     }
   }
-
-  actual override fun consumeRedirectCallback(): String? = null
 }
 
 @Composable
