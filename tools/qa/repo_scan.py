@@ -6,7 +6,7 @@ from pathlib import Path
 from hosts import hosts_in, host_ok
 
 ROOT = Path(__file__).resolve().parents[2]
-SECRET_DIRS = ("stack/.env", "stack/tls", "stack/taifafeki/secrets")
+SECRET_DIRS = ("stack/.env", "infra/.env", "stack/tls", "stack/taifafeki/secrets")
 KEY_BLOCK = re.compile(r"-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----")
 TOKENS = {
     "AWS access key id": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),

@@ -1,0 +1,4 @@
+.env
+nginx/host/*.conf
+data-pipes/config/postgres-analytics.json
+data-pipes/dwh/*/
