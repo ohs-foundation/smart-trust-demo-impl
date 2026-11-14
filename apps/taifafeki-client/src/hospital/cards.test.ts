@@ -31,6 +31,11 @@ describe("aDifferentDoseWarns", () => {
     expect(compareDoses(cards, [hepB, entered("vp-bcg-freeze-dried", "2026-10-17T12:05:00Z", "ANY-LOT")])).toEqual([]);
   });
 
+  it("compares the date a dose was given where it was given, whatever the browser's zone", () => {
+    const justAfterMidnight = entered("vp-hepb-peds-monovalent", "2026-10-17T00:30:00+07:00");
+    expect(compareDoses(cards, [justAfterMidnight, bcg])).toEqual([]);
+  });
+
   it("warns when a date differs", () => {
     const warnings = compareDoses(cards, [hepB, entered("vp-bcg-freeze-dried", "2026-10-18T12:05:00Z")]);
     expect(warnings).toHaveLength(1);

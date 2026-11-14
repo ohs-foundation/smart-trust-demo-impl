@@ -36,8 +36,5 @@ function productOf(dose: Immunization): string {
 }
 
 function dateOf(dose: Immunization): string {
-  const at = new Date(dose.occurrenceDateTime ?? "");
-  if (Number.isNaN(at.getTime())) return "no date";
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
+  return /^\d{4}-\d{2}-\d{2}/.exec(dose.occurrenceDateTime ?? "")?.[0] ?? "no date";
 }
