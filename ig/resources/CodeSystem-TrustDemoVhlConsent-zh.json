@@ -1,0 +1,26 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoVhlConsentZh",
+  "id": "TrustDemoVhlConsent-zh",
+  "title": "TrustDemoVhlConsent — Chinese (zh) supplement",
+  "description": "Unofficial Simplified Chinese (zh) display designations and definitions for the TrustDemoVhlConsent code system. Unofficial agent translation, not signed off by a human.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlConsent-zh",
+  "concept": [
+    {
+      "code": "CONSENT-VHL-TREATMENT",
+      "definition": "持有人将 VHL 的 QR 码和通行码交给的任何人，都可以为治疗目的读取其背后的患者摘要，直至链接到期。每次访问都由签发门户记录。",
+      "designation": [
+        {
+          "language": "zh",
+          "value": "同意为治疗目的读取摘要"
+        }
+      ]
+    }
+  ],
+  "experimental": true,
+  "language": "zh",
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlConsent",
+  "count": 1
+}

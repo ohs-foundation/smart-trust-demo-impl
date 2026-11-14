@@ -1,0 +1,12 @@
+{
+  "resourceType": "Practitioner",
+  "id": "TrustDemoVilay",
+  "name": [
+    {
+      "text": "Vilay",
+      "given": [
+        "Vilay"
+      ]
+    }
+  ]
+}

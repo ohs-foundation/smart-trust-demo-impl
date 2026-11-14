@@ -1,0 +1,113 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "TrustDemoTaifafekiImmunization",
+  "url": "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoTaifafekiImmunization",
+  "name": "TrustDemoTaifafekiImmunization",
+  "title": "Taifafeki: dose given at the birth hospital (DVC source)",
+  "status": "draft",
+  "description": "How it is used: J1. Each birth dose (Hep B, BCG) that Dr Anan gives is recorded here first. The hospital then packs it into a Digital Vaccination Certificate (HCERT, signed with XXR's key) and prints it as a QR card.\n\nWhy: the DVC can only carry what this record holds. The vaccine product, date, lot, dose number and the administering organization are exactly the fields the HCERT certificate needs. They are required here so every printed card is complete. The product is coded from the WHO PreQual-style product list, because that is the code Onesa will later map to its own schedule (J3).",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Immunization",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Immunization",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Immunization.status",
+        "path": "Immunization.status",
+        "patternCode": "completed"
+      },
+      {
+        "id": "Immunization.vaccineCode.coding",
+        "path": "Immunization.vaccineCode.coding",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "system"
+            }
+          ],
+          "rules": "open"
+        },
+        "min": 1
+      },
+      {
+        "id": "Immunization.vaccineCode.coding:product",
+        "path": "Immunization.vaccineCode.coding",
+        "sliceName": "product",
+        "min": 1,
+        "max": "1",
+        "mustSupport": true,
+        "binding": {
+          "strength": "required",
+          "valueSet": "http://smart.who.int/trust-demo/ValueSet/TrustDemoVaccineProducts"
+        }
+      },
+      {
+        "id": "Immunization.vaccineCode.coding:product.system",
+        "path": "Immunization.vaccineCode.coding.system",
+        "min": 1,
+        "patternUri": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
+      },
+      {
+        "id": "Immunization.vaccineCode.coding:cvx",
+        "path": "Immunization.vaccineCode.coding",
+        "sliceName": "cvx",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Immunization.vaccineCode.coding:cvx.system",
+        "path": "Immunization.vaccineCode.coding.system",
+        "min": 1,
+        "patternUri": "http://hl7.org/fhir/sid/cvx"
+      },
+      {
+        "id": "Immunization.patient",
+        "path": "Immunization.patient",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoTaifafekiPatient"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Immunization.occurrence[x]",
+        "path": "Immunization.occurrence[x]",
+        "type": [
+          {
+            "code": "dateTime"
+          }
+        ]
+      },
+      {
+        "id": "Immunization.primarySource",
+        "path": "Immunization.primarySource",
+        "patternBoolean": true
+      },
+      {
+        "id": "Immunization.lotNumber",
+        "path": "Immunization.lotNumber",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Immunization.performer",
+        "path": "Immunization.performer",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Immunization.protocolApplied",
+        "path": "Immunization.protocolApplied",
+        "min": 1,
+        "mustSupport": true
+      }
+    ]
+  }
+}

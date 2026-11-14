@@ -1,0 +1,17 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "TrustDemoVhlRefusalReasonVS",
+  "id": "TrustDemoVhlRefusalReasonVS",
+  "title": "Why a shared link released nothing",
+  "description": "Every code of TrustDemoVhlRefusalReason.",
+  "url": "http://smart.who.int/trust-demo/ValueSet/TrustDemoVhlRefusalReasonVS",
+  "experimental": true,
+  "compose": {
+    "include": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason"
+      }
+    ]
+  }
+}

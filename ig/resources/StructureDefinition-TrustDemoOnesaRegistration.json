@@ -1,0 +1,55 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "TrustDemoOnesaRegistration",
+  "url": "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaRegistration",
+  "name": "TrustDemoOnesaRegistration",
+  "title": "Onesa: newborn registration captured offline",
+  "status": "draft",
+  "description": "How it is used: J2a. These are the CHW's answers on the newborn registration form, which the app renders with Structured Data Capture and saves with no signal.\n\nWhy: in Onesa the form is the configuration, not code. A ministry can change the questions without shipping a new app. The answers are kept so that the Patient and Group extracted from them can always be traced back to what was asked and who answered.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "QuestionnaireResponse",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "QuestionnaireResponse.questionnaire",
+        "path": "QuestionnaireResponse.questionnaire",
+        "patternCanonical": "http://smart.who.int/trust-demo/Questionnaire/TrustDemoHouseholdRegistration"
+      },
+      {
+        "id": "QuestionnaireResponse.subject",
+        "path": "QuestionnaireResponse.subject",
+        "min": 1,
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaPatient"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "QuestionnaireResponse.authored",
+        "path": "QuestionnaireResponse.authored",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "QuestionnaireResponse.author",
+        "path": "QuestionnaireResponse.author",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "QuestionnaireResponse.source",
+        "path": "QuestionnaireResponse.source",
+        "mustSupport": true
+      }
+    ]
+  }
+}

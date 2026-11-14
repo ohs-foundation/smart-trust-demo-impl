@@ -1,0 +1,17 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "TrustDemoCodeMappingBasisVS",
+  "id": "TrustDemoCodeMappingBasisVS",
+  "title": "How an imported dose got its national schedule code",
+  "description": "Every code of TrustDemoCodeMappingBasis.",
+  "url": "http://smart.who.int/trust-demo/ValueSet/TrustDemoCodeMappingBasisVS",
+  "experimental": true,
+  "compose": {
+    "include": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoCodeMappingBasis"
+      }
+    ]
+  }
+}

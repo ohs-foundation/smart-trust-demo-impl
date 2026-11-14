@@ -1,0 +1,30 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "TrustDemoVhlRefusalReason",
+  "id": "TrustDemoVhlRefusalReason",
+  "title": "Why a shared link released nothing",
+  "description": "The refusal reasons of decision table TD.DT.05 (STD-ACC-001).",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason",
+  "concept": [
+    {
+      "code": "withdrawn",
+      "display": "Withdrawn",
+      "definition": "The holder withdrew the link before it expired."
+    },
+    {
+      "code": "expired",
+      "display": "Expired",
+      "definition": "The request came after the expiry the holder chose."
+    },
+    {
+      "code": "wrong-passcode",
+      "display": "Wrong passcode",
+      "definition": "The passcode given does not match the one the holder set."
+    }
+  ],
+  "experimental": true,
+  "caseSensitive": true,
+  "count": 3
+}

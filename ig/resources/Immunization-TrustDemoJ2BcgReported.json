@@ -1,0 +1,42 @@
+{
+  "resourceType": "Immunization",
+  "id": "TrustDemoJ2BcgReported",
+  "meta": {
+    "profile": [
+      "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaReportedImmunization"
+    ]
+  },
+  "status": "completed",
+  "primarySource": false,
+  "vaccineCode": {
+    "coding": [
+      {
+        "code": "vp-bcg-freeze-dried",
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+        "display": "BCG vaccine, freeze-dried"
+      }
+    ]
+  },
+  "patient": {
+    "reference": "Patient/TrustDemoSomsak"
+  },
+  "occurrenceDateTime": "2025-10-28",
+  "reportOrigin": {
+    "coding": [
+      {
+        "code": "record",
+        "system": "http://terminology.hl7.org/CodeSystem/immunization-origin",
+        "display": "Written Record"
+      }
+    ]
+  },
+  "lotNumber": "XXR-9012",
+  "location": {
+    "display": "Kesaro Provincial Hospital, Taifafeki"
+  },
+  "note": [
+    {
+      "text": "Read from a paper DVC that Khamla, Somsak's mother, showed, without verifying its signature (triage read): reported, not verified."
+    }
+  ]
+}

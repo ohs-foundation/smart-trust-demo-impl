@@ -1,0 +1,60 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoDvcOutcomeAr",
+  "id": "TrustDemoDvcOutcome-ar",
+  "title": "ما تصبح عليه DVC الممسوحة ضوئيًا في السجل",
+  "description": "ملحق باللغة العربية (ar) لنظام الرموز TrustDemoDvcOutcome: تسميات كل مفهوم. ترجمة غير رسمية أعدّها وكيل آلي، دون مراجعة بشرية.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDvcOutcome-ar",
+  "concept": [
+    {
+      "code": "verified",
+      "display": "مُتحقَّق منها",
+      "definition": "مُسجَّلة من مصدرها الأولي، مع مصدر منشأ التحقق.",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "مُتحقَّق منها"
+        }
+      ]
+    },
+    {
+      "code": "reported-unverified",
+      "display": "مُبلَّغ عنه، غير متحقَّق منه",
+      "definition": "محفوظة كما أبلغت عنها الأسرة (primarySource false)؛ لا يحتسبها جدول التطعيم.",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "مُبلَّغ عنه، غير متحقَّق منه"
+        }
+      ]
+    },
+    {
+      "code": "rejected",
+      "display": "مرفوضة",
+      "definition": "الشهادة ليست دليلًا على جرعة؛ تُسجَّل الخطوة والسبب.",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "مرفوضة"
+        }
+      ]
+    },
+    {
+      "code": "not-read",
+      "display": "لم تُقرأ",
+      "definition": "تعذّرت قراءة أي شيء من رمز QR؛ تُعامَل البطاقة على أنها ورقية.",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "لم تُقرأ"
+        }
+      ]
+    }
+  ],
+  "experimental": true,
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDvcOutcome",
+  "language": "ar",
+  "caseSensitive": true
+}

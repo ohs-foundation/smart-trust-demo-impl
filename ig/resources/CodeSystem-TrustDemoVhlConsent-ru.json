@@ -1,0 +1,35 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoVhlConsentRu",
+  "id": "TrustDemoVhlConsent-ru",
+  "title": "TrustDemoVhlConsent (ru designations, unofficial)",
+  "description": "Unofficial Russian designations for TrustDemoVhlConsent: an agent translation that no person has signed off. Each code has a display designation and a definition designation; the codes themselves are not translated.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlConsent-ru",
+  "concept": [
+    {
+      "code": "CONSENT-VHL-TREATMENT",
+      "display": "Consent to read the summary for treatment",
+      "designation": [
+        {
+          "language": "ru",
+          "value": "Согласие на чтение сводки для лечения"
+        },
+        {
+          "language": "ru",
+          "use": {
+            "code": "900000000000550004",
+            "system": "http://snomed.info/sct",
+            "display": "Definition"
+          },
+          "value": "Любой, кому владелец передаёт QR-код и код доступа VHL, может читать стоящую за ней сводку о пациенте в целях лечения до истечения срока действия ссылки. Каждый доступ регистрируется выдавшим порталом."
+        }
+      ]
+    }
+  ],
+  "experimental": true,
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlConsent",
+  "language": "ru",
+  "caseSensitive": true
+}

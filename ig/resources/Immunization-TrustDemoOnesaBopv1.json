@@ -1,0 +1,45 @@
+{
+  "resourceType": "Immunization",
+  "id": "TrustDemoOnesaBopv1",
+  "meta": {
+    "profile": [
+      "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaImmunization"
+    ]
+  },
+  "status": "completed",
+  "vaccineCode": {
+    "coding": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+        "code": "XXK-EPI-OPV-1",
+        "display": "bOPV, dose 1"
+      },
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+        "code": "vp-bopv-drops",
+        "display": "Bivalent oral polio vaccine (bOPV), drops"
+      }
+    ]
+  },
+  "primarySource": true,
+  "patient": {
+    "reference": "Patient/TrustDemoSomsak"
+  },
+  "occurrenceDateTime": "2025-12-10",
+  "performer": [
+    {
+      "actor": {
+        "reference": "Practitioner/TrustDemoChanthason"
+      }
+    }
+  ],
+  "lotNumber": "XXK-5531",
+  "location": {
+    "display": "Lomaru District Health Center, Onesa"
+  },
+  "protocolApplied": [
+    {
+      "doseNumberPositiveInt": 1
+    }
+  ]
+}

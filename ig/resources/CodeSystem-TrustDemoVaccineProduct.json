@@ -1,0 +1,39 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "TrustDemoVaccineProduct",
+  "id": "TrustDemoVaccineProduct",
+  "title": "Vaccine products (illustrative PreQual-style codes)",
+  "description": "Illustrative product codes in the style of WHO PreQual product ids, as the VaxLink walkthrough uses them: the issuer's coding of each dose. Not WHO PreQual ids.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+  "concept": [
+    {
+      "code": "vp-hepb-peds-monovalent",
+      "display": "Hepatitis B vaccine, paediatric, monovalent"
+    },
+    {
+      "code": "vp-bcg-freeze-dried",
+      "display": "BCG vaccine, freeze-dried"
+    },
+    {
+      "code": "vp-pentavalent-liquid",
+      "display": "DTP-HepB-Hib (pentavalent), liquid"
+    },
+    {
+      "code": "vp-bopv-drops",
+      "display": "Bivalent oral polio vaccine (bOPV), drops"
+    },
+    {
+      "code": "vp-pcv-13-dose",
+      "display": "Pneumococcal conjugate vaccine (PCV)"
+    },
+    {
+      "code": "vp-mr-freeze-dried",
+      "display": "Measles-rubella vaccine, freeze-dried"
+    }
+  ],
+  "experimental": true,
+  "caseSensitive": true,
+  "count": 6
+}

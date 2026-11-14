@@ -1,0 +1,17 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "TrustDemoVerificationFailureReasonVS",
+  "id": "TrustDemoVerificationFailureReasonVS",
+  "title": "Verification failure reasons",
+  "description": "Every code of TrustDemoVerificationFailureReason.",
+  "url": "http://smart.who.int/trust-demo/ValueSet/TrustDemoVerificationFailureReasonVS",
+  "experimental": true,
+  "compose": {
+    "include": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVerificationFailureReason"
+      }
+    ]
+  }
+}

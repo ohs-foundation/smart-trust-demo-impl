@@ -1,0 +1,95 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "TrustDemoVerificationFailureReason",
+  "id": "TrustDemoVerificationFailureReason",
+  "title": "Verification failure reasons",
+  "description": "The closed set of reasons a DVC fails verification, shared by the Kotlin and Rust HCERT libraries (STT-VER-008).",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVerificationFailureReason",
+  "concept": [
+    {
+      "code": "BadPrefix",
+      "display": "Bad prefix",
+      "definition": "The text does not start with the HC1: prefix."
+    },
+    {
+      "code": "UnsupportedContextVersion",
+      "display": "Unsupported context version",
+      "definition": "The context identifier names a version the verifier does not support."
+    },
+    {
+      "code": "Base45Invalid",
+      "display": "Base45 invalid",
+      "definition": "The text is not valid Base45."
+    },
+    {
+      "code": "InflateFailed",
+      "display": "Inflate failed",
+      "definition": "The compressed bytes do not decompress."
+    },
+    {
+      "code": "LimitExceeded",
+      "display": "Limit exceeded",
+      "definition": "A decode limit (size or depth) was exceeded."
+    },
+    {
+      "code": "CoseMalformed",
+      "display": "COSE malformed",
+      "definition": "The bytes are not a well-formed COSE_Sign1."
+    },
+    {
+      "code": "HeaderInvalid",
+      "display": "Header invalid",
+      "definition": "A COSE header is missing or not as required."
+    },
+    {
+      "code": "UnsupportedAlgorithm",
+      "display": "Unsupported algorithm",
+      "definition": "The signature algorithm is not one the verifier accepts."
+    },
+    {
+      "code": "KidNotFound",
+      "display": "Key not found",
+      "definition": "No certificate on the verifier's copy of the trust list has the kid (STT-VER-006)."
+    },
+    {
+      "code": "SignatureInvalid",
+      "display": "Signature invalid",
+      "definition": "The signature does not verify with any certificate with the kid."
+    },
+    {
+      "code": "KeyUsageMismatch",
+      "display": "Key usage mismatch",
+      "definition": "The signer's certificate may not sign this kind of certificate."
+    },
+    {
+      "code": "Expired",
+      "display": "Expired",
+      "definition": "The certificate's expiry has passed."
+    },
+    {
+      "code": "NotYetValid",
+      "display": "Not yet valid",
+      "definition": "The certificate's issued-at time is in the future."
+    },
+    {
+      "code": "HcertMissing",
+      "display": "HCERT missing",
+      "definition": "The claim set has no hcert claim."
+    },
+    {
+      "code": "MultipleSubclaims",
+      "display": "Multiple subclaims",
+      "definition": "The hcert claim has more subclaims than the verifier accepts."
+    },
+    {
+      "code": "PayloadInvalid",
+      "display": "Payload invalid",
+      "definition": "The payload does not conform to its logical model."
+    }
+  ],
+  "experimental": true,
+  "caseSensitive": true,
+  "count": 16
+}

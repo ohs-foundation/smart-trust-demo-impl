@@ -1,0 +1,17 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "TrustDemoVerificationStepVS",
+  "id": "TrustDemoVerificationStepVS",
+  "title": "Verification steps",
+  "description": "Every code of TrustDemoVerificationStep.",
+  "url": "http://smart.who.int/trust-demo/ValueSet/TrustDemoVerificationStepVS",
+  "experimental": true,
+  "compose": {
+    "include": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVerificationStep"
+      }
+    ]
+  }
+}

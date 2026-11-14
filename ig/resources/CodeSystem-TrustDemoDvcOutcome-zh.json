@@ -1,0 +1,51 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoDvcOutcomeZh",
+  "id": "TrustDemoDvcOutcome-zh",
+  "title": "TrustDemoDvcOutcome — Chinese (zh) supplement",
+  "description": "Unofficial Simplified Chinese (zh) display designations for the TrustDemoDvcOutcome code system, drafted by an agent and not signed off by a human.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDvcOutcome-zh",
+  "concept": [
+    {
+      "code": "verified",
+      "designation": [
+        {
+          "language": "zh",
+          "value": "已验证"
+        }
+      ]
+    },
+    {
+      "code": "reported-unverified",
+      "designation": [
+        {
+          "language": "zh",
+          "value": "已报告，未验证"
+        }
+      ]
+    },
+    {
+      "code": "rejected",
+      "designation": [
+        {
+          "language": "zh",
+          "value": "已拒绝"
+        }
+      ]
+    },
+    {
+      "code": "not-read",
+      "designation": [
+        {
+          "language": "zh",
+          "value": "未读取"
+        }
+      ]
+    }
+  ],
+  "experimental": true,
+  "language": "zh",
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDvcOutcome"
+}

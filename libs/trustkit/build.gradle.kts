@@ -19,3 +19,5 @@ plugins {
 }
 
 kotlin { jvmToolchain(21) }
+
+sourceSets.test { resources.srcDir(rootProject.file("ig/resources")) }

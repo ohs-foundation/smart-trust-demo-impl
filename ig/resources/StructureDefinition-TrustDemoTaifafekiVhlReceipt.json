@@ -1,0 +1,47 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "TrustDemoTaifafekiVhlReceipt",
+  "url": "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoTaifafekiVhlReceipt",
+  "name": "TrustDemoTaifafekiVhlReceipt",
+  "title": "Taifafeki: record of a summary read through a VHL",
+  "status": "draft",
+  "description": "How it is used: J4.1. The Kesaro clinic viewer keeps this record when it opens Somsak's patient summary through the Verifiable Health Link that his father shows.\n\nWhy: the Taifafeki clinic views the Onesan record and does not copy it into a Taifafeki registry. So the clinic keeps a note of what it saw, where it came from, and how it was verified: the VHL's signature against Onesa's key on the GDHCN trust list, the manifest fetch, and the passcode. The Onesan side keeps its own log of the same access (the Onesan audit profile).",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Provenance",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Provenance",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Provenance.target",
+        "path": "Provenance.target",
+        "mustSupport": true
+      },
+      {
+        "id": "Provenance.recorded",
+        "path": "Provenance.recorded",
+        "mustSupport": true
+      },
+      {
+        "id": "Provenance.activity",
+        "path": "Provenance.activity",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Provenance.agent",
+        "path": "Provenance.agent",
+        "min": 2,
+        "mustSupport": true
+      },
+      {
+        "id": "Provenance.entity",
+        "path": "Provenance.entity",
+        "min": 1,
+        "mustSupport": true
+      }
+    ]
+  }
+}

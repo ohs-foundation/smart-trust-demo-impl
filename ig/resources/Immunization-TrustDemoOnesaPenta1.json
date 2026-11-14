@@ -1,0 +1,45 @@
+{
+  "resourceType": "Immunization",
+  "id": "TrustDemoOnesaPenta1",
+  "meta": {
+    "profile": [
+      "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaImmunization"
+    ]
+  },
+  "status": "completed",
+  "vaccineCode": {
+    "coding": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+        "code": "XXK-EPI-PENTA-1",
+        "display": "Pentavalent (DTP-HepB-Hib), dose 1"
+      },
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+        "code": "vp-pentavalent-liquid",
+        "display": "DTP-HepB-Hib (pentavalent), liquid"
+      }
+    ]
+  },
+  "primarySource": true,
+  "patient": {
+    "reference": "Patient/TrustDemoSomsak"
+  },
+  "occurrenceDateTime": "2025-12-10",
+  "performer": [
+    {
+      "actor": {
+        "reference": "Practitioner/TrustDemoChanthason"
+      }
+    }
+  ],
+  "lotNumber": "XXK-2201",
+  "location": {
+    "display": "Lomaru District Health Center, Onesa"
+  },
+  "protocolApplied": [
+    {
+      "doseNumberPositiveInt": 1
+    }
+  ]
+}

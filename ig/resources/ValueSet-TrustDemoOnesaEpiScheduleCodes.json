@@ -1,0 +1,17 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "TrustDemoOnesaEpiScheduleCodes",
+  "id": "TrustDemoOnesaEpiScheduleCodes",
+  "title": "National schedule codes of the journeys",
+  "description": "Every code of TrustDemoOnesaEpiSchedule: the target of the national ConceptMap.",
+  "url": "http://smart.who.int/trust-demo/ValueSet/TrustDemoOnesaEpiScheduleCodes",
+  "experimental": true,
+  "compose": {
+    "include": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule"
+      }
+    ]
+  }
+}

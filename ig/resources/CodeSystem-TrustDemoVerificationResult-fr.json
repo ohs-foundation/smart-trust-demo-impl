@@ -1,0 +1,49 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoVerificationResultFr",
+  "id": "TrustDemoVerificationResult-fr",
+  "title": "Résultat de la lecture d'un DVC",
+  "description": "French (fr) supplement to TrustDemoVerificationResult: displays and definitions in French. Unofficial agent translation.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVerificationResult-fr",
+  "concept": [
+    {
+      "code": "verified",
+      "display": "Vérifié",
+      "definition": "Toutes les étapes de la vérification ont réussi (STT-VER-001).",
+      "designation": [
+        {
+          "language": "fr",
+          "value": "Vérifié"
+        }
+      ]
+    },
+    {
+      "code": "failed",
+      "display": "Échec",
+      "definition": "La vérification s'est arrêtée à une étape, pour un motif tiré de l'ensemble fermé de STT-VER-008.",
+      "designation": [
+        {
+          "language": "fr",
+          "value": "Échec"
+        }
+      ]
+    },
+    {
+      "code": "unverified",
+      "display": "Lu, non vérifié",
+      "definition": "La charge utile a été lue par read-unverified, sans consultation de la liste de confiance ni contrôle de la signature (STT-VER-011).",
+      "designation": [
+        {
+          "language": "fr",
+          "value": "Lu, non vérifié"
+        }
+      ]
+    }
+  ],
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVerificationResult",
+  "language": "fr",
+  "experimental": true,
+  "count": 3
+}

@@ -1,0 +1,49 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "TrustDemoHouseholdRegistration",
+  "url": "http://smart.who.int/trust-demo/Questionnaire/TrustDemoHouseholdRegistration",
+  "title": "Add a newborn to the household",
+  "description": "The form the CHW app renders offline (OHS Structured Data Capture) to add a newborn to a household and note any foreign vaccination cards.",
+  "name": "TrustDemoHouseholdRegistration",
+  "status": "draft",
+  "experimental": true,
+  "subjectType": [
+    "Patient"
+  ],
+  "item": [
+    {
+      "linkId": "household",
+      "text": "Household id",
+      "type": "string",
+      "required": true
+    },
+    {
+      "linkId": "given",
+      "text": "Child's given name",
+      "type": "string",
+      "required": true
+    },
+    {
+      "linkId": "family",
+      "text": "Child's family name",
+      "type": "string",
+      "required": true
+    },
+    {
+      "linkId": "birthDate",
+      "text": "Date of birth",
+      "type": "date",
+      "required": true
+    },
+    {
+      "linkId": "birthCountry",
+      "text": "Country of birth",
+      "type": "string"
+    },
+    {
+      "linkId": "foreignCards",
+      "text": "Does the family hold vaccination cards from abroad?",
+      "type": "boolean"
+    }
+  ]
+}

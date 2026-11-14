@@ -1,0 +1,49 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "TrustDemoOnesaReferral",
+  "url": "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaReferral",
+  "name": "TrustDemoOnesaReferral",
+  "title": "Onesa: CHW referral to verify foreign cards",
+  "status": "draft",
+  "description": "How it is used: J2b. The CHW refers Somsak to the district health center to have his foreign cards verified and his doses fitted to the Onesan schedule.\n\nWhy: the CHW cannot verify a DVC on the phone, but the clinic can. The referral points at the reported doses it is about, so the clinic knows exactly what to check, and the CHW can see when it is done.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "ServiceRequest",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/ServiceRequest",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "ServiceRequest.subject",
+        "path": "ServiceRequest.subject",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaPatient"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ServiceRequest.requester",
+        "path": "ServiceRequest.requester",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "ServiceRequest.performer",
+        "path": "ServiceRequest.performer",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "ServiceRequest.supportingInfo",
+        "path": "ServiceRequest.supportingInfo",
+        "min": 1,
+        "mustSupport": true
+      }
+    ]
+  }
+}

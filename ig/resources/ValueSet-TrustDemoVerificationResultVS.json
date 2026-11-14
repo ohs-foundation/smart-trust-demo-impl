@@ -1,0 +1,17 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "TrustDemoVerificationResultVS",
+  "id": "TrustDemoVerificationResultVS",
+  "title": "Result of reading a DVC",
+  "description": "Every code of TrustDemoVerificationResult.",
+  "url": "http://smart.who.int/trust-demo/ValueSet/TrustDemoVerificationResultVS",
+  "experimental": true,
+  "compose": {
+    "include": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVerificationResult"
+      }
+    ]
+  }
+}

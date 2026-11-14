@@ -1,0 +1,27 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoVhlConsentFr",
+  "id": "TrustDemoVhlConsent-fr",
+  "title": "Consentements du domaine de confiance VHL de la démo (illustratifs)",
+  "description": "French (fr) supplement to TrustDemoVhlConsent: displays and definitions in French. Unofficial agent translation.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlConsent-fr",
+  "concept": [
+    {
+      "code": "CONSENT-VHL-TREATMENT",
+      "display": "Consentement à la lecture du résumé à des fins de traitement",
+      "definition": "Toute personne à qui le titulaire remet le code QR et le code d'accès du VHL peut lire le résumé du patient auquel il donne accès, à des fins de traitement, jusqu'à l'expiration du lien. Chaque accès est journalisé par le portail émetteur.",
+      "designation": [
+        {
+          "language": "fr",
+          "value": "Consentement à la lecture du résumé à des fins de traitement"
+        }
+      ]
+    }
+  ],
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlConsent",
+  "language": "fr",
+  "experimental": true,
+  "count": 1
+}

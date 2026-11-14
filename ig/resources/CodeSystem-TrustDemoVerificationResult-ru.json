@@ -1,0 +1,46 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoVerificationResultRu",
+  "id": "TrustDemoVerificationResult-ru",
+  "title": "TrustDemoVerificationResult (ru designations, unofficial)",
+  "description": "Unofficial Russian designations for TrustDemoVerificationResult: an agent translation that no person has signed off.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVerificationResult-ru",
+  "concept": [
+    {
+      "code": "verified",
+      "display": "Verified",
+      "designation": [
+        {
+          "language": "ru",
+          "value": "Проверено"
+        }
+      ]
+    },
+    {
+      "code": "failed",
+      "display": "Failed",
+      "designation": [
+        {
+          "language": "ru",
+          "value": "Проверка не пройдена"
+        }
+      ]
+    },
+    {
+      "code": "unverified",
+      "display": "Read, not verified",
+      "designation": [
+        {
+          "language": "ru",
+          "value": "Прочитано, не проверено"
+        }
+      ]
+    }
+  ],
+  "experimental": true,
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVerificationResult",
+  "language": "ru",
+  "caseSensitive": true
+}

@@ -1,0 +1,47 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "TrustDemoOnesaVhlAccess",
+  "url": "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaVhlAccess",
+  "name": "TrustDemoOnesaVhlAccess",
+  "title": "Onesa: every VHL access logged at home",
+  "status": "draft",
+  "description": "How it is used: J4.1. The Onesan national gateway records each attempt by a clinic abroad to fetch a family member's VHL manifest, the refused ones included.\n\nWhy: the family shares a link, not a copy, and the data stays in Onesa. Logging every access at home, following IHE Basic Audit Log Patterns, is what lets the family and the ministry see who looked, from where and when. A wrong passcode is logged too.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "AuditEvent",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/AuditEvent",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "AuditEvent.recorded",
+        "path": "AuditEvent.recorded",
+        "mustSupport": true
+      },
+      {
+        "id": "AuditEvent.outcome",
+        "path": "AuditEvent.outcome",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "AuditEvent.agent",
+        "path": "AuditEvent.agent",
+        "min": 2,
+        "mustSupport": true
+      },
+      {
+        "id": "AuditEvent.source.observer",
+        "path": "AuditEvent.source.observer",
+        "mustSupport": true
+      },
+      {
+        "id": "AuditEvent.entity",
+        "path": "AuditEvent.entity",
+        "min": 1,
+        "mustSupport": true
+      }
+    ]
+  }
+}

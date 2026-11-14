@@ -1,0 +1,12 @@
+{
+  "resourceType": "Organization",
+  "id": "TrustDemoKesaroClinic",
+  "name": "Kesaro primary care clinic (demonstrator)",
+  "contact": [
+    {
+      "address": {
+        "country": "XXR"
+      }
+    }
+  ]
+}

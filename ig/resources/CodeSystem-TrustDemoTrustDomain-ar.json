@@ -1,0 +1,39 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoTrustDomainAr",
+  "id": "TrustDemoTrustDomain-ar",
+  "title": "نطاقات الثقة في الرحلات (توضيحية)",
+  "description": "ملحق باللغة العربية (ar) لنظام الرموز TrustDemoTrustDomain: تسميات كل مفهوم. ترجمة غير رسمية أعدّها وكيل آلي، دون مراجعة بشرية. Unofficial agent translation.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoTrustDomain-ar",
+  "concept": [
+    {
+      "code": "DEMO-DVC",
+      "display": "عرض توضيحي: شهادة التطعيم الرقمية",
+      "definition": "شهادات DVC للتمنيع الروتيني (HCERT) يوقّعها نظام عيادة الولادة لكل جرعة، ويتحقق منها السجل الصحي الإلكتروني (EHR) في عيادة البلد الأم (J1، J3).",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "عرض توضيحي: شهادة التطعيم الرقمية"
+        }
+      ]
+    },
+    {
+      "code": "DEMO-VHL",
+      "display": "عرض توضيحي: الرابط الصحي القابل للتحقق",
+      "definition": "روابط صحية قابلة للتحقق (HCERT) إلى ملخص المريض، تُنشأ على البوابة الوطنية وتُحَلّ في نقطة تقديم الرعاية في الخارج (J4.0، J4.1). وشروط استخدامه هي TrustDemoVhlTermsOfUse.",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "عرض توضيحي: الرابط الصحي القابل للتحقق"
+        }
+      ]
+    }
+  ],
+  "experimental": true,
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoTrustDomain",
+  "language": "ar",
+  "caseSensitive": true,
+  "count": 2
+}

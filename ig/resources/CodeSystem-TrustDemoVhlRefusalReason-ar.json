@@ -1,0 +1,49 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoVhlRefusalReasonAr",
+  "id": "TrustDemoVhlRefusalReason-ar",
+  "title": "لماذا لم يُتح الرابط المُشارَك أي شيء",
+  "description": "ملحق باللغة العربية (ar) لنظام الرموز TrustDemoVhlRefusalReason: تسميات كل مفهوم. ترجمة غير رسمية أعدّها وكيل آلي، دون مراجعة بشرية.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason-ar",
+  "concept": [
+    {
+      "code": "withdrawn",
+      "display": "مسحوب",
+      "definition": "سحب الحامل الرابط قبل انتهاء صلاحيته.",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "مسحوب"
+        }
+      ]
+    },
+    {
+      "code": "expired",
+      "display": "منتهية الصلاحية",
+      "definition": "ورد الطلب بعد تاريخ انتهاء الصلاحية الذي اختاره الحامل.",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "منتهية الصلاحية"
+        }
+      ]
+    },
+    {
+      "code": "wrong-passcode",
+      "display": "رمز مرور خاطئ",
+      "definition": "رمز المرور المُقدَّم لا يطابق الرمز الذي حدّده الحامل.",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "رمز مرور خاطئ"
+        }
+      ]
+    }
+  ],
+  "experimental": true,
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason",
+  "language": "ar",
+  "caseSensitive": true
+}

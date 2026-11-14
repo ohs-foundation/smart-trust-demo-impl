@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "TrustDemoOnesaDvcVerification",
+  "url": "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaDvcVerification",
+  "name": "TrustDemoOnesaDvcVerification",
+  "title": "Onesa: foreign DVC verified against the GDHCN trust list",
+  "status": "draft",
+  "description": "How it is used: J3a. The district EHR verifies each Taifafeki DVC offline against its cached copy of the GDHCN trust list, then imports the dose. This record says so.\n\nWhy: a verified dose replaces a reported one, so the record must show who verified what, against which policy, and which reported doses it removes. Anyone who later doubts a dose can follow this record back to the signed certificate and the issuing country's key.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Provenance",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Provenance",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Provenance.target",
+        "path": "Provenance.target",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaImmunization"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Provenance.policy",
+        "path": "Provenance.policy",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Provenance.activity",
+        "path": "Provenance.activity",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Provenance.agent",
+        "path": "Provenance.agent",
+        "min": 2,
+        "mustSupport": true
+      },
+      {
+        "id": "Provenance.entity",
+        "path": "Provenance.entity",
+        "min": 1,
+        "mustSupport": true
+      }
+    ]
+  }
+}

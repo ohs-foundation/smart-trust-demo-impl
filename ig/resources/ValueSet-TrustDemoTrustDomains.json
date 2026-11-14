@@ -1,0 +1,17 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "TrustDemoTrustDomains",
+  "id": "TrustDemoTrustDomains",
+  "title": "Trust domains of the journeys",
+  "description": "Every code of TrustDemoTrustDomain: the trust domains a verifier in the journeys accepts.",
+  "url": "http://smart.who.int/trust-demo/ValueSet/TrustDemoTrustDomains",
+  "experimental": true,
+  "compose": {
+    "include": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoTrustDomain"
+      }
+    ]
+  }
+}

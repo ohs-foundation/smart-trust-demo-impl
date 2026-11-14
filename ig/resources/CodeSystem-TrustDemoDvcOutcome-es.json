@@ -1,0 +1,60 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoDvcOutcomeEs",
+  "id": "TrustDemoDvcOutcome-es",
+  "title": "En qué se convierte en el registro un DVC escaneado",
+  "description": "Suplemento en español (es) de TrustDemoDvcOutcome: designaciones de cada concepto. Traducción no oficial generada por un agente, sin revisión humana.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDvcOutcome-es",
+  "concept": [
+    {
+      "code": "verified",
+      "display": "Verificado",
+      "definition": "Registrado a partir de su fuente primaria, con la procedencia de la verificación.",
+      "designation": [
+        {
+          "language": "es",
+          "value": "Verificado"
+        }
+      ]
+    },
+    {
+      "code": "reported-unverified",
+      "display": "Notificado, no verificado",
+      "definition": "Se conserva tal como lo notificó la familia (primarySource false); el calendario no lo cuenta.",
+      "designation": [
+        {
+          "language": "es",
+          "value": "Notificado, no verificado"
+        }
+      ]
+    },
+    {
+      "code": "rejected",
+      "display": "Rechazado",
+      "definition": "El certificado no es prueba de una dosis; se registran el paso y el motivo.",
+      "designation": [
+        {
+          "language": "es",
+          "value": "Rechazado"
+        }
+      ]
+    },
+    {
+      "code": "not-read",
+      "display": "No leído",
+      "definition": "No se pudo leer nada del QR; la tarjeta se trata como papel.",
+      "designation": [
+        {
+          "language": "es",
+          "value": "No leído"
+        }
+      ]
+    }
+  ],
+  "experimental": true,
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDvcOutcome",
+  "language": "es",
+  "caseSensitive": true
+}

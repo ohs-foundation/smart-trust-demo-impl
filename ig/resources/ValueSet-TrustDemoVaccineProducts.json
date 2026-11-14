@@ -1,0 +1,17 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "TrustDemoVaccineProducts",
+  "id": "TrustDemoVaccineProducts",
+  "title": "Vaccine products of the journeys",
+  "description": "Every product code of TrustDemoVaccineProduct: the source of the national ConceptMap.",
+  "url": "http://smart.who.int/trust-demo/ValueSet/TrustDemoVaccineProducts",
+  "experimental": true,
+  "compose": {
+    "include": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
+      }
+    ]
+  }
+}

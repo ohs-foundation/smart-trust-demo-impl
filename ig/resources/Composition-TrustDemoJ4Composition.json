@@ -1,0 +1,142 @@
+{
+  "resourceType": "Composition",
+  "id": "TrustDemoJ4Composition",
+  "status": "final",
+  "type": {
+    "coding": [
+      {
+        "code": "60591-5",
+        "system": "http://loinc.org",
+        "display": "Patient summary Document"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/TrustDemoSomsak"
+  },
+  "date": "2026-10-26T09:00:00+07:00",
+  "author": [
+    {
+      "display": "Onesa national health portal (Country B, XXK)"
+    }
+  ],
+  "title": "Patient summary: Somsak SENGMANY",
+  "section": [
+    {
+      "title": "Allergies and intolerances",
+      "code": {
+        "coding": [
+          {
+            "code": "48765-2",
+            "system": "http://loinc.org",
+            "display": "Allergies and adverse reactions Document"
+          }
+        ]
+      },
+      "emptyReason": {
+        "coding": [
+          {
+            "code": "unavailable",
+            "system": "http://terminology.hl7.org/CodeSystem/list-empty-reason",
+            "display": "Unavailable"
+          }
+        ]
+      }
+    },
+    {
+      "title": "Medication summary",
+      "code": {
+        "coding": [
+          {
+            "code": "10160-0",
+            "system": "http://loinc.org",
+            "display": "History of Medication use Narrative"
+          }
+        ]
+      },
+      "emptyReason": {
+        "coding": [
+          {
+            "code": "unavailable",
+            "system": "http://terminology.hl7.org/CodeSystem/list-empty-reason",
+            "display": "Unavailable"
+          }
+        ]
+      }
+    },
+    {
+      "title": "Problems",
+      "code": {
+        "coding": [
+          {
+            "code": "11450-4",
+            "system": "http://loinc.org",
+            "display": "Problem list - Reported"
+          }
+        ]
+      },
+      "emptyReason": {
+        "coding": [
+          {
+            "code": "unavailable",
+            "system": "http://terminology.hl7.org/CodeSystem/list-empty-reason",
+            "display": "Unavailable"
+          }
+        ]
+      }
+    },
+    {
+      "title": "Immunizations",
+      "code": {
+        "coding": [
+          {
+            "code": "11369-6",
+            "system": "http://loinc.org",
+            "display": "History of Immunization Narrative"
+          }
+        ]
+      },
+      "entry": [
+        {
+          "reference": "Immunization/TrustDemoJ3HepB"
+        },
+        {
+          "reference": "Immunization/TrustDemoJ3Bcg"
+        },
+        {
+          "reference": "Immunization/TrustDemoOnesaPenta1"
+        },
+        {
+          "reference": "Immunization/TrustDemoOnesaBopv1"
+        },
+        {
+          "reference": "Immunization/TrustDemoOnesaPcv1"
+        },
+        {
+          "reference": "Immunization/TrustDemoOnesaMr1"
+        }
+      ]
+    },
+    {
+      "title": "Advance directives: consent",
+      "code": {
+        "coding": [
+          {
+            "code": "42348-3",
+            "system": "http://loinc.org",
+            "display": "Advance directives"
+          }
+        ]
+      },
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Shared with Bounmy's consent: anyone he gives the QR code and the spoken passcode to may read this summary for treatment, from 26 October to 9 November 2026.</div>"
+      },
+      "entry": [
+        {
+          "reference": "Consent/TrustDemoJ4Consent"
+        }
+      ]
+    }
+  ]
+}

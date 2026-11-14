@@ -1,0 +1,20 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "TrustDemoVhlConsent",
+  "id": "TrustDemoVhlConsent",
+  "title": "Consents of the demo VHL trust domain (illustrative)",
+  "description": "The consent codes of the illustrative DEMO-VHL trust domain: what a holder agrees to when the family wallet creates a Verifiable Health Link (J4.0). Invented for the demo, in the style of the IPS for Pilgrimage consents (IPS.HAJJ.CONSENT); not a GDHCN trust domain's terms of use.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlConsent",
+  "concept": [
+    {
+      "code": "CONSENT-VHL-TREATMENT",
+      "display": "Consent to read the summary for treatment",
+      "definition": "Anyone the holder gives the VHL's QR code and passcode to may read the patient summary behind it, for treatment, until the link expires. Each access is logged by the issuing portal."
+    }
+  ],
+  "experimental": true,
+  "caseSensitive": true,
+  "count": 1
+}

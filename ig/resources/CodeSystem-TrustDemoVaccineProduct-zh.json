@@ -1,0 +1,69 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoVaccineProductZh",
+  "id": "TrustDemoVaccineProduct-zh",
+  "title": "TrustDemoVaccineProduct — Chinese (zh) supplement",
+  "description": "Unofficial Simplified Chinese (zh) display designations for the TrustDemoVaccineProduct code system, drafted by an agent and not signed off by a human.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct-zh",
+  "concept": [
+    {
+      "code": "vp-hepb-peds-monovalent",
+      "designation": [
+        {
+          "language": "zh",
+          "value": "乙型肝炎疫苗，儿童用，单价"
+        }
+      ]
+    },
+    {
+      "code": "vp-bcg-freeze-dried",
+      "designation": [
+        {
+          "language": "zh",
+          "value": "卡介苗（BCG），冻干"
+        }
+      ]
+    },
+    {
+      "code": "vp-pentavalent-liquid",
+      "designation": [
+        {
+          "language": "zh",
+          "value": "DTP-HepB-Hib（五联），液体"
+        }
+      ]
+    },
+    {
+      "code": "vp-bopv-drops",
+      "designation": [
+        {
+          "language": "zh",
+          "value": "二价口服脊髓灰质炎疫苗（bOPV），滴剂"
+        }
+      ]
+    },
+    {
+      "code": "vp-pcv-13-dose",
+      "designation": [
+        {
+          "language": "zh",
+          "value": "肺炎球菌结合疫苗（PCV）"
+        }
+      ]
+    },
+    {
+      "code": "vp-mr-freeze-dried",
+      "designation": [
+        {
+          "language": "zh",
+          "value": "麻疹-风疹疫苗，冻干"
+        }
+      ]
+    }
+  ],
+  "experimental": true,
+  "language": "zh",
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
+}

@@ -1,0 +1,17 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "TrustDemoVhlTermsOfUse",
+  "id": "TrustDemoVhlTermsOfUse",
+  "title": "Terms of use of the demo VHL trust domain",
+  "description": "The terms of use of the DEMO-VHL trust domain (TrustDemoTrustDomain): every code of TrustDemoVhlConsent. An explicit consent to share a VHL names one of them in Consent.policyRule (J4.0).",
+  "url": "http://smart.who.int/trust-demo/ValueSet/TrustDemoVhlTermsOfUse",
+  "experimental": true,
+  "compose": {
+    "include": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlConsent"
+      }
+    ]
+  }
+}

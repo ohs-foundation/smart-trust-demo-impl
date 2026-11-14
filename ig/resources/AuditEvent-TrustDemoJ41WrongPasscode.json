@@ -1,0 +1,76 @@
+{
+  "resourceType": "AuditEvent",
+  "id": "TrustDemoJ41WrongPasscode",
+  "meta": {
+    "profile": [
+      "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaVhlAccess"
+    ]
+  },
+  "type": {
+    "code": "110112",
+    "system": "http://dicom.nema.org/resources/ontology/DCM",
+    "display": "Query"
+  },
+  "subtype": [
+    {
+      "display": "IHE ITI VHL manifest retrieval (ITI-YY5)"
+    }
+  ],
+  "action": "E",
+  "recorded": "2026-10-28T14:29:02+07:00",
+  "outcome": "4",
+  "outcomeDesc": "Wrong passcode; manifest not released",
+  "agent": [
+    {
+      "type": {
+        "coding": [
+          {
+            "code": "IRCP",
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+            "display": "information recipient"
+          }
+        ]
+      },
+      "who": {
+        "reference": "Device/TrustDemoClinicViewer"
+      },
+      "requestor": true,
+      "network": {
+        "address": "clinic-viewer.kesaro.example",
+        "type": "1"
+      }
+    },
+    {
+      "type": {
+        "coding": [
+          {
+            "code": "CST",
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+            "display": "custodian"
+          }
+        ]
+      },
+      "who": {
+        "reference": "Device/TrustDemoOnesaGateway"
+      },
+      "requestor": false
+    }
+  ],
+  "source": {
+    "observer": {
+      "reference": "Device/TrustDemoOnesaGateway"
+    }
+  },
+  "entity": [
+    {
+      "what": {
+        "reference": "Patient/TrustDemoSomsak"
+      },
+      "role": {
+        "code": "1",
+        "system": "http://terminology.hl7.org/CodeSystem/object-role",
+        "display": "Patient"
+      }
+    }
+  ]
+}

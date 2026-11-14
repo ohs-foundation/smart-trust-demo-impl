@@ -1,0 +1,46 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoVhlRefusalReasonRu",
+  "id": "TrustDemoVhlRefusalReason-ru",
+  "title": "TrustDemoVhlRefusalReason (ru designations, unofficial)",
+  "description": "Unofficial Russian designations for TrustDemoVhlRefusalReason: an agent translation that no person has signed off.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason-ru",
+  "concept": [
+    {
+      "code": "withdrawn",
+      "display": "Withdrawn",
+      "designation": [
+        {
+          "language": "ru",
+          "value": "Отозвано"
+        }
+      ]
+    },
+    {
+      "code": "expired",
+      "display": "Expired",
+      "designation": [
+        {
+          "language": "ru",
+          "value": "Срок действия истёк"
+        }
+      ]
+    },
+    {
+      "code": "wrong-passcode",
+      "display": "Wrong passcode",
+      "designation": [
+        {
+          "language": "ru",
+          "value": "Неверный код доступа"
+        }
+      ]
+    }
+  ],
+  "experimental": true,
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason",
+  "language": "ru",
+  "caseSensitive": true
+}

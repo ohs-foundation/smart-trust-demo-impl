@@ -1,0 +1,45 @@
+{
+  "resourceType": "Immunization",
+  "id": "TrustDemoOnesaMr1",
+  "meta": {
+    "profile": [
+      "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaImmunization"
+    ]
+  },
+  "status": "completed",
+  "vaccineCode": {
+    "coding": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+        "code": "XXK-EPI-MR-1",
+        "display": "Measles-rubella, dose 1"
+      },
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+        "code": "vp-mr-freeze-dried",
+        "display": "Measles-rubella vaccine, freeze-dried"
+      }
+    ]
+  },
+  "primarySource": true,
+  "patient": {
+    "reference": "Patient/TrustDemoSomsak"
+  },
+  "occurrenceDateTime": "2026-07-28",
+  "performer": [
+    {
+      "actor": {
+        "reference": "Practitioner/TrustDemoChanthason"
+      }
+    }
+  ],
+  "lotNumber": "XXK-9923",
+  "location": {
+    "display": "Lomaru District Health Center, Onesa"
+  },
+  "protocolApplied": [
+    {
+      "doseNumberPositiveInt": 1
+    }
+  ]
+}

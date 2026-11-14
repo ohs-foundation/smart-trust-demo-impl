@@ -1,0 +1,232 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "TrustDemoDdChwReferral",
+  "url": "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoDdChwReferral",
+  "name": "TrustDemoDdChwReferral",
+  "title": "TD.J2B Referral for verification",
+  "status": "draft",
+  "experimental": true,
+  "description": "The community health worker's referral of the child to the home clinic, to verify the foreign cards and fit the doses to the national schedule.",
+  "fhirVersion": "4.0.1",
+  "mapping": [
+    {
+      "identity": "realisation",
+      "name": "Realised in this guide's profiles and examples",
+      "uri": "http://smart.who.int/trust-demo",
+      "comment": "Where this guide realises each element: a profile or example path, a DVC payload element (smart.who.int.trust-phw), or a CWT or COSE field."
+    }
+  ],
+  "kind": "logical",
+  "abstract": false,
+  "type": "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoDdChwReferral",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Base",
+  "derivation": "specialization",
+  "differential": {
+    "element": [
+      {
+        "id": "TrustDemoDdChwReferral",
+        "path": "TrustDemoDdChwReferral",
+        "short": "TD.J2B Referral for verification",
+        "definition": "The community health worker's referral of the child to the home clinic, to verify the foreign cards and fit the doses to the national schedule."
+      },
+      {
+        "id": "TrustDemoDdChwReferral.child",
+        "path": "TrustDemoDdChwReferral.child",
+        "code": [
+          {
+            "code": "TD.J2B.DE01",
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDataElements",
+            "display": "Child"
+          }
+        ],
+        "short": "Child",
+        "definition": "The child referred.",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Patient"
+            ]
+          }
+        ],
+        "mapping": [
+          {
+            "identity": "realisation",
+            "map": "TrustDemoOnesaReferral: ServiceRequest.subject"
+          }
+        ]
+      },
+      {
+        "id": "TrustDemoDdChwReferral.referredBy",
+        "path": "TrustDemoDdChwReferral.referredBy",
+        "code": [
+          {
+            "code": "TD.J2B.DE02",
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDataElements",
+            "display": "Referred by"
+          }
+        ],
+        "short": "Referred by",
+        "definition": "The community health worker who made the referral.",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Practitioner"
+            ]
+          }
+        ],
+        "mapping": [
+          {
+            "identity": "realisation",
+            "map": "TrustDemoOnesaReferral: ServiceRequest.requester"
+          }
+        ]
+      },
+      {
+        "id": "TrustDemoDdChwReferral.referredTo",
+        "path": "TrustDemoDdChwReferral.referredTo",
+        "code": [
+          {
+            "code": "TD.J2B.DE03",
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDataElements",
+            "display": "Referred to"
+          }
+        ],
+        "short": "Referred to",
+        "definition": "The clinic that will verify the cards.",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Organization"
+            ]
+          }
+        ],
+        "mapping": [
+          {
+            "identity": "realisation",
+            "map": "TrustDemoOnesaReferral: ServiceRequest.performer"
+          }
+        ]
+      },
+      {
+        "id": "TrustDemoDdChwReferral.referredAt",
+        "path": "TrustDemoDdChwReferral.referredAt",
+        "code": [
+          {
+            "code": "TD.J2B.DE04",
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDataElements",
+            "display": "Referred at"
+          }
+        ],
+        "short": "Referred at",
+        "definition": "When the referral was made.",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "dateTime"
+          }
+        ],
+        "mapping": [
+          {
+            "identity": "realisation",
+            "map": "TrustDemoOnesaReferral: ServiceRequest.authoredOn"
+          }
+        ]
+      },
+      {
+        "id": "TrustDemoDdChwReferral.reason",
+        "path": "TrustDemoDdChwReferral.reason",
+        "code": [
+          {
+            "code": "TD.J2B.DE05",
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDataElements",
+            "display": "Reason"
+          }
+        ],
+        "short": "Reason",
+        "definition": "Why the child is referred: unverified foreign vaccination cards.",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ],
+        "mapping": [
+          {
+            "identity": "realisation",
+            "map": "TrustDemoOnesaReferral: ServiceRequest.reason.concept.text"
+          }
+        ]
+      },
+      {
+        "id": "TrustDemoDdChwReferral.dosesToVerify",
+        "path": "TrustDemoDdChwReferral.dosesToVerify",
+        "code": [
+          {
+            "code": "TD.J2B.DE06",
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDataElements",
+            "display": "Doses to verify"
+          }
+        ],
+        "short": "Doses to verify",
+        "definition": "The reported doses the clinic is asked to verify.",
+        "min": 1,
+        "max": "*",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Immunization"
+            ]
+          }
+        ],
+        "mapping": [
+          {
+            "identity": "realisation",
+            "map": "TrustDemoOnesaReferral: ServiceRequest.supportingInfo"
+          }
+        ]
+      },
+      {
+        "id": "TrustDemoDdChwReferral.status",
+        "path": "TrustDemoDdChwReferral.status",
+        "code": [
+          {
+            "code": "TD.J2B.DE07",
+            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDataElements",
+            "display": "Referral status"
+          }
+        ],
+        "short": "Referral status",
+        "definition": "Active until the clinic records an outcome for every dose it lists, then completed (indicator TD.IND.03).",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "http://hl7.org/fhir/ValueSet/request-status"
+        },
+        "mapping": [
+          {
+            "identity": "realisation",
+            "map": "TrustDemoOnesaReferral: ServiceRequest.status"
+          }
+        ]
+      }
+    ]
+  }
+}

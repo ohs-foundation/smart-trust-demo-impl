@@ -1,0 +1,35 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "TrustDemoDvcOutcome",
+  "id": "TrustDemoDvcOutcome",
+  "title": "What a scanned DVC becomes in the record",
+  "description": "The outcome of decision table TD.DT.01 for one scanned DVC.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoDvcOutcome",
+  "concept": [
+    {
+      "code": "verified",
+      "display": "Verified",
+      "definition": "Recorded from its primary source, with provenance of the verification."
+    },
+    {
+      "code": "reported-unverified",
+      "display": "Reported, not verified",
+      "definition": "Kept as reported by the family (primarySource false); not counted by the schedule."
+    },
+    {
+      "code": "rejected",
+      "display": "Rejected",
+      "definition": "The certificate is not evidence of a dose; the step and reason are recorded."
+    },
+    {
+      "code": "not-read",
+      "display": "Not read",
+      "definition": "Nothing could be read from the QR; the card is treated as paper."
+    }
+  ],
+  "experimental": true,
+  "caseSensitive": true,
+  "count": 4
+}

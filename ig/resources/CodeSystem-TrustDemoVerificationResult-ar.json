@@ -1,0 +1,49 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "supplement",
+  "name": "TrustDemoVerificationResultAr",
+  "id": "TrustDemoVerificationResult-ar",
+  "title": "نتيجة قراءة DVC",
+  "description": "ملحق باللغة العربية (ar) لنظام الرموز TrustDemoVerificationResult: تسميات كل مفهوم. ترجمة غير رسمية أعدّها وكيل آلي، دون مراجعة بشرية.",
+  "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVerificationResult-ar",
+  "concept": [
+    {
+      "code": "verified",
+      "display": "مُتحقَّق منها",
+      "definition": "اجتازت جميع خطوات التحقق بنجاح (STT-VER-001).",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "مُتحقَّق منها"
+        }
+      ]
+    },
+    {
+      "code": "failed",
+      "display": "فشل",
+      "definition": "توقف التحقق عند خطوة ما، لسبب من المجموعة المغلقة في STT-VER-008.",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "فشل"
+        }
+      ]
+    },
+    {
+      "code": "unverified",
+      "display": "مقروءة، غير مُتحقَّق منها",
+      "definition": "قُرئت الحمولة بواسطة read-unverified، دون بحث في قائمة الثقة أو تحقق من التوقيع (STT-VER-011).",
+      "designation": [
+        {
+          "language": "ar",
+          "value": "مقروءة، غير مُتحقَّق منها"
+        }
+      ]
+    }
+  ],
+  "experimental": true,
+  "supplements": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVerificationResult",
+  "language": "ar",
+  "caseSensitive": true
+}

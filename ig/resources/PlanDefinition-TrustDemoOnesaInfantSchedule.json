@@ -1,0 +1,140 @@
+{
+  "resourceType": "PlanDefinition",
+  "id": "TrustDemoOnesaInfantSchedule",
+  "url": "http://smart.who.int/trust-demo/PlanDefinition/TrustDemoOnesaInfantSchedule",
+  "title": "National infant immunization schedule (illustrative excerpt)",
+  "description": "The part of the national schedule the J3 evaluation needs: birth doses, the 6-week doses and measles-rubella at 9 months. Illustrative; the schedule rules are not executable here.",
+  "name": "TrustDemoOnesaInfantSchedule",
+  "status": "draft",
+  "experimental": true,
+  "type": {
+    "coding": [
+      {
+        "code": "clinical-protocol",
+        "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type"
+      }
+    ]
+  },
+  "action": [
+    {
+      "title": "Birth doses",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-HEPB-BD",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "Hepatitis B birth dose"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 0,
+        "code": "d",
+        "system": "http://unitsofmeasure.org",
+        "unit": "days"
+      }
+    },
+    {
+      "title": "BCG",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-BCG",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "BCG"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 0,
+        "code": "d",
+        "system": "http://unitsofmeasure.org",
+        "unit": "days"
+      }
+    },
+    {
+      "title": "6 weeks: pentavalent 1",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-PENTA-1",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "Pentavalent (DTP-HepB-Hib), dose 1"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 6,
+        "code": "wk",
+        "system": "http://unitsofmeasure.org",
+        "unit": "weeks"
+      }
+    },
+    {
+      "title": "6 weeks: bOPV 1",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-OPV-1",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "bOPV, dose 1"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 6,
+        "code": "wk",
+        "system": "http://unitsofmeasure.org",
+        "unit": "weeks"
+      }
+    },
+    {
+      "title": "6 weeks: PCV 1",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-PCV-1",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "PCV, dose 1"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 6,
+        "code": "wk",
+        "system": "http://unitsofmeasure.org",
+        "unit": "weeks"
+      }
+    },
+    {
+      "title": "9 months: measles-rubella 1",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-MR-1",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "Measles-rubella, dose 1"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 9,
+        "code": "mo",
+        "system": "http://unitsofmeasure.org",
+        "unit": "months"
+      }
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "resourceType": "Immunization",
+  "id": "TrustDemoJ3Bcg",
+  "meta": {
+    "profile": [
+      "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaImmunization"
+    ]
+  },
+  "status": "completed",
+  "vaccineCode": {
+    "coding": [
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+        "code": "XXK-EPI-BCG",
+        "display": "BCG"
+      },
+      {
+        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+        "code": "vp-bcg-freeze-dried",
+        "display": "BCG vaccine, freeze-dried"
+      },
+      {
+        "system": "http://hl7.org/fhir/sid/cvx",
+        "code": "19",
+        "display": "BCG"
+      }
+    ],
+    "text": "BCG"
+  },
+  "primarySource": true,
+  "patient": {
+    "reference": "Patient/TrustDemoSomsak"
+  },
+  "occurrenceDateTime": "2025-10-28T09:20:00+07:00",
+  "performer": [
+    {
+      "actor": {
+        "reference": "Practitioner/TrustDemoAnan"
+      }
+    }
+  ],
+  "lotNumber": "XXR-9012",
+  "location": {
+    "display": "Kesaro Provincial Hospital, Taifafeki"
+  },
+  "protocolApplied": [
+    {
+      "doseNumberPositiveInt": 1
+    }
+  ]
+}

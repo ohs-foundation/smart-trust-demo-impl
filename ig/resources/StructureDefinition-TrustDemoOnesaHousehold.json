@@ -1,0 +1,76 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "TrustDemoOnesaHousehold",
+  "url": "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaHousehold",
+  "name": "TrustDemoOnesaHousehold",
+  "title": "Onesa: household on the CHW's roster",
+  "status": "draft",
+  "description": "How it is used: J2a. The CHW finds that a newborn is missing from the household roster and adds Somsak as a member.\n\nWhy: Onesan community health work is organized by household. The roster is how a CHW notices that a child is missing, and it is the unit the family phone shares under in J4 (one phone, three profiles).",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Group",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Group",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Group.identifier",
+        "path": "Group.identifier",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "system"
+            }
+          ],
+          "rules": "open"
+        },
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Group.identifier:household",
+        "path": "Group.identifier",
+        "sliceName": "household",
+        "min": 1,
+        "max": "1",
+        "mustSupport": true
+      },
+      {
+        "id": "Group.identifier:household.system",
+        "path": "Group.identifier.system",
+        "min": 1,
+        "patternUri": "http://smart.who.int/trust-demo/sid/onesa-household-id"
+      },
+      {
+        "id": "Group.type",
+        "path": "Group.type",
+        "patternCode": "person"
+      },
+      {
+        "id": "Group.actual",
+        "path": "Group.actual",
+        "patternBoolean": true
+      },
+      {
+        "id": "Group.member",
+        "path": "Group.member",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Group.member.entity",
+        "path": "Group.member.entity",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Patient"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
