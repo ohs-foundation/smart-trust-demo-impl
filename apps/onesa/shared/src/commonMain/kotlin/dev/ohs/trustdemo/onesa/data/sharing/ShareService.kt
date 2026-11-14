@@ -223,7 +223,7 @@ class ShareService(
       null
     } ?: "The service refused the share (HTTP $status)."
 
-  private suspend fun nameOf(patientId: String): String? {
+  suspend fun nameOf(patientId: String): String? {
     val patient = repository.get("Patient", patientId)?.toJson() ?: return null
     val name = patient["name"]?.jsonArray?.firstOrNull() as? JsonObject
     return name?.get("text")?.jsonPrimitive?.contentOrNull

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,12 +37,13 @@ import dev.ohs.trustdemo.onesa.generated.resources.wallet_empty
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_household
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_not_synced
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_share
+import dev.ohs.trustdemo.onesa.generated.resources.wallet_shared_links
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /** S6: the household the signed-in family member manages, and the way to share its records. */
 @Composable
-fun WalletScreen(onShare: () -> Unit) {
+fun WalletScreen(onShare: () -> Unit, onSharedLinks: () -> Unit) {
   val viewModel: WalletViewModel = koinViewModel()
   val members by viewModel.members.collectAsStateWithLifecycle()
 
@@ -68,6 +70,9 @@ fun WalletScreen(onShare: () -> Unit) {
       modifier = Modifier.fillMaxWidth(),
     ) {
       Text(stringResource(Res.string.wallet_share))
+    }
+    OutlinedButton(onClick = onSharedLinks, modifier = Modifier.fillMaxWidth()) {
+      Text(stringResource(Res.string.wallet_shared_links))
     }
   }
 }

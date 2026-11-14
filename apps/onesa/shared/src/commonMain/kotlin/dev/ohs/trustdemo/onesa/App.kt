@@ -56,6 +56,7 @@ import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncScreen
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
 import dev.ohs.trustdemo.onesa.feature.wallet.IssuedLinksScreen
 import dev.ohs.trustdemo.onesa.feature.wallet.ShareScreen
+import dev.ohs.trustdemo.onesa.feature.wallet.SharedLinksScreen
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import org.koin.compose.koinInject
@@ -166,6 +167,7 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
             onSignOut = onSignOut,
             onOpenReferral = { id -> navController.navigate("verifyCards/$id") },
             onShareRecords = { navController.navigate("share") },
+            onSharedLinks = { navController.navigate("shared") },
             destinations = role.destinations(),
           )
         }
@@ -221,6 +223,13 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
                 popUpTo("share") { inclusive = true }
               }
             },
+          )
+        }
+
+        composable("shared") {
+          SharedLinksScreen(
+            onBack = { navController.popBackStack() },
+            onShowQr = { id -> navController.navigate("issued/$id") },
           )
         }
 

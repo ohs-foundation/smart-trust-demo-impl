@@ -111,6 +111,7 @@ fun HomeScreen(
   destinations: List<HomeDestination> = HomeDestination.entries,
   onOpenReferral: (String) -> Unit = {},
   onShareRecords: () -> Unit = {},
+  onSharedLinks: () -> Unit = {},
 ) {
   val homeViewModel: HomeViewModel = koinViewModel()
   val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
@@ -301,7 +302,8 @@ fun HomeScreen(
           }
         HomeDestination.Referrals -> ReferralInboxScreen(onOpen = onOpenReferral)
         HomeDestination.TrustLists -> TrustListScreen()
-        HomeDestination.Wallet -> WalletScreen(onShare = onShareRecords)
+        HomeDestination.Wallet ->
+          WalletScreen(onShare = onShareRecords, onSharedLinks = onSharedLinks)
       }
     }
 
