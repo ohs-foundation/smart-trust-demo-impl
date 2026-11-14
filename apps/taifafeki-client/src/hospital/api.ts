@@ -1,5 +1,5 @@
 import type { MedplumClient } from "@medplum/core";
-import type { Bundle, Immunization, Location, Organization, Patient, Practitioner } from "@medplum/fhirtypes";
+import type { Bundle, DocumentReference, Immunization, Location, Organization, Patient, Practitioner } from "@medplum/fhirtypes";
 import {
   HOSPITAL_NUMBER_SYSTEM,
   PRODUCTS_VALUE_SET,
@@ -12,6 +12,8 @@ import {
   type Newborn,
   type TimedPatient,
 } from "./records";
+import { readCardTexts, type CardText } from "../server/cards";
+import type { Card } from "./cards";
 
 const IG_ID_SYSTEM = "http://ohs.dev/fhir/trust-demo/ig-id";
 const HOSPITAL_LOCATION = "TrustDemoKesaroHospitalLoc";
@@ -111,4 +113,22 @@ function checkDoses(doses: Dose[], birth: string, now: Date) {
 function birthInstant(patient: TimedPatient): string {
   const time = patient._birthDate?.extension?.find((it) => it.url === BIRTH_TIME);
   return time?.valueDateTime ?? `${patient.birthDate}T00:00`;
+}
+
+export async function readCards(
+  medplum: Pick<MedplumClient, "searchResources">,
+  hospitalNumber: string,
+  read: (texts: CardText[]) => Promise<Card[]> = (texts) => readCardTexts({ data: texts }),
+): Promise<Card[]> {
+  const found = await medplum.searchResources("DocumentReference", {
+    identifier: `${HOSPITAL_NUMBER_SYSTEM}|${hospitalNumber}`,
+  });
+  const cards = await read(found.flatMap(textOf));
+  return cards.sort((a, b) => a.doseId.localeCompare(b.doseId));
+}
+
+function textOf(reference: DocumentReference): CardText[] {
+  const attachment = reference.content?.[0]?.attachment;
+  if (!attachment?.data || !attachment.title?.endsWith(".hc1")) return [];
+  return [{ doseId: attachment.title.slice(0, -".hc1".length), hc1: atob(attachment.data) }];
 }

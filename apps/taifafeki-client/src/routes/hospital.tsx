@@ -5,7 +5,7 @@ export const Route = createFileRoute("/hospital")({
   validateSearch: (search: Record<string, unknown>) => ({
     organization: typeof search.organization === "string" ? search.organization : "",
     patient: typeof search.patient === "string" ? search.patient : "",
-    screen: search.screen === "s1" ? ("s1" as const) : ("emr" as const),
+    screen: search.screen === "s1" || search.screen === "print" ? (search.screen as "s1" | "print") : ("emr" as const),
     discharged: typeof search.discharged === "string" ? search.discharged : "",
   }),
   component: Hospital,

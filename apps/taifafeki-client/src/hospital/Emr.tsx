@@ -4,12 +4,13 @@ import { useMedplum } from "@medplum/react-hooks";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { addDoses, readChart, readContext, readNewborns, readProducts, registerNewborn, type Product } from "./api";
-import { HOSPITAL_NUMBER_SYSTEM, type Context, type Dose, type Newborn, type TimedPatient } from "./records";
+import { PrintStation } from "./PrintStation";
+import { hospitalNumberOf, type Context, type Dose, type Newborn, type TimedPatient } from "./records";
 
 export interface EmrSearch {
   organization: string;
   patient: string;
-  screen: "emr" | "s1";
+  screen: "emr" | "s1" | "print";
   discharged: string;
 }
 
@@ -57,6 +58,14 @@ export function Emr({ search, go }: Props) {
       </main>
     );
   }
+  if (search.patient && search.screen === "print") {
+    return (
+      <main>
+        {heading}
+        <PrintStation patientId={search.patient} onBack={() => go({ screen: "emr" })} />
+      </main>
+    );
+  }
   if (search.patient) {
     return (
       <main>
@@ -67,6 +76,7 @@ export function Emr({ search, go }: Props) {
           products={products.data ?? []}
           onList={() => go({ patient: "" })}
           onSummary={() => go({ screen: "s1" })}
+          onPrint={() => go({ screen: "print" })}
         />
       </main>
     );
@@ -152,7 +162,7 @@ function Register({ context, products, onRegistered }: { context: Context; produ
   );
 }
 
-function PatientChart({ patientId, context, products, onList, onSummary }: { patientId: string; context: Context; products: Product[]; onList: () => void; onSummary: () => void }) {
+function PatientChart({ patientId, context, products, onList, onSummary, onPrint }: { patientId: string; context: Context; products: Product[]; onList: () => void; onSummary: () => void; onPrint: () => void }) {
   const medplum = useMedplum();
   const queries = useQueryClient();
   const chart = useQuery({ queryKey: ["chart", patientId], queryFn: () => readChart(medplum, patientId) });
@@ -187,7 +197,7 @@ function PatientChart({ patientId, context, products, onList, onSummary }: { pat
         {rows.length > 0 && <button type="submit" disabled={add.isPending}>Save doses</button>}
         {add.isError && <Failure error={add.error} />}
       </form>
-      <p><button onClick={onSummary}>Discharge summary</button></p>
+      <p><button onClick={onSummary}>Discharge summary</button> <button onClick={onPrint}>Print cards</button></p>
     </section>
   );
 }
@@ -300,6 +310,3 @@ function nameOf(person: { name?: HumanName[] }): string {
   return [name?.given?.join(" "), name?.family].filter(Boolean).join(" ");
 }
 
-function hospitalNumberOf(patient: Patient): string {
-  return patient.identifier?.find((it) => it.system === HOSPITAL_NUMBER_SYSTEM)?.value ?? "";
-}

@@ -38,6 +38,10 @@ export interface Dose {
   lot: string;
 }
 
+export function hospitalNumberOf(patient: Patient): string {
+  return patient.identifier?.find((it) => it.system === HOSPITAL_NUMBER_SYSTEM)?.value ?? "";
+}
+
 export function doseDateProblem(occurredAt: string, birth: string, now: Date): string | undefined {
   const at = new Date(occurredAt);
   if (Number.isNaN(at.getTime())) return "Enter the date and time of the dose.";
