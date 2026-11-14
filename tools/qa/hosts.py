@@ -18,6 +18,7 @@ ALLOWED = {
     ".googleapis.com": "Google Cloud APIs the GCP OpenTofu config enables",
     "-docker.pkg.dev": "Artifact Registry's <region>-docker.pkg.dev, interpolated in the GCP OpenTofu config",
     "download.docker.com": "Docker's apt repository the GCP server installs Docker from",
+    "registry-1.docker.io": "Docker Hub's registry, named in the deploy runbook's troubleshooting",
     "containerd.io": "the containerd package name in the GCP server's apt install, not a host",
     "registry.opentofu.org": "the OpenTofu provider registry recorded in the GCP config's lock file",
     "services.gradle.org": "where the Gradle wrapper downloads its pinned distribution",
