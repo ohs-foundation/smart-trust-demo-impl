@@ -4,6 +4,7 @@ import { useMedplum } from "@medplum/react-hooks";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { addDoses, readChart, readContext, readNewborns, readProducts, registerNewborn, type Product } from "./api";
+import { WorkplaceGate } from "../Workplaces";
 import { PrintStation } from "./PrintStation";
 import { hospitalNumberOf, type Context, type Dose, type Newborn, type TimedPatient } from "./records";
 
@@ -28,16 +29,18 @@ interface DoseDraft {
 const GENDERS = ["male", "female", "other", "unknown"] as const;
 
 export function Emr({ search, go }: Props) {
+  return <WorkplaceGate configuration="hospital" requested={search.organization}>{(organization) => <Hospital organization={organization} search={search} go={go} />}</WorkplaceGate>;
+}
+
+function Hospital({ organization, search, go }: Props & { organization: string }) {
   const medplum = useMedplum();
   const profile = medplum.getProfile();
   const context = useQuery({
-    queryKey: ["hospital-context", search.organization, profile?.id],
-    enabled: profile?.id !== undefined && search.organization !== "",
-    queryFn: () => readContext(medplum, search.organization, profile?.id ?? ""),
+    queryKey: ["hospital-context", organization, profile?.id],
+    queryFn: () => readContext(medplum, organization, profile?.id ?? ""),
   });
   const products = useQuery({ queryKey: ["products"], queryFn: () => readProducts(medplum) });
 
-  if (!profile) return <a href="/signin">Sign in</a>;
   if (context.isError) return <Failure error={context.error} />;
   if (!context.data) return <p>Loading</p>;
   const { hospital, practitioner, ...ids } = context.data;
@@ -86,7 +89,7 @@ export function Emr({ search, go }: Props) {
       {heading}
       {search.discharged && <p role="status">Discharged: {search.discharged}</p>}
       <Register context={ids} products={products.data ?? []} onRegistered={(patient) => go({ patient, discharged: "" })} />
-      <Newborns hospitalId={search.organization} onOpen={(patient) => go({ patient, discharged: "" })} />
+      <Newborns hospitalId={organization} onOpen={(patient) => go({ patient, discharged: "" })} />
     </main>
   );
 }

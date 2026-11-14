@@ -2,6 +2,7 @@ import { normalizeErrorString } from "@medplum/core";
 import { useMedplum } from "@medplum/react-hooks";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { WorkplaceGate } from "../Workplaces";
 import { fetchSummary, scanVhl, trustListStatuses } from "../server/links";
 import { writeReceipt } from "./receipt";
 import { Scanner } from "./Scanner";
@@ -16,6 +17,15 @@ interface Opened {
 }
 
 export function Viewer({ organization }: { organization: string }) {
+  return <WorkplaceGate configuration="clinic" requested={organization}>{(clinic) => (
+    <main>
+      <h1>VHL Viewer (J4.1)</h1>
+      <ViewerFor organization={clinic} />
+    </main>
+  )}</WorkplaceGate>;
+}
+
+function ViewerFor({ organization }: { organization: string }) {
   const medplum = useMedplum();
   const [camera, setCamera] = useState(false);
   const [pasted, setPasted] = useState("");

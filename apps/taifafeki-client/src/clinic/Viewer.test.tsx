@@ -4,11 +4,14 @@ import { MedplumProvider } from "@medplum/react-hooks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { WitVhl } from "smart-trust-kotlin-hcert-core";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchSummary, scanVhl, trustListStatuses } from "../server/links";
 import { ig } from "../testing/ig";
+import { searchAnansWorkplaces } from "../testing/workplaces";
 import { Viewer } from "./Viewer";
 
+vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: ReactNode }) => <a href="/">{children}</a> }));
 vi.mock("../server/links", () => ({ scanVhl: vi.fn(), fetchSummary: vi.fn(), trustListStatuses: vi.fn() }));
 
 const IPS = ig("Bundle-TrustDemoJ4Ips.json");
@@ -23,6 +26,7 @@ function medplumWith(createResource: (resource: unknown) => Promise<unknown>) {
     isLoading: () => false,
     getProfile: () => ({ resourceType: "Practitioner", id: "anan-id" }),
     getAccessToken: () => "anan-token",
+    searchResources: searchAnansWorkplaces,
     searchOne: async () => ({ resourceType: "Device", id: "viewer-id" }),
     createResource,
     addEventListener: () => undefined,
@@ -30,12 +34,12 @@ function medplumWith(createResource: (resource: unknown) => Promise<unknown>) {
   } as unknown as MedplumClient;
 }
 
-function mount(createResource = vi.fn(async (resource: unknown) => resource)) {
+function mount(createResource = vi.fn(async (resource: unknown) => resource), organization = "clinic-org") {
   const queries = new QueryClient();
   render(
     <QueryClientProvider client={queries}>
       <MedplumProvider medplum={medplumWith(createResource)}>
-        <Viewer organization="clinic-org" />
+        <Viewer organization={organization} />
       </MedplumProvider>
     </QueryClientProvider>,
   );
@@ -43,7 +47,7 @@ function mount(createResource = vi.fn(async (resource: unknown) => resource)) {
 }
 
 async function openSummary() {
-  fireEvent.change(screen.getByLabelText(/paste the link text/i), { target: { value: "vhlink:/abc" } });
+  fireEvent.change(await screen.findByLabelText(/paste the link text/i), { target: { value: "vhlink:/abc" } });
   fireEvent.click(screen.getByRole("button", { name: "Check link" }));
   fireEvent.change(await screen.findByLabelText("Passcode"), { target: { value: "0482" } });
   fireEvent.click(screen.getByRole("button", { name: "Open summary" }));
@@ -90,6 +94,22 @@ describe("nothingOfTheSummaryReachesStorage", () => {
     await waitFor(() => expect(screen.queryByText(/Somsak SENGMANY/)).toBeNull());
     expect(document.body.innerHTML).not.toContain("SENGMANY");
     check();
+  });
+});
+
+describe("aReceiptLandsInTheClinicOnly", () => {
+  it("writes the receipt into the clinic's compartment", async () => {
+    const { createResource } = mount();
+    await openSummary();
+    await waitFor(() => expect(createResource).toHaveBeenCalledTimes(1));
+    expect(createResource).toHaveBeenCalledWith(expect.objectContaining({ meta: expect.objectContaining({ accounts: [{ reference: "Organization/clinic-org" }] }) }));
+  });
+
+  it.each([["the hospital", "hospital-org"], ["nobody", ""]])("shows the workplace picker for a URL naming %s", async (_, organization) => {
+    const { createResource } = mount(undefined, organization);
+    expect(await screen.findByRole("heading", { name: "Where are you working?" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Check link" })).toBeNull();
+    expect(createResource).not.toHaveBeenCalled();
   });
 });
 

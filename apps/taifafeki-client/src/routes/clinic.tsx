@@ -10,10 +10,5 @@ export const Route = createFileRoute("/clinic")({
 
 function Clinic() {
   const { organization } = Route.useSearch();
-  return (
-    <main>
-      <h1>VHL Viewer (J4.1)</h1>
-      <Viewer organization={organization} />
-    </main>
-  );
+  return <Viewer organization={organization} />;
 }
