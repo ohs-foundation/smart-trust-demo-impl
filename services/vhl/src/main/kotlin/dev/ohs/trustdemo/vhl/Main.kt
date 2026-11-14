@@ -50,7 +50,9 @@ fun main() {
   val passcodes = H2PasscodeStore(database)
   val deps =
     VhlDeps(
-      publicUrl = "https://vhl.onesa.${required("STACK_HOST")}:${required("VHL_TLS_PORT")}",
+      publicUrl =
+        env["VHL_PUBLIC_URL"]
+          ?: "https://vhl.onesa.${required("STACK_HOST")}:${required("VHL_TLS_PORT")}",
       issuer = required("TOKEN_ISSUER"),
       allowedClients = required("VHL_ALLOWED_CLIENTS").split(",").map { it.trim() }.toSet(),
       jwks =

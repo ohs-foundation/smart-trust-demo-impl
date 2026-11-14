@@ -148,6 +148,59 @@ services:
       retries: 10
       start_period: 20s
 
+  vhl:
+    build:
+      context: ..
+      dockerfile: services/vhl/Dockerfile
+    image: trust-demo-vhl:local
+    container_name: ohs-vhl
+    restart: unless-stopped
+    environment:
+      HAPI_URL: http://hapi-fhir:8080/fhir
+      GATEWAY_URL: http://fhir-gateway:8080/fhir
+      JWKS_URL: http://keycloak:${KEYCLOAK_PORT:-8081}/realms/ohs-player/protocol/openid-connect/certs
+      TOKEN_ISSUER: https://${KEYCLOAK_HOST}/realms/ohs-player
+      VHL_PUBLIC_URL: https://${VHL_HOST:?set VHL_HOST in .env to the public VHL hostname}
+      VHL_ALLOWED_CLIENTS: ohs-player-reference-app,trust-demo-cli
+      LINK_KEY_FILE: /run/keys/XXK_LINK.key.pem
+      LINK_CERT_FILE: /run/keys/XXK_LINK.crt.pem
+      VHL_DB_PATH: /data/vhl
+      TRUST_LIST_SIGNER_PATH: /run/trust/gdhcn-signer-did.json
+      JAVA_OPTS: -Xmx200m
+    volumes:
+      - ../testkit/XXK_LINK.key.pem:/run/keys/XXK_LINK.key.pem:ro
+      - ../testkit/XXK_LINK.crt.pem:/run/keys/XXK_LINK.crt.pem:ro
+      - ../testkit/gdhcn-signer-did.json:/run/trust/gdhcn-signer-did.json:ro
+      - onesa_vhl:/data
+    ports:
+      - "127.0.0.1:${VHL_PORT:-8085}:8080"
+    depends_on:
+      hapi-fhir:
+        condition: service_healthy
+      fhir-gateway:
+        condition: service_healthy
+      gdhcn:
+        condition: service_started
+    networks: [fhir_net]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # The stand-in GDHCN host: the demo's signed test list and DIDs, TEST ONLY.
+  gdhcn:
+    image: nginx:1.29.8-alpine
+    container_name: ohs-gdhcn
+    restart: unless-stopped
+    volumes:
+      - ../stack/gdhcn/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../testkit:/srv/testkit:ro
+    ports:
+      - "127.0.0.1:${TRUST_PORT:-8086}:80"
+    networks: [fhir_net]
+
   ohs-player-web:
     build:
       context: .
@@ -176,5 +229,6 @@ networks:
 
 volumes:
   postgres_data:
+  onesa_vhl:
   postgres_analytics_data:
   superset_home:
