@@ -124,12 +124,22 @@ class VhlService(private val deps: VhlDeps) {
       throw e
     } catch (e: Exception) {
       consents.forEach { consent ->
-        runCatching { deps.hapi.update("Consent/${consent.id()}", inactive(consent)) }
-          .onFailure { log.error("{} inactivating Consent/{}", it::class.simpleName, consent.id()) }
-        runCatching { deps.passcodes.remove(consent.id()) }
-          .onFailure { log.error("{} removing passcode of {}", it::class.simpleName, consent.id()) }
+        logFailure("inactivating Consent", consent.id()) {
+          deps.hapi.update("Consent/${consent.id()}", inactive(consent))
+        }
+        logFailure("removing passcode of", consent.id()) { deps.passcodes.remove(consent.id()) }
       }
       throw BackendRefused(false, "the passcodes could not be stored")
+    }
+  }
+
+  private suspend fun logFailure(what: String, id: String, action: suspend () -> Unit) {
+    try {
+      action()
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      log.error("{} {} {}", e::class.simpleName, what, id)
     }
   }
 
