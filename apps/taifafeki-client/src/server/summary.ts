@@ -3,6 +3,7 @@ import { signedHeaders, type ClinicIdentity, type Outgoing } from "./signing";
 import type { Viewer } from "./viewer";
 
 const MAX_DOCUMENTS = 10;
+const MAX_REPLY_BYTES = 5_000_000;
 const TIMEOUT_MILLIS = 15_000;
 const RECIPIENT = "Kesaro primary care clinic";
 const DEMO_REASONS = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason";
@@ -45,7 +46,7 @@ function reasonOf(text: string): string | undefined {
   try {
     const outcome = JSON.parse(text) as { issue?: { details?: { coding?: { system?: string; code?: string }[] } }[] };
     const codings = outcome.issue?.flatMap((issue) => issue.details?.coding ?? []) ?? [];
-    return codings.find((coding) => (coding.system === DEMO_REASONS || coding.system === OHS_REASONS) && coding.code && coding.code in REFUSALS)?.code;
+    return codings.find((coding) => (coding.system === DEMO_REASONS || coding.system === OHS_REASONS) && coding.code && Object.hasOwn(REFUSALS, coding.code))?.code;
   } catch {
     return undefined;
   }
@@ -57,6 +58,26 @@ function refusal(response: Response, text: string): Refusal {
   return new Refusal(response.status === 403 ? "Nothing to release." : `Onesa refused the request (HTTP ${response.status}).`);
 }
 
+async function capped(response: Response): Promise<string> {
+  const tooLarge = new Refusal("Onesa sent more than the client accepts.");
+  if (Number(response.headers.get("content-length") ?? 0) > MAX_REPLY_BYTES) throw tooLarge;
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_REPLY_BYTES) {
+      await reader.cancel();
+      throw tooLarge;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
 export async function fetchSummary(
   viewer: Pick<Viewer, "handles" | "session" | "now" | "clinic">,
   input: { token: string | undefined; handle: string; passcode: string },
@@ -65,16 +86,22 @@ export async function fetchSummary(
   const link = viewer.handles.get(input.handle, owner);
   if (!link) return refused("This link is no longer held. Scan it again.");
   const { clinic } = viewer;
+  let identity: ClinicIdentity;
+  try {
+    identity = clinic.identity();
+  } catch {
+    return refused("The clinic key cannot be read on this server.");
+  }
 
   const send = async (request: Outgoing): Promise<string> => {
     const response = await clinic.send(request.url, {
       method: request.method,
-      headers: signedHeaders(clinic.identity(), request, viewer.now()),
+      headers: signedHeaders(identity, request, viewer.now()),
       body: request.body && new Uint8Array(request.body),
       redirect: "error",
       signal: AbortSignal.timeout(TIMEOUT_MILLIS),
     });
-    const text = await response.text();
+    const text = await capped(response);
     if (!response.ok) throw refusal(response, text);
     return text;
   };

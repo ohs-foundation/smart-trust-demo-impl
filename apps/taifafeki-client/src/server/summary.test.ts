@@ -230,6 +230,26 @@ describe("aRefusalFromOnesaIsAPlainMessage", () => {
     expect(await setup(refusal(403, "")).call()).toEqual({ kind: "refused", message: "Nothing to release." });
   });
 
+  it("treats a reason named like an object property as no reason", async () => {
+    expect(await setup(refusal(403, outcome(REASONS, "constructor"))).call()).toEqual({ kind: "refused", message: "Nothing to release." });
+  });
+
+  it("refuses a reply larger than the client accepts", async () => {
+    const huge = (request: Seen) => (request.method === "GET" ? new Response("x".repeat(5_000_001)) : undefined);
+    expect(await setup(huge).call()).toEqual({ kind: "refused", message: "Onesa sent more than the client accepts." });
+  });
+
+  it("says so when the clinic key cannot be read", async () => {
+    const { viewer, handle } = setup();
+    viewer.clinic = {
+      ...viewer.clinic,
+      identity: () => {
+        throw new Error("EACCES");
+      },
+    };
+    expect(await fetchSummary(viewer, { token: "anan-token", handle, passcode: PASSCODE })).toEqual({ kind: "refused", message: "The clinic key cannot be read on this server." });
+  });
+
   it("names the status for anything else", async () => {
     expect(await setup(refusal(401, outcome(REASONS))).call()).toEqual({ kind: "refused", message: "Onesa refused the request (HTTP 401)." });
     expect(await setup(refusal(503, "down")).call()).toEqual({ kind: "refused", message: "Onesa refused the request (HTTP 503)." });
