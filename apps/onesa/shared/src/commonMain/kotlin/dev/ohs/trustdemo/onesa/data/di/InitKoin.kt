@@ -31,6 +31,7 @@ fun initKoin(platformModule: Module) {
       serviceModule,
       syncModule,
       authModule,
+      hcertModule,
       viewModelModule,
     )
   }

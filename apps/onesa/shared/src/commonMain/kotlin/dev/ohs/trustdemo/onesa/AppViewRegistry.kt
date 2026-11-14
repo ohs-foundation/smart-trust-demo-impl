@@ -20,6 +20,7 @@ import dev.ohs.trustdemo.onesa.feature.group.list.registerGroupList
 import dev.ohs.trustdemo.onesa.feature.group.profile.registerGroupProfile
 import dev.ohs.trustdemo.onesa.feature.patient.list.registerPatientList
 import dev.ohs.trustdemo.onesa.feature.patient.profile.registerPatientProfile
+import dev.ohs.trustdemo.onesa.feature.trustlist.registerTrustLists
 
 fun buildAppViewRegistry(): ViewRegistry =
   ViewRegistry().apply {
@@ -27,4 +28,5 @@ fun buildAppViewRegistry(): ViewRegistry =
     registerGroupProfile()
     registerPatientList()
     registerPatientProfile()
+    registerTrustLists()
   }

@@ -20,6 +20,7 @@ import dev.ohs.player.client.layout.HorizontalListRenderer
 import dev.ohs.player.client.layout.VerticalListRenderer
 import dev.ohs.player.client.registry.componentRenderer
 import dev.ohs.player.client.registry.layoutRenderer
+import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListState
 import dev.ohs.trustdemo.onesa.generated.state.GroupListState
 import dev.ohs.trustdemo.onesa.generated.state.GroupMemberState
 import dev.ohs.trustdemo.onesa.generated.state.PatientAllergyState
@@ -55,5 +56,9 @@ class AppViewRegistryTest {
     registry.componentRenderer<PatientMedicationState>(ViewTypeCS.MedicationItem)
     registry.componentRenderer<PatientConditionState>(ViewTypeCS.ConditionItem)
     registry.componentRenderer<PatientImmunizationState>(ViewTypeCS.ImmunizationItem)
+
+    // Trust list status
+    registry.componentRenderer<TrustListState>(ViewTypeCS.TrustListCard)
+    registry.layoutRenderer<TrustListState>(VerticalListRenderer.VIEW_TYPE)
   }
 }

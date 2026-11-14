@@ -1,0 +1,4 @@
+# Copied from WorldHealthOrganization/smart-trust-tools at d94e21d,
+# vectors/negative/negative-vectors.json (generated there from vectors/smart-trust-pr129).
+# TEST DATA. Trust anchor for the cases: ../vectors/dvc-qr-example-XXA-dsc.pem (same commit,
+# vectors/smart-trust-pr129/dvc-qr-example-XXA-dsc.pem).

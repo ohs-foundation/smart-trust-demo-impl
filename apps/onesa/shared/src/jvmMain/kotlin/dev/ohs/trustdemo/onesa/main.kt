@@ -29,6 +29,7 @@ import dev.ohs.trustdemo.onesa.data.di.initKoin
 import dev.ohs.trustdemo.onesa.data.sync.ForegroundSyncManager
 import dev.ohs.trustdemo.onesa.data.sync.SYNC_TIMEOUT_DURATION
 import dev.ohs.trustdemo.onesa.data.sync.SyncManager
+import dev.ohs.trustdemo.onesa.data.sync.TrustListRefreshingSyncManager
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.app_logo
 import org.jetbrains.compose.resources.painterResource
@@ -55,7 +56,7 @@ fun main() = application {
   initKoin(
     module {
       single<FhirEngine> { FhirEngineProvider.getInstance() }
-      single<SyncManager> { ForegroundSyncManager() }
+      single<SyncManager> { TrustListRefreshingSyncManager(ForegroundSyncManager(), get()) }
     }
   )
   Window(

@@ -24,6 +24,8 @@ import dev.ohs.fhir.engine.sync.FhirSyncWorker
 import dev.ohs.fhir.engine.sync.upload.UploadStrategy
 import dev.ohs.trustdemo.onesa.auth.ensureFreshSessionForSync
 import dev.ohs.trustdemo.onesa.data.DataChangeSignal
+import dev.ohs.trustdemo.onesa.data.hcert.HcertService
+import org.koin.mp.KoinPlatform
 
 /**
  * WorkManager entry point for this app's sync, enqueued via [dev.ohs.fhir.engine.sync.Sync]. Built
@@ -42,7 +44,10 @@ class AppFhirSyncWorker(appContext: Context, workerParams: WorkerParameters) :
   @Suppress("RestrictedApi")
   override suspend fun doWork(): Result {
     ensureFreshSessionForSync()
-    return super.doWork().also { if (it is Result.Success) DataChangeSignal.notifyChanged() }
+    return super.doWork().also {
+      if (it is Result.Success) DataChangeSignal.notifyChanged()
+      KoinPlatform.getKoin().get<HcertService>().refreshLocalListQuietly()
+    }
   }
 
   override fun getFhirEngine() = syncTask.getFhirEngine()

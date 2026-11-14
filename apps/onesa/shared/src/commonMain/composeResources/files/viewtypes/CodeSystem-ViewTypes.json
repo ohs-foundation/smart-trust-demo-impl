@@ -59,6 +59,10 @@
     {
       "code": "MemberItem",
       "display": "Household member row"
+    },
+    {
+      "code": "TrustListCard",
+      "display": "Trust list status card"
     }
   ]
 }

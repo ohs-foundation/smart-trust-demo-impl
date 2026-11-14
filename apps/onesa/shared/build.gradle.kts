@@ -69,6 +69,8 @@ val resolvedRedirectScheme = authProp("OAUTH_REDIRECT_SCHEME", "dev.ohs.trustdem
 val resolvedRedirectHost = authProp("OAUTH_REDIRECT_HOST", "auth")
 val resolvedDesktopPort = authProp("OAUTH_DESKTOP_REDIRECT_PORT", "8765")
 val resolvedScopes = authProp("OAUTH_SCOPES", "openid profile email offline_access")
+val resolvedTrustListUrl =
+  authProp("TRUST_LIST_URL", "http://trust.gdhcn.example:8480/local-test-list.json")
 // The FHIR Engine resolves sync paths against this URL, so it must end in a slash.
 // See kotlin-fhir-engine#90 and issue #84; a base without the slash loses its
 // last segment when the engine resolves paths against it.
@@ -100,6 +102,7 @@ kotlin {
 
   sourceSets {
     commonMain.dependencies {
+      implementation(projects.libs.hcert)
       implementation(libs.ohs.player.client)
       implementation(libs.compose.runtime)
       implementation(libs.compose.foundation)
@@ -153,6 +156,8 @@ kotlin {
     jvmTest.dependencies {
       implementation(compose.desktop.currentOs)
       implementation(libs.koin.test)
+      implementation(libs.hcert.core)
+      implementation(projects.libs.trustkit)
     }
   }
 }
@@ -173,6 +178,7 @@ val generateAuthConfig =
     val desktopPort = resolvedDesktopPort
     val scopes = resolvedScopes
     val fhirBaseUrl = resolvedFhirBaseUrl
+    val trustListUrl = resolvedTrustListUrl
     val versionName = releaseVersionName
     val versionCode = releaseVersionCode
     val outDir = authConfigOutputDir
@@ -183,6 +189,7 @@ val generateAuthConfig =
     inputs.property("desktopPort", desktopPort)
     inputs.property("scopes", scopes)
     inputs.property("fhirBaseUrl", fhirBaseUrl)
+    inputs.property("trustListUrl", trustListUrl)
     inputs.property("versionName", versionName)
     inputs.property("versionCode", versionCode)
     outputs.dir(outDir)
@@ -204,6 +211,7 @@ val generateAuthConfig =
         |  const val DESKTOP_REDIRECT_PORT: Int = $desktopPort
         |  const val SCOPES: String = "$scopes"
         |  const val FHIR_BASE_URL: String = "$fhirBaseUrl"
+        |  const val TRUST_LIST_URL: String = "$trustListUrl"
         |}
         |
         """
@@ -228,6 +236,11 @@ val generateAuthConfig =
   }
 
 kotlin.sourceSets.named("commonMain") { kotlin.srcDir(authConfigOutputDir) }
+
+kotlin.sourceSets.named("jvmTest") {
+  resources.srcDir(rootProject.file("testkit"))
+  resources.srcDir(rootProject.file("testkit/who"))
+}
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
   dependsOn(generateAuthConfig)

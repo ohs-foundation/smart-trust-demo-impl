@@ -16,13 +16,21 @@
 package dev.ohs.trustdemo.onesa.data.di
 
 import dev.ohs.fhir.engine.FhirEngineProvider
+import dev.ohs.trustdemo.hcert.InMemoryTrustListStorage
+import dev.ohs.trustdemo.hcert.TrustListCache
 import dev.ohs.trustdemo.onesa.auth.AuthService
 import dev.ohs.trustdemo.onesa.auth.AuthViewModel
+import dev.ohs.trustdemo.onesa.auth.GeneratedAuthConfig
 import dev.ohs.trustdemo.onesa.auth.OAuthConfig
 import dev.ohs.trustdemo.onesa.auth.OidcAuthApi
 import dev.ohs.trustdemo.onesa.auth.PractitionerDetailsApi
 import dev.ohs.trustdemo.onesa.auth.SessionRepository
 import dev.ohs.trustdemo.onesa.auth.SessionStore
+import dev.ohs.trustdemo.onesa.data.hcert.BundledTrustLists
+import dev.ohs.trustdemo.onesa.data.hcert.DataStoreTrustListStorage
+import dev.ohs.trustdemo.onesa.data.hcert.HcertService
+import dev.ohs.trustdemo.onesa.data.hcert.PinnedTrustList
+import dev.ohs.trustdemo.onesa.data.hcert.createTrustListDataStore
 import dev.ohs.trustdemo.onesa.data.repository.FhirEngineRepository
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.data.repository.GroupRepository
@@ -40,6 +48,9 @@ import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireLaunchContext
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireService
 import dev.ohs.trustdemo.onesa.feature.role.UserContextViewModel
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
+import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListViewModel
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpTimeout
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -85,6 +96,29 @@ internal val authModule = module {
   single { PractitionerDetailsApi() }
 }
 
+/**
+ * The local trust list is fetched and kept on the device; the GDHCN DEV snapshot ships with the
+ * app. Both are verified against signer documents bundled in the app.
+ */
+internal val hcertModule = module {
+  single {
+    HcertService(
+      local =
+        PinnedTrustList(
+          name = "Local test list",
+          signer = BundledTrustLists::localSigner,
+          cache =
+            TrustListCache(
+              DataStoreTrustListStorage(createTrustListDataStore()),
+              url = GeneratedAuthConfig.TRUST_LIST_URL,
+              httpClient = HttpClient { install(HttpTimeout) { requestTimeoutMillis = 15_000 } },
+            ),
+        ),
+      gdhcnDev = BundledTrustLists.gdhcnDev(InMemoryTrustListStorage()),
+    )
+  }
+}
+
 internal val viewModelModule = module {
   viewModel { PatientListViewModel(get()) }
   viewModel { (patientId: String) -> PatientProfileViewModel(patientId, get()) }
@@ -103,4 +137,5 @@ internal val viewModelModule = module {
     )
   }
   viewModel { InitialSyncViewModel(get(), get()) }
+  viewModel { TrustListViewModel(get()) }
 }

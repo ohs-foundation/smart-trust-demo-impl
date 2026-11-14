@@ -33,10 +33,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.savedstate.read
 import dev.ohs.player.client.registry.LocalViewRegistry
+import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.auth.AuthState
 import dev.ohs.trustdemo.onesa.auth.AuthViewModel
 import dev.ohs.trustdemo.onesa.auth.rememberAuthorizationLauncher
 import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileScreen
+import dev.ohs.trustdemo.onesa.feature.home.HomeDestination
 import dev.ohs.trustdemo.onesa.feature.home.HomeScreen
 import dev.ohs.trustdemo.onesa.feature.login.LoginScreen
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileScreen
@@ -100,7 +102,11 @@ fun App() {
                 onSignOut = { authViewModel.logout() },
               )
             is UserContextState.Ready ->
-              SignedInApp(userName = userName, onSignOut = { authViewModel.logout() })
+              SignedInApp(
+                userName = userName,
+                role = state.context.role,
+                onSignOut = { authViewModel.logout() },
+              )
           }
         }
       }
@@ -109,7 +115,7 @@ fun App() {
 }
 
 @Composable
-private fun SignedInApp(userName: String, onSignOut: () -> Unit) {
+private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) {
   val initialSyncViewModel: InitialSyncViewModel = koinViewModel()
   val gateState by initialSyncViewModel.state.collectAsStateWithLifecycle()
   LaunchedEffect(Unit) { initialSyncViewModel.start() }
@@ -154,6 +160,9 @@ private fun SignedInApp(userName: String, onSignOut: () -> Unit) {
               )
             },
             onSignOut = onSignOut,
+            destinations =
+              if (role == AppRole.FAMILY) listOf(HomeDestination.Households)
+              else HomeDestination.entries,
           )
         }
 

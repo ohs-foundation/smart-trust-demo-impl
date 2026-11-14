@@ -80,6 +80,7 @@ import dev.ohs.trustdemo.onesa.feature.group.list.GroupListScreen
 import dev.ohs.trustdemo.onesa.feature.group.list.LocalSelectedGroupId
 import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileScreen
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileScreen
+import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListScreen
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.home_cancel_sync
 import dev.ohs.trustdemo.onesa.generated.resources.home_last_synced
@@ -105,6 +106,7 @@ fun HomeScreen(
   onAddMembers: (String) -> Unit,
   onAddClinicalData: (String) -> Unit,
   onSignOut: () -> Unit,
+  destinations: List<HomeDestination> = HomeDestination.entries,
 ) {
   val homeViewModel: HomeViewModel = koinViewModel()
   val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
@@ -183,7 +185,7 @@ fun HomeScreen(
           color = onDrawer.copy(alpha = 0.7f),
           modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
         )
-        HomeDestination.entries.forEach { destination ->
+        destinations.forEach { destination ->
           NavigationDrawerItem(
             label = { Text(stringResource(destination.label)) },
             icon = { Icon(destination.icon, contentDescription = null) },
@@ -293,6 +295,7 @@ fun HomeScreen(
           } else {
             GroupListScreen(onGroupClick = onGroupClick, onDataCaptureClick = onDataCaptureClick)
           }
+        HomeDestination.TrustLists -> TrustListScreen()
       }
     }
 
@@ -321,7 +324,7 @@ fun HomeScreen(
           )
         NavigationRail(containerColor = MaterialTheme.colorScheme.primary) {
           val syncInProgressDescription = stringResource(Res.string.home_sync_in_progress)
-          HomeDestination.entries.forEach { destination ->
+          destinations.forEach { destination ->
             NavigationRailItem(
               selected = destination == selectedDestination,
               onClick = { selectedDestination = destination },

@@ -17,6 +17,7 @@
 
     <!-- Home screen -->
     <string name="home_destination_households">Households</string>
+    <string name="home_destination_trust_lists">Trust lists</string>
     <string name="home_registers">Registers</string>
     <string name="home_signed_in">Signed in</string>
     <string name="home_last_synced">Last synced: %1$s</string>
@@ -46,6 +47,15 @@
     <!-- Group list screen -->
     <string name="group_list_register_household">Add household</string>
     <string name="group_list_empty">No households</string>
+
+    <!-- Trust list status -->
+    <string name="trust_list_empty">No trust lists</string>
+    <string name="trust_list_not_fetched">Not fetched yet</string>
+    <string name="trust_list_source">Source: %1$s</string>
+    <string name="trust_list_signer">Signed by: %1$s</string>
+    <string name="trust_list_fetched_at">Fetched: %1$s</string>
+    <string name="trust_list_entries">Entries: %1$s</string>
+    <string name="trust_list_domains">Domains: %1$s</string>
 
     <!-- Group profile screen -->
     <string name="group_profile_default_name">Household</string>

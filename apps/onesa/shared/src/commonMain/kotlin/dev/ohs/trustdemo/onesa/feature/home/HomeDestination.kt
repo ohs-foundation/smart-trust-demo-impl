@@ -17,15 +17,18 @@ package dev.ohs.trustdemo.onesa.feature.home
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.ui.graphics.vector.ImageVector
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.home_destination_households
+import dev.ohs.trustdemo.onesa.generated.resources.home_destination_trust_lists
 import org.jetbrains.compose.resources.StringResource
 
 /**
- * A top-level destination reachable from [HomeScreen]'s navigation drawer. `Households` is the only
- * entry today; adding a second destination later is a new enum entry, not a rewrite.
+ * A top-level destination reachable from [HomeScreen]'s navigation drawer. A new destination is a
+ * new enum entry, not a rewrite.
  */
 enum class HomeDestination(val label: StringResource, val icon: ImageVector) {
-  Households(label = Res.string.home_destination_households, icon = Icons.Filled.Home)
+  Households(label = Res.string.home_destination_households, icon = Icons.Filled.Home),
+  TrustLists(label = Res.string.home_destination_trust_lists, icon = Icons.Filled.Lock),
 }

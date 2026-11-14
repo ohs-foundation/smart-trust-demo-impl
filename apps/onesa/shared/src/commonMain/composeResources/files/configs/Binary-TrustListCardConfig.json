@@ -1,0 +1,16 @@
+{
+  "resourceType": "http://ohs.dev/StructureDefinition/ViewConfig",
+  "viewType": "TrustListCard",
+  "property": [
+    {
+      "name": "showSigner",
+      "type": "boolean",
+      "valueBoolean": true
+    },
+    {
+      "name": "showDomains",
+      "type": "boolean",
+      "valueBoolean": true
+    }
+  ]
+}

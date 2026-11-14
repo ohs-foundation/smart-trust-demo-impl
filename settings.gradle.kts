@@ -59,6 +59,8 @@ include(":apps:onesa:android")
 
 include(":apps:onesa:desktop")
 
+include(":libs:hcert")
+
 include(":libs:trustkit")
 
 include(":services:vhl")
