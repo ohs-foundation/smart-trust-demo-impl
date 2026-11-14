@@ -47,7 +47,10 @@ class PinnedTrustList(
   val cache: TrustListCache,
 )
 
-/** A list older than this is shown as stale; verification still runs against it. */
+/**
+ * A fetched list older than this is shown as stale; verification still runs against it. The bundled
+ * GDHCN snapshot is never fetched, so it shows its date and is never stale.
+ */
 const val TRUST_LIST_STALE_AFTER_SECONDS = 24 * 60 * 60L
 
 /** When the latest refresh of a list failed, and why; the last good list stays in use. */
@@ -56,11 +59,13 @@ data class RefreshFailure(val atEpochSeconds: Long, val reason: String)
 /** When the list behind a verification was last fetched, and whether that is over a day ago. */
 data class ListFreshness(val fetchedAtEpochSeconds: Long?, val stale: Boolean)
 
-private fun freshnessOf(fetchedAtEpochSeconds: Long?, now: Long) =
+private fun freshnessOf(fetchedAtEpochSeconds: Long?, now: Long, fetched: Boolean) =
   ListFreshness(
     fetchedAtEpochSeconds,
     stale =
-      fetchedAtEpochSeconds != null && now - fetchedAtEpochSeconds > TRUST_LIST_STALE_AFTER_SECONDS,
+      fetched &&
+        fetchedAtEpochSeconds != null &&
+        now - fetchedAtEpochSeconds > TRUST_LIST_STALE_AFTER_SECONDS,
   )
 
 /** What the trust list status screen shows about one list. */
@@ -114,14 +119,10 @@ class HcertService(private val local: PinnedTrustList, private val gdhcnDev: Pin
   suspend fun freshness(
     dsc: TrustedDscInfo,
     now: Long = HcertClock.nowEpochSeconds(),
-  ): ListFreshness =
-    freshnessOf(
-      (if (dsc.domain == TrustDomain.Dvc.code) local else gdhcnDev)
-        .cache
-        .current()
-        ?.fetchedAtEpochSeconds,
-      now,
-    )
+  ): ListFreshness {
+    val list = if (dsc.domain == TrustDomain.Dvc.code) local else gdhcnDev
+    return freshnessOf(list.cache.current()?.fetchedAtEpochSeconds, now, fetched = list === local)
+  }
 
   /**
    * Fetches the local list; the copy already held stays when the fetch or its proof fails, and the
@@ -163,7 +164,7 @@ class HcertService(private val local: PinnedTrustList, private val gdhcnDev: Pin
       fetchedAtEpochSeconds = snapshot?.fetchedAtEpochSeconds,
       entryCount = snapshot?.let { DidDocuments.entryCount(it.json) } ?: 0,
       domains = snapshot?.let { DidDocuments.domains(it.json) }.orEmpty(),
-      stale = freshnessOf(snapshot?.fetchedAtEpochSeconds, now).stale,
+      stale = freshnessOf(snapshot?.fetchedAtEpochSeconds, now, fetched = this === local).stale,
       lastFailure = failures.value[name],
     )
   }

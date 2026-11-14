@@ -119,7 +119,9 @@ class HcertServiceTest {
       kept.lastFailure,
     )
     assertFalse(kept.stale)
-    assertTrue(service.statuses(now = fetchedAt + 25 * 3600).first().stale)
+    val dayLater = service.statuses(now = fetchedAt + 25 * 3600)
+    assertTrue(dayLater.first().stale)
+    assertFalse(dayLater.last().stale, "the bundled snapshot is dated, never refreshed")
     val card =
       assertIs<VerificationResult.Verified>(
         service.verifyCard(SignedCards.dvc(StandIn.XXR_CARD, fetchedAt), fetchedAt)
