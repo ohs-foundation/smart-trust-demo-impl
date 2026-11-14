@@ -75,7 +75,7 @@ Point the `dns_records` output at `server_ip`:
 *.gdhcn.demo.example.org    A  <server_ip>
 ```
 
-Check they resolve before step 4's certificates: `dig +short keycloak.onesa.demo.example.org` prints `<server_ip>`.
+Check they resolve before step 4's certificates: `dig +short keycloak.onesa.demo.example.org` prints `<server_ip>`. Behind Cloudflare, set the records to DNS only (grey cloud): its proxy answers with its own addresses and its free certificate covers one level below the domain, not names like `keycloak.onesa.demo.example.org`.
 
 ### 3. Images (laptop)
 
@@ -151,6 +151,7 @@ On the server, in `~/smart-trust-demo-impl/infra`:
 
 ```
 chmod 600 .env
+sudo usermod -aG docker "$USER"     # once, then sign in again
 gcloud auth configure-docker <region>-docker.pkg.dev    # once
 ./dev.sh nginx                      # vhosts and one certificate per name
 ./dev.sh up --pull --taifafeki      # add --pipes for the analytics pipeline and Superset
