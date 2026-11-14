@@ -129,6 +129,17 @@ object OnesaIcons {
   }
   val Send: ImageVector by lazy { lineIcon("send", "M22 2L11 13M22 2l-7 20-4-9-9-4z") }
   val Check: ImageVector by lazy { lineIcon("check", "M20 6L9 17l-5-5") }
+  val Mark: ImageVector by lazy {
+    ImageVector.Builder("mark", 24.dp, 24.dp, 48f, 48f)
+      .apply {
+        listOf(
+            "M3.24 16.71L20.65 34.11L38.83 7.75A22 22 0 0 0 3.24 16.71Z",
+            "M2.05 22.58L21.35 41.89L42.21 11.65A22 22 0 1 1 2.05 22.58Z",
+          )
+          .forEach { addPath(pathData = addPathNodes(it), fill = SolidColor(Color.Black)) }
+      }
+      .build()
+  }
 }
 
 private fun lineIcon(name: String, vararg paths: String): ImageVector =

@@ -40,7 +40,7 @@ fun NoRoleScreen(message: String?, onRetry: (() -> Unit)?, onSignOut: () -> Unit
     topBar = {
       OnesaTopBar(
         title = stringResource(Res.string.login_brand),
-        icon = OnesaIcons.ShieldCheck,
+        icon = OnesaIcons.Mark,
         subtitle = stringResource(Res.string.login_ministry),
       )
     },

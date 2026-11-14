@@ -72,7 +72,7 @@ fun InitialSyncScreen(
     topBar = {
       OnesaTopBar(
         title = stringResource(Res.string.login_brand),
-        icon = OnesaIcons.ShieldCheck,
+        icon = OnesaIcons.Mark,
         subtitle =
           if (userName != null && role != null) {
             stringResource(
