@@ -46,7 +46,7 @@ object TrustListWriter {
    */
   fun localTestList(): String = TestKeys.testkitText("local-test-list.json")
 
-  internal fun generate(
+  fun generate(
     certificates: Map<StandIn, X509Certificate>,
     signerKey: PrivateKey,
     created: Instant,

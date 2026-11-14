@@ -38,29 +38,21 @@ import who.smart.trust.HcertResult
 import who.smart.trust.core.Hcert
 
 private val log = LoggerFactory.getLogger(ClinicTrustList::class.java)
-private const val ANCHOR_PATH = "trustlist:DEMO-VHL:XXR:CSCA#"
+private val ANCHOR = listOf("trustlist", "DEMO-VHL", "XXR", "CSCA")
 private const val ANCHOR_USAGE = "#CSCA"
 private val RETRY = 30.seconds
 
-/** The signed trust list and the document that carries its signer's key, as fetched. */
-class TrustListDocuments(val list: String, val signer: String)
-
-/** Where the trust list comes from. */
+/** Where the signed trust list comes from. */
 fun interface TrustListSource {
-  suspend fun fetch(): TrustListDocuments
+  suspend fun fetch(): String
 }
 
-/** Fetches the list and its signer's DID document over HTTP. */
-class HttpTrustListSource(
-  private val client: HttpClient,
-  private val listUrl: String,
-  private val signerUrl: String,
-) : TrustListSource {
-  override suspend fun fetch() = TrustListDocuments(get(listUrl), get(signerUrl))
-
-  private suspend fun get(url: String): String {
-    val response = client.get(url)
-    check(response.status.isSuccess()) { "$url answered ${response.status.value}" }
+/** Fetches the list over HTTP. */
+class HttpTrustListSource(private val client: HttpClient, private val listUrl: String) :
+  TrustListSource {
+  override suspend fun fetch(): String {
+    val response = client.get(listUrl)
+    check(response.status.isSuccess()) { "$listUrl answered ${response.status.value}" }
     return response.bodyAsText()
   }
 }
@@ -72,11 +64,24 @@ fun interface ClinicAnchor {
 
 /**
  * The XXR clinic anchor, read from the signed trust list: the entry `DEMO-VHL:XXR:CSCA` whose
- * keyusage is `#CSCA`. A list that fails its proof or lacks that entry leaves the last good anchor.
+ * keyusage is `#CSCA`. The list must be signed by [signer], the pinned DID document of the list's
+ * publisher, which is never fetched. A list that fails its proof or lacks that entry leaves the
+ * last good anchor.
  */
-class ClinicTrustList(private val source: TrustListSource, private val trustDomains: String) :
-  ClinicAnchor {
+class ClinicTrustList(
+  private val source: TrustListSource,
+  private val signer: String,
+  private val trustDomains: String,
+) : ClinicAnchor {
   @Volatile private var anchor: X509Certificate? = null
+
+  init {
+    val id =
+      Json.parseToJsonElement(signer).jsonObject.getValue("verificationMethod").jsonArray.map {
+        it.jsonObject.getValue("id").jsonPrimitive.content
+      }
+    log.info("trust list signer pinned: {}", id)
+  }
 
   override fun current(): X509Certificate? = anchor
 
@@ -90,8 +95,7 @@ class ClinicTrustList(private val source: TrustListSource, private val trustDoma
 
   suspend fun refresh() {
     try {
-      val documents = source.fetch()
-      anchor = verifiedAnchor(documents)
+      anchor = verifiedAnchor(source.fetch())
       log.info("trust list loaded")
     } catch (e: CancellationException) {
       throw e
@@ -100,17 +104,17 @@ class ClinicTrustList(private val source: TrustListSource, private val trustDoma
     }
   }
 
-  private fun verifiedAnchor(documents: TrustListDocuments): X509Certificate {
+  private fun verifiedAnchor(list: String): X509Certificate {
     val store = Hcert.trust.newTrustStore()
     check(store.loadTrustDomains(trustDomains) is HcertResult.Ok) { "trust domains do not load" }
-    when (val added = store.addVerifiedDidDocument(documents.list, documents.signer)) {
+    when (val added = store.addVerifiedDidDocument(list, signer)) {
       is HcertResult.Ok -> Unit
       is HcertResult.Err -> error("the list is not accepted: ${added.error}")
     }
-    val methods = Json.parseToJsonElement(documents.list).jsonObject.getValue("verificationMethod")
+    val methods = Json.parseToJsonElement(list).jsonObject.getValue("verificationMethod")
     val entry =
       methods.jsonArray.map { it.jsonObject }.singleOrNull { it.isAnchor() }
-        ?: error("the list has no single $ANCHOR_PATH entry")
+        ?: error("the list has no single ${ANCHOR.joinToString(":")} entry")
     val der = entry.getValue("publicKeyJwk").jsonObject.getValue("x5c").jsonArray.first()
     return CertificateFactory.getInstance("X.509")
       .generateCertificate(
@@ -119,6 +123,7 @@ class ClinicTrustList(private val source: TrustListSource, private val trustDoma
   }
 
   private fun JsonObject.isAnchor(): Boolean =
-    getValue("id").jsonPrimitive.content.contains(ANCHOR_PATH) &&
+    getValue("id").jsonPrimitive.content.substringBefore('#').split(':').takeLast(ANCHOR.size) ==
+      ANCHOR &&
       getValue("keyusage").jsonObject.getValue("code").jsonPrimitive.content == ANCHOR_USAGE
 }

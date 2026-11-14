@@ -134,10 +134,12 @@ services:
       LINK_KEY_FILE: /run/keys/XXK_LINK.key.pem
       LINK_CERT_FILE: /run/keys/XXK_LINK.crt.pem
       VHL_DB_PATH: /data/vhl
+      TRUST_LIST_SIGNER_PATH: /run/trust/gdhcn-signer-did.json
       JAVA_OPTS: -Xmx200m
     volumes:
       - ../../testkit/XXK_LINK.key.pem:/run/keys/XXK_LINK.key.pem:ro
       - ../../testkit/XXK_LINK.crt.pem:/run/keys/XXK_LINK.crt.pem:ro
+      - ../../testkit/gdhcn-signer-did.json:/run/trust/gdhcn-signer-did.json:ro
       - onesa_vhl:/data
     mem_limit: 384m
     depends_on:

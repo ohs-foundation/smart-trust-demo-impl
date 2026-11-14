@@ -108,6 +108,7 @@ class SignedRequestVerifier(
     if (!verified) refuse("the signature does not verify")
     val kid = kidOf(certificate)
     if (keyid != kid) refuse("keyid is not the certificate's")
+    if (!isSigningLeaf(certificate)) refuse("the certificate is not an end-entity signing one")
     if (!chainsTo(certificate, anchorCertificate))
       refuse("the certificate does not chain to the anchor")
     if (abs(clock.instant().epochSecond - created.toLong()) > MAX_SKEW_SECONDS) {
@@ -117,8 +118,12 @@ class SignedRequestVerifier(
     return Requester(name, kid)
   }
 
+  private fun isSigningLeaf(certificate: X509Certificate): Boolean =
+    certificate.basicConstraints == -1 && certificate.keyUsage?.getOrNull(0) == true
+
   private fun chainsTo(certificate: X509Certificate, anchor: X509Certificate): Boolean =
     try {
+      anchor.checkValidity(Date.from(clock.instant()))
       val parameters =
         PKIXParameters(setOf(TrustAnchor(anchor, null))).apply {
           isRevocationEnabled = false
@@ -152,8 +157,10 @@ class SignedRequestVerifier(
   private fun commonName(certificate: X509Certificate): String? =
     LdapName(certificate.subjectX500Principal.name)
       .rdns
-      .firstOrNull { it.type.equals("CN", ignoreCase = true) }
-      ?.value
+      .flatMap { it.toAttributes().all.toList() }
+      .filter { it.id.equals("CN", ignoreCase = true) }
+      .singleOrNull()
+      ?.get()
       ?.toString()
       ?.ifBlank { null }
 

@@ -21,6 +21,7 @@ import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.security.spec.ECGenParameterSpec
+import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Date
@@ -39,6 +40,8 @@ object ClinicCertificates {
   fun issueClinicViewer(
     subject: String = "CN=clinic-viewer.kesaro.example",
     issuer: StandIn = StandIn.XXR_CLINIC_ANCHOR,
+    validFor: Duration = Duration.ofDays(365),
+    ca: Boolean = false,
   ): Pair<PrivateKey, X509Certificate> {
     val key = newKeyPair()
     val anchor = TestKeys.certificate(issuer)
@@ -50,8 +53,8 @@ object ClinicCertificates {
         subjectKey = key,
         signer = TestKeys.privateKey(issuer),
         notBefore = now.minus(1, ChronoUnit.DAYS),
-        notAfter = now.plus(365, ChronoUnit.DAYS),
-        ca = false,
+        notAfter = now.plus(validFor),
+        ca = ca,
       )
     return key.private to cert
   }

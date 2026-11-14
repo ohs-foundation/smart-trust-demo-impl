@@ -30,11 +30,13 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import java.io.File
+import java.security.KeyPairGenerator
 import java.security.MessageDigest
 import java.security.PrivateKey
 import java.security.Signature
 import java.security.cert.X509Certificate
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Base64
@@ -60,14 +62,15 @@ private const val FORM_BODY =
     "&recipient=Kesaro+clinic&passcode=482913"
 
 class SignedRequestsTest {
-  private val now = Instant.parse("2026-11-14T09:00:00Z")
+  private var now = Instant.parse("2026-11-14T09:00:00Z")
   private val clinic = ClinicCertificates.issueClinicViewer("CN=clinic-viewer.kesaro.example")
   private val releases = mutableListOf<ReleaseRequest>()
   private var list: String = TrustListWriter.localTestList()
 
   private val trustList =
     ClinicTrustList(
-      source = { TrustListDocuments(list, TestKeys.gdhcnSignerDidDocument()) },
+      source = { list },
+      signer = TestKeys.gdhcnSignerDidDocument(),
       trustDomains =
         checkNotNull(javaClass.getResource("/CodeSystem-TrustDemoTrustDomain.json")).readText(),
     )
@@ -244,6 +247,63 @@ class SignedRequestsTest {
     runBlocking { trustList.refresh() }
 
     assertEquals(TestKeys.certificate(StandIn.XXR_CLINIC_ANCHOR), trustList.current())
+  }
+
+  @Test
+  fun aListSignedByAnotherSignerIsRefused() {
+    runBlocking { trustList.refresh() }
+    val attacker = KeyPairGenerator.getInstance("EC").apply { initialize(256) }.generateKeyPair()
+    list =
+      TrustListWriter.generate(
+        StandIn.entries.associateWith { TestKeys.certificate(it) },
+        attacker.private,
+        now,
+        "attackerNonce000000000000000000001",
+      )
+    runBlocking { trustList.refresh() }
+
+    assertEquals(TestKeys.certificate(StandIn.XXR_CLINIC_ANCHOR), trustList.current())
+  }
+
+  @Test
+  fun aListSignedByAnotherSignerIsNeverLoaded() {
+    val attacker = KeyPairGenerator.getInstance("EC").apply { initialize(256) }.generateKeyPair()
+    list =
+      TrustListWriter.generate(
+        StandIn.entries.associateWith { TestKeys.certificate(it) },
+        attacker.private,
+        now,
+        "attackerNonce000000000000000000001",
+      )
+    runBlocking { trustList.refresh() }
+
+    assertNull(trustList.current())
+  }
+
+  @Test
+  fun aCertificateWithTwoCommonNamesIsRefused() = withService {
+    trustList.refresh()
+    val ambiguous = ClinicCertificates.issueClinicViewer("CN=clinic-a,CN=clinic-b")
+
+    assertRefused(post(sign("POST", MANIFEST_PATH, FORM_BODY.toByteArray(), identity = ambiguous)))
+  }
+
+  @Test
+  fun aCaFlaggedCertificateIsRefused() = withService {
+    trustList.refresh()
+    val ca = ClinicCertificates.issueClinicViewer(ca = true)
+
+    assertRefused(post(sign("POST", MANIFEST_PATH, FORM_BODY.toByteArray(), identity = ca)))
+  }
+
+  @Test
+  fun anExpiredAnchorIsRefused() = withService {
+    trustList.refresh()
+    val anchor = TestKeys.certificate(StandIn.XXR_CLINIC_ANCHOR)
+    val longLived = ClinicCertificates.issueClinicViewer(validFor = Duration.ofDays(36_500))
+    now = anchor.notAfter.toInstant().plusSeconds(86_400)
+
+    assertRefused(post(sign("POST", MANIFEST_PATH, FORM_BODY.toByteArray(), identity = longLived)))
   }
 
   private suspend fun ApplicationTestBuilder.post(request: Signed): HttpResponse =

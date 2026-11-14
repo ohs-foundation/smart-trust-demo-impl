@@ -40,8 +40,8 @@ fun main() {
         HttpTrustListSource(
           HttpClient(CIO),
           env["TRUST_LIST_URL"] ?: "http://gdhcn/local-test-list.json",
-          env["TRUST_LIST_SIGNER_URL"] ?: "http://gdhcn/signing/did.json",
         ),
+      signer = File(required("TRUST_LIST_SIGNER_PATH")).readText(),
       trustDomains = checkNotNull(TRUST_DOMAINS_RESOURCE.readResource()),
     )
   val deps =
