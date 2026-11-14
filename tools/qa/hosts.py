@@ -9,7 +9,6 @@ ALLOWED = {
     ".example.org": "RFC 2606 reserved name",
     ".example.com": "RFC 2606 reserved name",
     ".sslip.io": "the demo's own hosts: STACK_HOST is <ip>.sslip.io",
-    ".demo.example.org": "the demo's live hosts: <service>.<country>.demo.example.org",
     ".localhost": "RFC 6761 loopback names, the web image's build default for a local stack",
     "smartregister.org": "extension URL in the infra's FHIR Data Pipes views, an identifier never fetched",
     "stackoverflow.com": "explanatory link in a comment of the infra's flink-conf.yaml, never called",
