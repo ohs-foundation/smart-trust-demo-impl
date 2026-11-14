@@ -24,16 +24,20 @@ import kotlinx.coroutines.flow.first
 /**
  * JVM [SyncManager]: schedules sync through the foreground [Sync] scheduler. Desktop only syncs
  * while its host process is alive (see [Sync]'s docs for why), with each periodic cycle gated on
- * [isNetworkConnected].
+ * [isNetworkConnected]. Each attempt sends the [outbox] first.
  */
-class ForegroundSyncManager : SyncManager {
+class ForegroundSyncManager(private val outbox: Outbox) : SyncManager {
   override suspend fun syncNow(): SyncJobStatus {
     val terminalStatus =
-      Sync.oneTimeSync(taskFactory = { AppFhirSyncTask(FhirEngineProvider.getInstance()) }).first {
-        it is CurrentSyncJobStatus.Succeeded ||
-          it is CurrentSyncJobStatus.Failed ||
-          it is CurrentSyncJobStatus.Cancelled
-      }
+      Sync.oneTimeSync(
+          taskFactory = { AppFhirSyncTask(FhirEngineProvider.getInstance()) },
+          before = outbox::send,
+        )
+        .first {
+          it is CurrentSyncJobStatus.Succeeded ||
+            it is CurrentSyncJobStatus.Failed ||
+            it is CurrentSyncJobStatus.Cancelled
+        }
     return when (terminalStatus) {
       is CurrentSyncJobStatus.Succeeded -> SyncJobStatus.Succeeded()
       else -> SyncJobStatus.Failed()
@@ -48,6 +52,7 @@ class ForegroundSyncManager : SyncManager {
     Sync.periodicSync(
       taskFactory = { AppFhirSyncTask(FhirEngineProvider.getInstance()) },
       repeatInterval = 15.minutes,
+      before = outbox::send,
     )
   }
 

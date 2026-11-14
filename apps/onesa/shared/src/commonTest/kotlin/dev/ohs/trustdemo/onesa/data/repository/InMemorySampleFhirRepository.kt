@@ -53,6 +53,11 @@ class InMemorySampleFhirRepository : FhirRepository {
     _revision.value += 1
   }
 
+  override suspend fun storeAsSynced(resources: List<Resource>) {
+    resources.forEach(::store)
+    _revision.value += 1
+  }
+
   private fun store(resource: Resource) {
     val id = resource.id ?: return
     resourcesByType.getOrPut(resource.resourceType) { mutableMapOf() }[id] = resource

@@ -15,18 +15,28 @@
  */
 package dev.ohs.trustdemo.onesa.data.registration
 
+import dev.ohs.fhir.engine.FhirEngineConfiguration
+import dev.ohs.fhir.engine.FhirEngineProvider
+import dev.ohs.fhir.engine.sync.createDataStore
 import dev.ohs.fhir.model.r4.QuestionnaireResponse
 import dev.ohs.fhir.model.r4.Resource
+import dev.ohs.trustdemo.onesa.data.repository.FhirEngineRepository
+import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
+import dev.ohs.trustdemo.onesa.data.repository.GroupRepository
 import dev.ohs.trustdemo.onesa.data.repository.InMemorySampleFhirRepository
+import dev.ohs.trustdemo.onesa.data.sync.Outbox
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import java.io.IOException
+import java.nio.file.Files
+import kotlin.io.path.createTempFile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -43,16 +53,31 @@ import kotlinx.serialization.json.put
 class RegistrationServiceTest {
   private val repository = InMemorySampleFhirRepository()
   private val server = FakeHousehold()
-  private val service =
+  private val outbox = outbox(HttpClient(server.engine))
+  private val service = service(repository, outbox)
+
+  private fun outbox(client: HttpClient) =
+    Outbox(
+      dataStore =
+        createDataStore {
+          createTempFile(suffix = ".preferences_pb").toFile().apply { deleteOnExit() }.absolutePath
+        },
+      httpClient = client,
+      baseUrl = "http://gateway/fhir",
+      accessToken = { "token" },
+    )
+
+  private fun service(repository: FhirRepository, outbox: Outbox) =
     RegistrationService(
       repository = repository,
       scannedCards = ScannedCards(),
       session = { RegistrationSession("token", "vilay", "lomaru-dhc") },
-      httpClient = HttpClient(server.engine),
-      baseUrl = "http://gateway/fhir",
+      outbox = outbox,
       refresh = { true },
       clock = { Instant.parse("2026-11-14T03:00:00Z") },
     )
+
+  private val noSignal = HttpClient(MockEngine { throw IOException("no signal") })
 
   private val firstChild =
     """{"resourceType":"Patient","id":"somsak","gender":"male","meta":{"versionId":"1"},
@@ -175,27 +200,22 @@ class RegistrationServiceTest {
     synced()
     server.failNext = HttpStatusCode.InternalServerError
 
-    assertFailsWith<IllegalStateException> { service.register("house", form("Noy"), key = "k1") }
-    service.register("house", form("Noy"), key = "k1")
-    val committed = server.resources.keys.toSet()
+    assertTrue(service.register("house", form("Noy"), key = "k1").waiting)
+    outbox.send()
 
-    assertFailsWith<HouseholdChangedException> {
-      service.register("house", form("Noy"), key = "k1")
-    }
-
-    assertEquals(committed, server.resources.keys.toSet())
     assertEquals(
       1,
       server.resources.values.count { it.isNew() && it.text("resourceType") == "Patient" },
     )
     assertEquals(server.attempts[0], server.attempts[1])
+    assertEquals(emptyList(), outbox.entries())
   }
 
   @Test
   fun aRetryOnAFreshCopyRewritesTheSameChild() = runTest {
     synced()
     server.loseNextReply = true
-    assertFailsWith<IOException> { service.register("house", form("Noy"), key = "k4") }
+    service.register("house", form("Noy"), key = "k4")
     server.resources.values.forEach {
       repository.upsert(FhirJson.instance.decodeFromJsonElement(Resource.serializer(), it))
     }
@@ -215,16 +235,15 @@ class RegistrationServiceTest {
     synced()
     server.loseNextReply = true
 
-    assertFailsWith<IOException> { service.register("house", form("Noy"), key = "k2") }
-    assertFailsWith<HouseholdChangedException> {
-      service.register("house", form("Noy"), key = "k2")
-    }
+    assertTrue(service.register("house", form("Noy"), key = "k2").waiting)
+    outbox.send()
 
     assertEquals(
       1,
       server.resources.values.count { it.isNew() && it.text("resourceType") == "Patient" },
     )
     assertEquals(server.attempts[0], server.attempts[1])
+    assertEquals(emptyList(), outbox.entries())
   }
 
   @Test
@@ -238,6 +257,49 @@ class RegistrationServiceTest {
     }
 
     assertEquals(before, server.resources)
+    assertEquals(emptyList(), outbox.entries())
+  }
+
+  @Test
+  fun aRegistrationSavedOfflineWaitsInTheOutbox() = runTest {
+    synced()
+    val waiting = outbox(noSignal)
+    val offline = service(repository, waiting)
+    val transaction = offline.preview("house", form("Noy"), key = "k5")
+
+    assertTrue(offline.register("house", form("Noy"), key = "k5").waiting)
+
+    val entry = waiting.entries().single()
+    assertEquals(transaction, entry.transaction)
+    assertEquals(null, entry.refused)
+  }
+
+  @Test
+  fun theSavedChildShowsInTheHouseholdBeforeUpload() = runTest {
+    if (FhirEngineProvider.isNotInitialized()) {
+      FhirEngineProvider.init(
+        FhirEngineConfiguration(
+          storageDirectory = Files.createTempDirectory("registration-test").toString()
+        )
+      )
+    }
+    val engine = FhirEngineProvider.getInstance()
+    engine.clearDatabase()
+    val local = FhirEngineRepository(engine)
+    local.storeAsSynced(
+      listOf(group, bounmy, khamla, firstChild).map {
+        FhirJson.instance.decodeFromString(Resource.serializer(), it)
+      }
+    )
+
+    service(local, outbox(noSignal)).register("house", form("Noy"), key = "k6")
+
+    val members = GroupRepository(local).getGroupProfile("house").members
+    assertEquals(4, members.size)
+    assertTrue(members.any { it.memberGivenName == "Noy" })
+    listOf("Patient", "RelatedPerson", "Group", "QuestionnaireResponse").forEach {
+      assertEquals(emptyList(), local.unsynced(it), it)
+    }
   }
 
   private fun JsonObject.text(name: String) = get(name)?.jsonPrimitive?.content
@@ -276,6 +338,11 @@ private class FakeHousehold {
   }
 
   val engine = MockEngine { request ->
+    if (request.method == HttpMethod.Get) {
+      val found = resources[request.url.encodedPath.substringAfter("/fhir/")]
+      return@MockEngine if (found == null) respond("{}", HttpStatusCode.NotFound)
+      else respond(found.toString(), HttpStatusCode.OK)
+    }
     val entries =
       FhirJson.instance
         .parseToJsonElement((request.body as TextContent).text)

@@ -40,6 +40,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.sync_status_nothing
 import dev.ohs.trustdemo.onesa.generated.resources.sync_status_nothing_body
 import dev.ohs.trustdemo.onesa.generated.resources.sync_status_queued
 import dev.ohs.trustdemo.onesa.generated.resources.sync_status_records
+import dev.ohs.trustdemo.onesa.generated.resources.sync_status_refused
 import dev.ohs.trustdemo.onesa.generated.resources.sync_status_signal
 import dev.ohs.trustdemo.onesa.generated.resources.sync_status_today
 import dev.ohs.trustdemo.onesa.generated.resources.sync_status_waiting
@@ -87,7 +88,15 @@ fun SyncStatusContent(
         )
       }
       val queued = Status(stringResource(Res.string.sync_status_queued))
-      pending.forEach { RecordRow(it.label, code = it.reference, status = queued) }
+      val refused = Status(stringResource(Res.string.sync_status_refused), Tone.Danger)
+      pending.forEach {
+        RecordRow(
+          it.label,
+          code = it.reference,
+          detail = it.reason,
+          status = if (it.refused) refused else queued,
+        )
+      }
     }
     SectionCard {
       FieldGrid(

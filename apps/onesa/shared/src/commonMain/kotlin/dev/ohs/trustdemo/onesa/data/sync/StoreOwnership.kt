@@ -45,6 +45,7 @@ internal class StoreOwnership(
   private val engine: FhirEngine,
   private val state: DataStore<Preferences>,
   private val links: LinkStore,
+  private val outbox: Outbox,
 ) {
   /** Hands the store to [subject], emptying it first when it held another user's records. */
   suspend fun admit(subject: String): Admission {
@@ -61,12 +62,13 @@ internal class StoreOwnership(
   }
 
   private suspend fun hasUnsyncedChanges(): Boolean =
-    ResourceType.entries.any { type ->
-      engine.count(Search(type)) > 0 &&
-        engine.search<Resource>(Search(type)).any {
-          engine.getLocalChanges(type, it.resource.id.orEmpty()).isNotEmpty()
-        }
-    }
+    outbox.entries().isNotEmpty() ||
+      ResourceType.entries.any { type ->
+        engine.count(Search(type)) > 0 &&
+          engine.search<Resource>(Search(type)).any {
+            engine.getLocalChanges(type, it.resource.id.orEmpty()).isNotEmpty()
+          }
+      }
 
   private companion object {
     const val UNSYNCED =

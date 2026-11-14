@@ -56,7 +56,7 @@ fun main() = application {
   initKoin(
     module {
       single<FhirEngine> { FhirEngineProvider.getInstance() }
-      single<SyncManager> { TrustListRefreshingSyncManager(ForegroundSyncManager(), get()) }
+      single<SyncManager> { TrustListRefreshingSyncManager(ForegroundSyncManager(get()), get()) }
     }
   )
   Window(

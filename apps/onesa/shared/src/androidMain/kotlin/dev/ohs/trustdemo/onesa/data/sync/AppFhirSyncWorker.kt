@@ -39,11 +39,13 @@ class AppFhirSyncWorker(appContext: Context, workerParams: WorkerParameters) :
   /**
    * WorkManager can relaunch this worker in a fresh process after the app was killed, where the UI
    * bootstrap never ran and [dev.ohs.trustdemo.onesa.auth.SessionRepository] is empty. Hydrate and
-   * refresh the session first so the sync's requests carry a valid Bearer token.
+   * refresh the session first so the sync's requests carry a valid Bearer token. What waits in the
+   * [Outbox] goes up before the engine's upload and download.
    */
   @Suppress("RestrictedApi")
   override suspend fun doWork(): Result {
     ensureFreshSessionForSync()
+    KoinPlatform.getKoin().get<Outbox>().send()
     return super.doWork().also {
       if (it is Result.Success) DataChangeSignal.notifyChanged()
       KoinPlatform.getKoin().get<HcertService>().refreshLocalListQuietly()

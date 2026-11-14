@@ -98,6 +98,7 @@
     <string name="sync_status_nothing">Nothing waiting</string>
     <string name="sync_status_nothing_body">Everything changed on this phone is on the national server.</string>
     <string name="sync_status_queued">Queued</string>
+    <string name="sync_status_refused">Refused</string>
     <string name="sync_status_last_upload">Last upload</string>
     <string name="sync_status_never">Not yet</string>
     <string name="sync_status_today">Today, %1$s</string>
@@ -231,6 +232,7 @@
     <string name="registration_writes">%1$s, sent to the national server in one request</string>
     <string name="registration_saved_title">Saved</string>
     <string name="registration_saved_text">%1$s, born %2$s, is registered in the household.</string>
+    <string name="registration_saved_waiting">%1$s, born %2$s, is saved on this phone. It uploads to the national server when there is signal.</string>
 
     <string name="home_destination_referrals">Referrals</string>
     <string name="referral_inbox_empty">No referrals waiting.</string>

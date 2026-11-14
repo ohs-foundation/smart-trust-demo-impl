@@ -54,6 +54,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.registration_save
 import dev.ohs.trustdemo.onesa.generated.resources.registration_save_all
 import dev.ohs.trustdemo.onesa.generated.resources.registration_saved_text
 import dev.ohs.trustdemo.onesa.generated.resources.registration_saved_title
+import dev.ohs.trustdemo.onesa.generated.resources.registration_saved_waiting
 import dev.ohs.trustdemo.onesa.generated.resources.registration_writes
 import dev.ohs.trustdemo.onesa.ui.Action
 import dev.ohs.trustdemo.onesa.ui.AlertCard
@@ -210,7 +211,10 @@ fun RegistrationReviewContent(
   }
 }
 
-/** After the registration is in: who was registered, the doses as reported, who was told. */
+/**
+ * After the registration is saved: who was registered, whether it is in or waits on this phone, the
+ * doses as reported, who was told.
+ */
 @Composable
 fun RegistrationSavedContent(
   summary: RegistrationSummary,
@@ -230,7 +234,8 @@ fun RegistrationSavedContent(
       text =
         listOfNotNull(
             stringResource(
-              Res.string.registration_saved_text,
+              if (summary.waiting) Res.string.registration_saved_waiting
+              else Res.string.registration_saved_text,
               summary.childName,
               summary.birthDate,
             ),

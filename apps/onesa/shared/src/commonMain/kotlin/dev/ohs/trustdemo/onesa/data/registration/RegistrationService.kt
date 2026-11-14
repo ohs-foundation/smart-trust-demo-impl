@@ -21,21 +21,17 @@ import dev.ohs.fhir.model.r4.Patient
 import dev.ohs.fhir.model.r4.QuestionnaireResponse
 import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
+import dev.ohs.trustdemo.onesa.data.sync.Outbox
+import dev.ohs.trustdemo.onesa.data.sync.OutboxEntry
 import dev.ohs.trustdemo.onesa.data.sync.succeeded
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import dev.ohs.trustdemo.onesa.util.idOf
-import io.ktor.client.HttpClient
-import io.ktor.client.request.bearerAuth
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
-import io.ktor.http.isSuccess
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 
 /** What the signed-in CHW's session lends to a registration. */
 data class RegistrationSession(
@@ -52,6 +48,8 @@ data class RegistrationSummary(
   val referredTo: String?,
   /** True when the registration is in but the local copy could not be refreshed. */
   val listStale: Boolean = false,
+  /** True when the registration is saved on this phone and waits for signal to upload. */
+  val waiting: Boolean = false,
 )
 
 /** The household changed since this phone read it, so nothing was written. */
@@ -62,23 +60,22 @@ class HouseholdChangedException :
 
 /**
  * Registers a newborn into a household: loads the household and the parents the form names from the
- * local store, builds the transaction with [NewbornRegistration], and posts it to the gateway as
- * one request. The Group and the parents are written only at the version this phone read: if the
- * gateway holds a newer one, nothing is written. A [key] fixes the ids of one confirmed
- * registration, so a retry rewrites the records of the attempt before it.
+ * local store, builds the transaction with [NewbornRegistration], and saves it in the [Outbox],
+ * which posts it to the gateway as one request now or at the next sync. The records are stored on
+ * this phone at once. The Group and the parents are written only at the version this phone read: if
+ * the gateway holds a newer one, nothing is written. A [key] fixes the ids of one confirmed
+ * registration, so a resend rewrites the records of the attempt before it.
  *
- * The transaction goes straight to the gateway rather than through the engine's sync upload. The
- * engine uploads each local change as its own `PUT` or `PATCH` and cannot send the household's
- * `member` list as one replacement, nor guarantee that the child, the doses and the referral arrive
- * in one request; the gateway's write rules judge the Group update by the whole Bundle. The cost is
- * that registering needs a connection, where scanning cards does not.
+ * The transaction goes through the outbox rather than the engine's sync upload. The engine uploads
+ * each local change as its own `PUT` or `PATCH` and cannot send the household's `member` list as
+ * one replacement, nor guarantee that the child, the doses and the referral arrive in one request;
+ * the gateway's write rules judge the Group update by the whole Bundle.
  */
 class RegistrationService(
   private val repository: FhirRepository,
   private val scannedCards: ScannedCards,
   private val session: suspend () -> RegistrationSession?,
-  private val httpClient: HttpClient,
-  private val baseUrl: String,
+  private val outbox: Outbox,
   private val refresh: suspend () -> Boolean,
   private val clock: () -> Instant = Clock.System::now,
 ) {
@@ -113,28 +110,32 @@ class RegistrationService(
     val cards = request.cards
     val transaction = NewbornRegistration.transaction(request)
 
-    val reply =
-      httpClient.post(baseUrl) {
-        bearerAuth(current.accessToken)
-        contentType(ContentType("application", "fhir+json"))
-        setBody(json.encodeToString(JsonObject.serializer(), transaction))
+    outbox.add(OutboxEntry(key, transaction, created = "Patient/${request.newId("child")}"))
+    outbox.send()
+    val kept = outbox.entries().firstOrNull { it.key == key }
+    kept?.refused?.let { refusal ->
+      outbox.remove(key)
+      if (
+        refusal.status == HttpStatusCode.PreconditionFailed.value ||
+          refusal.status == HttpStatusCode.Conflict.value
+      ) {
+        succeeded(refresh)
+        throw HouseholdChangedException()
       }
-    if (
-      reply.status == HttpStatusCode.PreconditionFailed || reply.status == HttpStatusCode.Conflict
-    ) {
-      succeeded(refresh)
-      throw HouseholdChangedException()
+      error("The registration was not accepted (HTTP ${refusal.status}): ${refusal.reason}")
     }
-    check(reply.status.isSuccess()) {
-      "The registration was not accepted (HTTP ${reply.status.value}): ${reply.bodyAsText().take(300)}"
-    }
+    repository.storeAsSynced(
+      transaction.getValue("entry").jsonArray.map {
+        json.decodeFromJsonElement(Resource.serializer(), it.jsonObject.getValue("resource"))
+      }
+    )
 
     scannedCards.clear()
-    val synced = succeeded(refresh)
+    val synced = kept != null || succeeded(refresh)
     val clinic =
       (repository.get("Organization", current.organizationId) as? Organization)?.name?.value
     return NewbornRegistration.summary(response, cards, clinic ?: current.organizationId)
-      .copy(listStale = !synced)
+      .copy(listStale = !synced, waiting = kept != null)
   }
 
   private suspend fun request(

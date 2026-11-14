@@ -35,7 +35,10 @@ import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.data.repository.InMemorySampleFhirRepository
 import dev.ohs.trustdemo.onesa.data.sync.FakeSyncManager
 import dev.ohs.trustdemo.onesa.data.sync.LocalCopy
+import dev.ohs.trustdemo.onesa.data.sync.Outbox
 import dev.ohs.trustdemo.onesa.data.sync.SyncManager
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
 import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -61,6 +64,17 @@ class HomeScreenTest {
           single { newFhirDataStore() }
           single<SyncManager> { syncManager }
           single { LocalCopy(syncManager) }
+          single {
+            Outbox(
+              createDataStore {
+                Files.createTempFile("home-screen-outbox", ".preferences_pb").toString()
+              },
+              HttpClient(MockEngine { error("This test never sends") }),
+              "http://gateway/fhir",
+            ) {
+              null
+            }
+          }
         },
         repositoryModule,
         viewModelModule,

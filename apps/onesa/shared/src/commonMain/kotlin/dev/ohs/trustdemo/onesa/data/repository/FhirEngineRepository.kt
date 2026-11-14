@@ -19,6 +19,7 @@ import dev.ohs.fhir.engine.FhirEngine
 import dev.ohs.fhir.engine.db.ResourceNotFoundException
 import dev.ohs.fhir.engine.resourceType
 import dev.ohs.fhir.engine.search.Search
+import dev.ohs.fhir.engine.sync.AcceptRemoteConflictResolver
 import dev.ohs.fhir.model.r4.Bundle
 import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.fhir.model.r4.terminologies.ResourceType
@@ -26,6 +27,7 @@ import dev.ohs.trustdemo.onesa.data.DataChangeSignal
 import dev.ohs.trustdemo.onesa.generateId
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -77,6 +79,13 @@ class FhirEngineRepository(private val fhirEngine: FhirEngine) : FhirRepository 
 
   override suspend fun remove(resourceType: String, id: String) {
     fhirEngine.purge(ResourceType.valueOf(resourceType), id, forcePurge = true)
+    DataChangeSignal.notifyChanged()
+  }
+
+  /** The engine's synced insert; the stored copy wins over any local change it replaces. */
+  override suspend fun storeAsSynced(resources: List<Resource>) {
+    @Suppress("DEPRECATION")
+    fhirEngine.syncDownload(AcceptRemoteConflictResolver) { flowOf(resources) }
     DataChangeSignal.notifyChanged()
   }
 

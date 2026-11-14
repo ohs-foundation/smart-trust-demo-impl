@@ -68,15 +68,17 @@ internal object Sync {
    * @param retryConfiguration Retry policy on failure, or null to disable retries.
    * @param syncTimeout Maximum duration for a single sync attempt. If exceeded, the attempt is
    *   treated as failed and subject to retry. `null` means no timeout.
+   * @param before Runs at the start of each attempt, before the engine's upload and download.
    * @return A [Flow] of [CurrentSyncJobStatus] tracking the full sync lifecycle.
    */
   suspend inline fun <reified T : FhirSyncTask> oneTimeSync(
     noinline taskFactory: () -> T,
     retryConfiguration: RetryConfiguration? = defaultRetryConfiguration,
     syncTimeout: Duration? = null,
+    noinline before: suspend () -> Unit = {},
   ): Flow<CurrentSyncJobStatus> {
     val uniqueWorkName = "${T::class.simpleName}-oneTimeSync"
-    return runOneTimeSync(uniqueWorkName, taskFactory, retryConfiguration, syncTimeout)
+    return runOneTimeSync(uniqueWorkName, taskFactory, retryConfiguration, syncTimeout, before)
   }
 
   /** Cancels an active one-time sync for [T]. No-op if none is active. */
@@ -91,17 +93,20 @@ internal object Sync {
    *
    * @param repeatInterval Delay between the end of one cycle and the start of the next.
    * @param retryConfiguration Retry policy applied within each cycle, or null to disable retries.
+   * @param before Runs at the start of each attempt, before the engine's upload and download.
    */
   suspend inline fun <reified T : FhirSyncTask> periodicSync(
     noinline taskFactory: () -> T,
     repeatInterval: Duration = 15.minutes,
     retryConfiguration: RetryConfiguration? = defaultRetryConfiguration,
+    noinline before: suspend () -> Unit = {},
   ) {
     runPeriodicSync(
       "${T::class.simpleName}-periodicSync",
       taskFactory,
       repeatInterval,
       retryConfiguration,
+      before,
     )
   }
 
@@ -116,6 +121,7 @@ internal object Sync {
     taskFactory: () -> FhirSyncTask,
     retryConfiguration: RetryConfiguration?,
     syncTimeout: Duration? = null,
+    before: suspend () -> Unit = {},
   ): Flow<CurrentSyncJobStatus> {
     mutex
       .withLock { activeSyncs[uniqueWorkName] }
@@ -132,7 +138,13 @@ internal object Sync {
     val job =
       scope.launch {
         val lastResult =
-          runAttemptsWithRetry(taskFactory, uniqueWorkName, retryConfiguration, syncTimeout) {
+          runAttemptsWithRetry(
+            taskFactory,
+            uniqueWorkName,
+            retryConfiguration,
+            syncTimeout,
+            before,
+          ) {
             statusFlow.emit(it)
           }
         when (lastResult) {
@@ -158,6 +170,7 @@ internal object Sync {
     taskFactory: () -> FhirSyncTask,
     repeatInterval: Duration,
     retryConfiguration: RetryConfiguration?,
+    before: suspend () -> Unit = {},
   ) {
     mutex.withLock {
       if (activePeriodicJobs[uniqueWorkName]?.isActive == true) return
@@ -170,6 +183,7 @@ internal object Sync {
                 uniqueWorkName,
                 retryConfiguration,
                 syncTimeout = null,
+                before,
               ) {}
             } else {
               Logger.d { "Periodic sync cycle skipped for $uniqueWorkName — offline" }
@@ -198,6 +212,7 @@ internal object Sync {
     uniqueWorkName: String,
     retryConfiguration: RetryConfiguration?,
     syncTimeout: Duration?,
+    before: suspend () -> Unit,
     onStatus: suspend (CurrentSyncJobStatus) -> Unit,
   ): SyncJobStatus {
     val maxRetries = retryConfiguration?.maxRetries ?: 0
@@ -211,6 +226,7 @@ internal object Sync {
       onStatus(CurrentSyncJobStatus.Running(SyncJobStatus.Started()))
       lastResult =
         try {
+          before()
           runSyncWithTimeout(taskFactory(), uniqueWorkName, syncTimeout) { syncJobStatus ->
             onStatus(CurrentSyncJobStatus.Running(syncJobStatus))
           }

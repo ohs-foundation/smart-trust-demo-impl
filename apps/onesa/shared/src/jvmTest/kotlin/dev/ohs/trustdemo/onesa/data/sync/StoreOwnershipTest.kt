@@ -29,6 +29,8 @@ import dev.ohs.trustdemo.onesa.data.repository.FhirEngineRepository
 import dev.ohs.trustdemo.onesa.data.sharing.InMemoryLinks
 import dev.ohs.trustdemo.onesa.data.sharing.IssuedLink
 import dev.ohs.trustdemo.onesa.util.FhirJson
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
 import java.nio.file.Files
 import kotlin.io.path.createTempFile
 import kotlin.test.BeforeTest
@@ -38,11 +40,13 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
 
 class StoreOwnershipTest {
   private lateinit var engine: FhirEngine
   private lateinit var state: DataStore<Preferences>
   private val links = InMemoryLinks()
+  private lateinit var outbox: Outbox
   private lateinit var ownership: StoreOwnership
 
   @BeforeTest
@@ -59,7 +63,17 @@ class StoreOwnershipTest {
     val file = createTempFile(suffix = ".preferences_pb").toFile()
     file.deleteOnExit()
     state = createDataStore { file.absolutePath }
-    ownership = StoreOwnership(engine, state, links)
+    val box = createTempFile(suffix = ".preferences_pb").toFile()
+    box.deleteOnExit()
+    outbox =
+      Outbox(
+        createDataStore { box.absolutePath },
+        HttpClient(MockEngine { error("This test never sends") }),
+        "http://gateway/fhir",
+      ) {
+        null
+      }
+    ownership = StoreOwnership(engine, state, links, outbox)
   }
 
   private fun patient(id: String) =
@@ -105,6 +119,16 @@ class StoreOwnershipTest {
     assertIs<Admission.Blocked>(refused)
     assertEquals(1, patients())
     assertIs<Admission.Allowed>(ownership.admit("alice"))
+    assertEquals(1, patients())
+  }
+
+  @Test
+  fun anUnsentRegistrationBlocksAnotherUsersSignIn() = runTest {
+    assertIs<Admission.Allowed>(ownership.admit("alice"))
+    downloaded("p1")
+    outbox.add(OutboxEntry("k1", JsonObject(emptyMap()), created = "Patient/p1"))
+
+    assertIs<Admission.Blocked>(ownership.admit("bob"))
     assertEquals(1, patients())
   }
 }

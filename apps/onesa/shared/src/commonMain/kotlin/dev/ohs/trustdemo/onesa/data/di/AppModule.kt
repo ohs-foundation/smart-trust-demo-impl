@@ -50,8 +50,10 @@ import dev.ohs.trustdemo.onesa.data.sharing.SharedLinks
 import dev.ohs.trustdemo.onesa.data.sync.DataStoreInitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.InitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.LocalCopy
+import dev.ohs.trustdemo.onesa.data.sync.Outbox
 import dev.ohs.trustdemo.onesa.data.sync.StoreOwnership
 import dev.ohs.trustdemo.onesa.data.sync.SyncManager
+import dev.ohs.trustdemo.onesa.data.sync.createOutboxDataStore
 import dev.ohs.trustdemo.onesa.data.sync.createSyncTimestampDataStore
 import dev.ohs.trustdemo.onesa.data.verification.DoseMatchService
 import dev.ohs.trustdemo.onesa.data.verification.ForeignDoses
@@ -120,8 +122,7 @@ internal val serviceModule = module {
       repository = get(),
       scannedCards = get(),
       session = { registrationSession(get()) },
-      httpClient = OidcAuthApi.defaultHttpClient(),
-      baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
+      outbox = get(),
       refresh = get<LocalCopy>()::refreshAfterWrite,
     )
   }
@@ -203,7 +204,15 @@ internal val serviceModule = module {
 internal val syncModule = module {
   single { FhirEngineProvider.getFhirDataStore() }
   single<InitialSyncStore> { DataStoreInitialSyncStore(createSyncTimestampDataStore()) }
-  single { StoreOwnership(get(), createSyncTimestampDataStore(), get()) }
+  single { StoreOwnership(get(), createSyncTimestampDataStore(), get(), get()) }
+  single {
+    Outbox(
+      dataStore = createOutboxDataStore(),
+      httpClient = OidcAuthApi.defaultHttpClient(),
+      baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
+      accessToken = { get<AuthService>().sessionForRequest()?.accessToken },
+    )
+  }
 }
 
 /**
@@ -261,7 +270,7 @@ internal val viewModelModule = module {
   }
   viewModel { InitialSyncViewModel(get(), get()) }
   viewModel { SyncStepsViewModel(get()) { SessionRepository.session.value?.context } }
-  viewModel { SyncStatusViewModel(get()) { SessionRepository.session.value?.context } }
+  viewModel { SyncStatusViewModel(get(), get()) { SessionRepository.session.value?.context } }
   viewModel { TrustListViewModel(get()) }
   viewModel { ScanCardViewModel(get(), get()) }
   viewModel { ReferralInboxViewModel(get()) }
