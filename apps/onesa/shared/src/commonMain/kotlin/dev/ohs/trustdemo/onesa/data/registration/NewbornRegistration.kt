@@ -144,6 +144,13 @@ object NewbornRegistration {
       "vp-bcg-freeze-dried" to "BCG vaccine, freeze-dried",
     )
 
+  /** The CVX coding of each product, as the IG's Hep B hospital record and BCG dose give it. */
+  val CVX =
+    mapOf(
+      "vp-hepb-peds-monovalent" to ("08" to "Hep B, adolescent or pediatric"),
+      "vp-bcg-freeze-dried" to ("19" to "BCG"),
+    )
+
   /** The demo's fictional countries, as a card or a form names them by code. */
   private val COUNTRIES = mapOf("XXR" to "Taifafeki", "XXK" to "Onesa")
 

@@ -44,6 +44,19 @@ internal class NationalMap(private val repository: FhirRepository) {
       .map(::epiCodesOf)
       .fold(emptyMap()) { all, codes -> all + codes }
 
+  /** The display of each dose code in the synced national schedule code system. */
+  suspend fun scheduleDisplays(): Map<String, String> =
+    repository
+      .all("CodeSystem")
+      .map { it.toJson() }
+      .filter { it.text("url") == ScanTransactions.EPI_SYSTEM }
+      .flatMap { it["concept"]?.jsonArray.orEmpty() }
+      .mapNotNull { concept ->
+        val code = concept.jsonObject.text("code") ?: return@mapNotNull null
+        concept.jsonObject.text("display")?.let { code to it }
+      }
+      .toMap()
+
   private fun Resource.toJson(): JsonObject =
     json.encodeToJsonElement(Resource.serializer(), this).jsonObject
 }

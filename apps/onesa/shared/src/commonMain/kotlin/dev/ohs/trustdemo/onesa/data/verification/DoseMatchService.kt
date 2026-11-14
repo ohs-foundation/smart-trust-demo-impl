@@ -38,6 +38,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -112,15 +113,7 @@ class DoseMatchService(
 
   /** The picker's choices: the doses of the synced national schedule code system. */
   suspend fun choices(): List<EpiDose> =
-    repository
-      .all("CodeSystem")
-      .map { it.toJson() }
-      .filter { it.text("url") == ScanTransactions.EPI_SYSTEM }
-      .flatMap { it["concept"]?.jsonArray.orEmpty() }
-      .mapNotNull { concept ->
-        val code = concept.jsonObject.text("code") ?: return@mapNotNull null
-        EpiDose(code, concept.jsonObject.text("display") ?: code)
-      }
+    national.scheduleDisplays().map { (code, display) -> EpiDose(code, display) }
 
   /** Records that [dose] counts as [choice], unless the map or the dose has changed meanwhile. */
   suspend fun confirm(dose: UnmatchedDose, choice: EpiDose): MatchOutcome {
@@ -257,9 +250,9 @@ class DoseMatchService(
       put("display", choice.display)
     }
     val codings = JsonArray(listOf(schedule) + code["coding"]?.jsonArray.orEmpty())
-    return unversioned(
-      JsonObject(immunization + ("vaccineCode" to JsonObject(code + ("coding" to codings))))
-    )
+    val named =
+      JsonObject(code + mapOf("coding" to codings, "text" to JsonPrimitive(choice.display)))
+    return unversioned(JsonObject(immunization + ("vaccineCode" to named)))
   }
 
   private fun unversioned(resource: JsonObject): JsonObject {

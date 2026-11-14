@@ -38,6 +38,7 @@ import dev.ohs.trustdemo.onesa.util.profile
 import kotlin.time.Instant
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -107,6 +108,7 @@ val FailureReason.code: String
 object ScanTransactions {
   const val PRODUCT_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
   const val EPI_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule"
+  const val CVX_SYSTEM = "http://hl7.org/fhir/sid/cvx"
   const val REFUSAL_SYSTEM = "http://ohs.dev/fhir/trust-demo/CodeSystem/TrustDemoScanRefusal"
   const val EPI_MAP = "http://smart.who.int/trust-demo/ConceptMap/TrustDemoProductToOnesaEpi"
 
@@ -141,6 +143,7 @@ object ScanTransactions {
     card: VerifiedCard,
     reported: List<ReportedDose>,
     epiCodes: Map<String, String>,
+    scheduleDisplays: Map<String, String>,
   ): JsonObject {
     val dvc = card.dvc
     val immunizationId = immunizationId(request.hc1)
@@ -168,7 +171,11 @@ object ScanTransactions {
     val (verified, provenance) = DvcFhirMapper.markVerified(unverified, evidence)
 
     return transaction(
-      createEntry("Immunization", immunizationId, immunization(verified, dvc.vx.vp, epiCodes)),
+      createEntry(
+        "Immunization",
+        immunizationId,
+        immunization(verified, dvc.vx.vp, epiCodes, scheduleDisplays),
+      ),
       createEntry(
         "Provenance",
         provenanceId(request.hc1),
@@ -200,18 +207,26 @@ object ScanTransactions {
     verified: Immunization,
     product: String,
     epiCodes: Map<String, String>,
+    scheduleDisplays: Map<String, String>,
   ): JsonObject {
     val resource = json.encodeToJsonElement(Immunization.serializer(), verified).jsonObject
     val named = NewbornRegistration.PRODUCTS[product]
     val codings =
       listOfNotNull(
-        epiCodes[product]?.let { coding(EPI_SYSTEM, it, null) },
+        epiCodes[product]?.let { coding(EPI_SYSTEM, it, scheduleDisplays[it]) },
         named?.let { coding(PRODUCT_SYSTEM, product, it) },
+        NewbornRegistration.CVX[product]?.let { (code, display) ->
+          coding(CVX_SYSTEM, code, display)
+        },
       )
+    val text = epiCodes[product]?.let(scheduleDisplays::get) ?: named
     val vaccineCode =
       if (named == null) resource.getValue("vaccineCode")
       else
-        JsonObject(resource.getValue("vaccineCode").jsonObject + ("coding" to JsonArray(codings)))
+        JsonObject(
+          resource.getValue("vaccineCode").jsonObject +
+            mapOf("coding" to JsonArray(codings), "text" to JsonPrimitive(text))
+        )
     return JsonObject(
       resource +
         mapOf("meta" to profile("TrustDemoOnesaImmunization"), "vaccineCode" to vaccineCode)

@@ -400,6 +400,41 @@ class CardVerificationTest {
   }
 
   @Test
+  fun theVerifiedDosesCarryTheVaccineCodeOfTheIgExamples() = runTest {
+    val schedule = igResource("CodeSystem-TrustDemoOnesaEpiSchedule.json")
+    repository.upsert(decode(schedule))
+    importedDoses()
+    matching.confirm(matching.unmatched(patientId).single(), hepBChoice)
+
+    val written =
+      mapOf("Immunization-TrustDemoJ3Bcg.json" to bcg, "Immunization-TrustDemoJ3HepB.json" to hepB)
+    assertEquals(2, written.size)
+    written.forEach { (example, card) ->
+      val ig = igResource(example).getValue("vaccineCode").jsonObject
+      val app =
+        gateway.immunizations
+          .getValue(ScanTransactions.immunizationId(card))
+          .getValue("vaccineCode")
+      assertTrue(ig.getValue("coding").jsonArray.size >= 3, example)
+      assertEquals(displayedCodings(ig), displayedCodings(app.jsonObject), example)
+    }
+    val bcgText = gateway.immunizations.getValue(ScanTransactions.immunizationId(bcg))
+    assertEquals(
+      igResource("Immunization-TrustDemoJ3Bcg.json")
+        .getValue("vaccineCode")
+        .jsonObject
+        .text("text"),
+      bcgText.getValue("vaccineCode").jsonObject.text("text"),
+    )
+  }
+
+  private fun displayedCodings(code: JsonObject): List<Triple<String, String, String?>> =
+    code.getValue("coding").jsonArray.map {
+      val coding = it.jsonObject
+      Triple(coding.text("system"), coding.text("code"), coding["display"]?.jsonPrimitive?.content)
+    }
+
+  @Test
   fun theIssuerCodingIsKept() = runTest {
     importedDoses()
     val dose = matching.unmatched(patientId).single()
@@ -432,7 +467,7 @@ class CardVerificationTest {
       0,
       gateway.provenances.values.count { "ConceptMap/$MAP_ID" in it.references("target") },
     )
-    assertEquals(1, codings(gateway.immunizations.getValue(dose.id)).size)
+    assertEquals(2, codings(gateway.immunizations.getValue(dose.id)).size)
     assertEquals(1, refreshes)
   }
 
@@ -469,7 +504,11 @@ class CardVerificationTest {
 
     val imported = codings(gateway.immunizations.getValue(ScanTransactions.immunizationId(hepB)))
     assertEquals(
-      setOf(ScanTransactions.EPI_SYSTEM, ScanTransactions.PRODUCT_SYSTEM),
+      setOf(
+        ScanTransactions.EPI_SYSTEM,
+        ScanTransactions.PRODUCT_SYSTEM,
+        ScanTransactions.CVX_SYSTEM,
+      ),
       imported.map { it.first }.toSet(),
     )
   }

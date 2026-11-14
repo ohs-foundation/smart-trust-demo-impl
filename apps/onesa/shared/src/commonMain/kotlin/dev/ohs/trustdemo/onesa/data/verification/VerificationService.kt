@@ -171,7 +171,10 @@ class VerificationService(
     }
     val replaced = inbox.reportedDoses(pending.referral.patientId).filter { it.isDoseOf(dvc) }
     try {
-      post(current, ScanTransactions.imported(request, pending.card, replaced, epiCodes()))
+      post(
+        current,
+        ScanTransactions.imported(request, pending.card, replaced, epiCodes(), scheduleDisplays()),
+      )
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {
@@ -253,6 +256,9 @@ class VerificationService(
     this[name]?.jsonObject?.get("reference")?.jsonPrimitive?.contentOrNull
 
   private suspend fun epiCodes(): Map<String, String> = NationalMap(repository).epiCodes()
+
+  private suspend fun scheduleDisplays(): Map<String, String> =
+    NationalMap(repository).scheduleDisplays()
 
   private suspend fun post(current: RegistrationSession, transaction: JsonObject) {
     val reply =
