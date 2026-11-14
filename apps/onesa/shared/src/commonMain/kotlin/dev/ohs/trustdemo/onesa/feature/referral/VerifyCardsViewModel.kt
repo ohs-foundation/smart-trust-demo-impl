@@ -44,6 +44,7 @@ data class VerifyCardsUiState(
   val busy: Boolean = false,
   val couldNotSave: Boolean = false,
   val unmatched: List<UnmatchedDose> = emptyList(),
+  val choices: List<EpiDose> = emptyList(),
   val matchChanged: Boolean = false,
   val matchedTo: List<EpiDose> = emptyList(),
 )
@@ -100,7 +101,10 @@ class VerifyCardsViewModel(
   private suspend fun loadUnmatched() {
     val referral = _uiState.value.referral ?: return
     val doses = attempt { matching.unmatched(referral.patientId) } ?: return
-    _uiState.update { it.copy(unmatched = doses.filter { dose -> dose.id !in leftUnmapped }) }
+    val choices = attempt { matching.choices() } ?: return
+    _uiState.update {
+      it.copy(unmatched = doses.filter { dose -> dose.id !in leftUnmapped }, choices = choices)
+    }
   }
 
   /**

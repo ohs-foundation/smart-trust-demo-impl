@@ -52,7 +52,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.onesa.data.verification.EpiDose
-import dev.ohs.trustdemo.onesa.data.verification.EpiSchedule
 import dev.ohs.trustdemo.onesa.data.verification.ScanOutcome
 import dev.ohs.trustdemo.onesa.data.verification.UnmatchedDose
 import dev.ohs.trustdemo.onesa.data.verification.display
@@ -212,6 +211,7 @@ fun VerifyCardsScreen(referralId: String, onBack: () -> Unit) {
       state.unmatched.forEach { dose ->
         MatchPicker(
           dose = dose,
+          choices = state.choices,
           busy = state.busy,
           onMatch = { viewModel.match(dose, it) },
           onNone = { viewModel.leaveUnmapped(dose) },
@@ -296,6 +296,7 @@ private fun Outcome(outcome: ScanOutcome) {
 @Composable
 private fun MatchPicker(
   dose: UnmatchedDose,
+  choices: List<EpiDose>,
   busy: Boolean,
   onMatch: (EpiDose) -> Unit,
   onNone: () -> Unit,
@@ -306,7 +307,7 @@ private fun MatchPicker(
       Text(stringResource(Res.string.match_title), style = MaterialTheme.typography.labelLarge)
       Text(dose.label)
       Text(stringResource(Res.string.match_hint))
-      EpiSchedule.doses.forEach { choice ->
+      choices.forEach { choice ->
         Row(
           Modifier.fillMaxWidth()
             .selectable(

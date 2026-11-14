@@ -40,6 +40,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
+import java.io.File
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -307,7 +308,26 @@ class CardVerificationTest {
     repository.upsert(decode(gateway.immunizations.getValue(ScanTransactions.immunizationId(hepB))))
   }
 
-  private val hepBChoice = EpiSchedule.doses.single { it.code == "XXK-EPI-HEPB-BD" }
+  private val hepBChoice = EpiDose("XXK-EPI-HEPB-BD", "Hepatitis B birth dose")
+
+  @Test
+  fun thePickerOffersTheSyncedNationalSchedule() = runTest {
+    val schedule = igResource("CodeSystem-TrustDemoOnesaEpiSchedule.json")
+    repository.upsert(decode(schedule))
+    repository.upsert(decode(igResource("CodeSystem-TrustDemoVaccineProduct.json")))
+    val concepts =
+      schedule.getValue("concept").jsonArray.map {
+        EpiDose(it.jsonObject.text("code"), it.jsonObject.text("display"))
+      }
+
+    assertEquals(6, concepts.size)
+    assertEquals(concepts, matching.choices())
+  }
+
+  private fun igResource(name: String): JsonObject =
+    FhirJson.instance.parseToJsonElement(File("../../../ig/resources/$name").readText()).jsonObject
+
+  private fun JsonObject.text(name: String): String = getValue(name).jsonPrimitive.content
 
   @Test
   fun onlyAVerifiedDoseWithNoScheduleCodeNeedsTheMatchPicker() = runTest {

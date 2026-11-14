@@ -47,19 +47,6 @@ import kotlinx.serialization.json.putJsonObject
 /** A national schedule dose the nurse can say a product counts as. */
 data class EpiDose(val code: String, val display: String)
 
-/** The choices of the dose match picker: the IG's `TrustDemoOnesaEpiSchedule`. */
-object EpiSchedule {
-  val doses =
-    listOf(
-      EpiDose("XXK-EPI-HEPB-BD", "Hepatitis B birth dose"),
-      EpiDose("XXK-EPI-BCG", "BCG"),
-      EpiDose("XXK-EPI-PENTA-1", "Pentavalent (DTP-HepB-Hib), dose 1"),
-      EpiDose("XXK-EPI-OPV-1", "bOPV, dose 1"),
-      EpiDose("XXK-EPI-PCV-1", "PCV, dose 1"),
-      EpiDose("XXK-EPI-MR-1", "Measles-rubella, dose 1"),
-    )
-}
-
 /** A verified dose whose product the national map does not name: DT.02 asks the nurse. */
 data class UnmatchedDose(
   val id: String,
@@ -121,6 +108,18 @@ class DoseMatchService(
         UnmatchedDose(id, patientId, product, listOfNotNull(name, date).joinToString(", "))
       }
   }
+
+  /** The picker's choices: the doses of the synced national schedule code system. */
+  suspend fun choices(): List<EpiDose> =
+    repository
+      .all("CodeSystem")
+      .map { it.toJson() }
+      .filter { it.text("url") == ScanTransactions.EPI_SYSTEM }
+      .flatMap { it["concept"]?.jsonArray.orEmpty() }
+      .mapNotNull { concept ->
+        val code = concept.jsonObject.text("code") ?: return@mapNotNull null
+        EpiDose(code, concept.jsonObject.text("display") ?: code)
+      }
 
   /** Records that [dose] counts as [choice], unless the map or the dose has changed meanwhile. */
   suspend fun confirm(dose: UnmatchedDose, choice: EpiDose): MatchOutcome {

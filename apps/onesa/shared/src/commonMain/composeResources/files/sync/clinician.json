@@ -10,6 +10,7 @@
     { "type": "QuestionnaireResponse", "params": { "_count": "100" } },
     { "type": "Provenance", "params": { "_count": "100" } },
     { "type": "ConceptMap", "params": { "_count": "100" } },
+    { "type": "CodeSystem", "params": { "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule", "_count": "100" } },
     { "type": "AuditEvent", "params": { "_count": "100" } },
     { "type": "Organization", "params": { "_count": "100" } },
     { "type": "Location", "params": { "_count": "100" } },
