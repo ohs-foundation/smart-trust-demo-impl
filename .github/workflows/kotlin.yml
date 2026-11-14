@@ -68,12 +68,7 @@ jobs:
           gradle-version: '8.14.3'
 
       - name: Publish hcert-core to mavenLocal
-        run: |
-          src="$RUNNER_TEMP/smart-trust-tools"
-          git init --quiet "$src"
-          git -C "$src" fetch --quiet --depth 1 https://github.com/litlfred/smart-trust-tools.git d94e21d23d798ab309d57d7c4bb2ee570a80e8fc
-          git -C "$src" checkout --quiet FETCH_HEAD
-          gradle -p "$src/tools/hcert-kotlin" publishToMavenLocal --stacktrace
+        run: gradle -p "$(./stack/smart-trust-tools.sh)/tools/hcert-kotlin" publishToMavenLocal --stacktrace
 
       - name: Check
         run: ./gradlew check -Pkotlin.daemon.jvmargs="-Xmx6g -XX:+UseG1GC" --stacktrace

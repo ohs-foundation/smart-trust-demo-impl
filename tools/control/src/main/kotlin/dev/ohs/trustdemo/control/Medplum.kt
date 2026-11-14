@@ -74,8 +74,7 @@ private val READ_ONLY =
     "CodeSystem",
     "ValueSet",
   )
-private val READ_WRITE =
-  listOf("Patient", "Immunization", "Provenance", "DocumentReference", "Binary")
+private val READ_WRITE = listOf("Patient", "Immunization", "Provenance", "DocumentReference")
 private val IN_COMPARTMENT =
   listOf(
     "Patient",

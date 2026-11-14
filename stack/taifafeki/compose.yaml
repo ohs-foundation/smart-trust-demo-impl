@@ -84,12 +84,13 @@ services:
     environment:
       PORT: 3000
       MEDPLUM_BASE_URL: http://medplum.kesaro.${STACK_HOST}:${PROXY_PORT}
+      MEDPLUM_INTERNAL_URL: http://medplum:8103
       CLIENT_ORIGIN: http://client.kesaro.${STACK_HOST}:${PROXY_PORT}
-      MEDPLUM_CLIENT_ID_FILE: /run/secrets/taifafeki/medplum-client-id
+      MEDPLUM_CLIENT_ID_FILE: /run/secrets/medplum-client-id
       NODE_EXTRA_CA_CERTS: /run/secrets/tls/ca.crt
       ONESA_VHL_HOSTS: vhl.onesa.${STACK_HOST}:${VHL_TLS_PORT}
     volumes:
-      - ./secrets:/run/secrets/taifafeki:ro
+      - ./secrets/medplum-client-id:/run/secrets/medplum-client-id:ro
       - ../tls/ca.crt:/run/secrets/tls/ca.crt:ro
     mem_limit: 256m
     healthcheck:

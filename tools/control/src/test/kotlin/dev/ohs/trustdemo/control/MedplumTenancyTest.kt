@@ -18,6 +18,7 @@ package dev.ohs.trustdemo.control
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -60,7 +61,7 @@ class MedplumTenancyTest {
       val rule = rules.single { it.getValue("resourceType").jsonPrimitive.content == type }
       assertEquals("$type?_compartment=%organization", rule["criteria"]?.jsonPrimitive?.content)
     }
-    assertNull(rules.single { it["resourceType"]?.jsonPrimitive?.content == "Binary" }["criteria"])
+    assertTrue(rules.none { it["resourceType"]?.jsonPrimitive?.content == "Binary" })
   }
 
   @Test

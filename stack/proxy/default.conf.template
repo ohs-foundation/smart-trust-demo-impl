@@ -36,6 +36,9 @@ server {
 server {
   listen 80;
   server_name client.kesaro.${STACK_HOST};
+  add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://medplum.kesaro.${STACK_HOST}:${PROXY_PORT}; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'" always;
+  add_header Referrer-Policy "no-referrer" always;
+  add_header X-Content-Type-Options "nosniff" always;
   location / { set $u http://client:3000; proxy_pass $u; }
 }
 

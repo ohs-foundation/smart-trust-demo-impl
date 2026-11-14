@@ -15,6 +15,8 @@ hcert-js:
 stack-up: hcert-js
 	./stack/init-env.sh
 	./stack/init-tls.sh
+	mkdir -p stack/taifafeki/secrets
+	touch stack/taifafeki/secrets/medplum-client-id
 	./gradlew :services:vhl:installDist
 	docker compose -f stack/compose.yaml up -d --build --wait
 	docker compose -f stack/compose.yaml restart proxy
