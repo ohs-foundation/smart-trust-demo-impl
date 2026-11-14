@@ -1,4 +1,4 @@
-.PHONY: build test ig-check hcert-js stack-up stack-down stack-reset stack-check
+.PHONY: build test ig-check hcert-js stack-up stack-down stack-reset stack-check qa
 
 build:
 	./gradlew assemble
@@ -32,3 +32,6 @@ stack-reset:
 
 stack-check:
 	./stack/check.sh
+
+qa:
+	./tools/qa/qa.sh
