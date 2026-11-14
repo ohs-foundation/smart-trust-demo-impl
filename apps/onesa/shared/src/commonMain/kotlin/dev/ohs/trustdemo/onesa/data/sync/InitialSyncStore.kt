@@ -32,7 +32,10 @@ interface InitialSyncStore {
 
   suspend fun markComplete()
 
-  /** Forgets the first sync and every download cursor, so the next sync downloads everything. */
+  /**
+   * Forgets the first sync and every download cursor, so the next sync downloads everything. The
+   * store's owner is kept.
+   */
   suspend fun reset()
 }
 
@@ -46,7 +49,11 @@ internal class DataStoreInitialSyncStore(private val dataStore: DataStore<Prefer
   }
 
   override suspend fun reset() {
-    dataStore.edit { it.clear() }
+    dataStore.edit {
+      val owner = it[STORE_OWNER_KEY]
+      it.clear()
+      owner?.let { subject -> it[STORE_OWNER_KEY] = subject }
+    }
   }
 
   private companion object {

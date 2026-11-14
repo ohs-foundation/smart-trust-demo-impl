@@ -39,6 +39,8 @@ class SharedLinksTest {
   private val requests = mutableListOf<Triple<HttpMethod, String, String>>()
   private var refreshes = 0
 
+  private var family: String? = "bounmy"
+
   private fun linksOver(status: HttpStatusCode): SharedLinks =
     SharedLinks(
       repository = repository,
@@ -58,6 +60,7 @@ class SharedLinksTest {
       baseUrl = "https://vhl.test:8443",
       links = links,
       names = { if (it == "somsak") "Somsak" else null },
+      family = { family },
       refresh = { refreshes++ },
       today = { today },
     )
@@ -127,18 +130,33 @@ class SharedLinksTest {
     assertEquals(1, refreshes)
   }
 
+  @Test
+  fun sharedLinksShowOnlyTheSignedInFamilysShares() = runTest {
+    twoSharesForSomsak()
+    repository.upsert(decode(consent("c3", performer = "Patient/khamla")))
+    val shared = linksOver(HttpStatusCode.OK)
+
+    assertEquals(listOf("c1", "c2"), shared.list().map { it.consentId }.sorted())
+
+    family = "khamla"
+    assertEquals(listOf("c3"), shared.list().map { it.consentId })
+
+    family = null
+    assertEquals(emptyList(), shared.list().map { it.consentId })
+  }
+
   private fun withdrawBody(consentId: String) =
     """{"resourceType":"Parameters","parameter":[{"name":"consent","valueReference":{"reference":"Consent/$consentId"}}]}"""
 
   private fun decode(json: String): Resource =
     FhirJson.instance.decodeFromString(Resource.serializer(), json)
 
-  private fun consent(id: String) =
+  private fun consent(id: String, performer: String = "Patient/bounmy") =
     """{"resourceType":"Consent","id":"$id","status":"active",
       "scope":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/consentscope","code":"patient-privacy"}]},
       "category":[{"coding":[{"system":"http://loinc.org","code":"59284-0"}]}],
       "patient":{"reference":"Patient/somsak"},
-      "performer":[{"reference":"Patient/bounmy"}],
+      "performer":[{"reference":"$performer"}],
       "policyRule":{"coding":[{"system":"http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlConsent","code":"CONSENT-VHL-TREATMENT"}]},
       "provision":{"type":"permit","period":{"start":"2026-11-14","end":"2026-11-28"}}}"""
 

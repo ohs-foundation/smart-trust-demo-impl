@@ -15,6 +15,7 @@
  */
 package dev.ohs.trustdemo.onesa.auth
 
+import dev.ohs.trustdemo.onesa.data.sync.Admission
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -32,6 +33,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,11 +108,11 @@ class AuthServiceTest {
     )
 
   private fun apiWith(
-    onToken: MockRequestHandleScope.() -> HttpResponseData = {
+    onToken: suspend MockRequestHandleScope.() -> HttpResponseData = {
       respond(tokenBody, HttpStatusCode.OK, jsonHeaders)
     },
     onUserInfo: MockRequestHandleScope.() -> HttpResponseData = {
-      respond("{}", HttpStatusCode.OK, jsonHeaders)
+      respond("""{"sub":"alice"}""", HttpStatusCode.OK, jsonHeaders)
     },
   ): OidcAuthApi {
     val engine = MockEngine { request ->
@@ -137,8 +139,12 @@ class AuthServiceTest {
     return OidcAuthApi(OAuthConfig("https://idp.example.org", "client", "openid"), client)
   }
 
+  private var admission: Admission = Admission.Allowed
+
   private fun service(store: SessionStore, api: OidcAuthApi) =
-    AuthService(OAuthConfig("https://idp.example.org", "client", "openid"), store, api)
+    AuthService(OAuthConfig("https://idp.example.org", "client", "openid"), store, api) {
+      admission
+    }
 
   @Test
   fun refreshSuccess_updatesSession() = runTest {
@@ -170,6 +176,49 @@ class AuthServiceTest {
 
     assertEquals(listOf("new-access", "new-access", "new-access"), tokens)
     assertEquals(1, refreshes)
+  }
+
+  @Test
+  fun separateServicesShareOneRefresh() = runTest {
+    val store = FakeSessionStore(session(expired = true))
+    var refreshes = 0
+    val api =
+      apiWith(
+        onToken = {
+          refreshes++
+          respond(tokenBody, HttpStatusCode.OK, jsonHeaders)
+        }
+      )
+
+    List(2) { async { service(store, api).ensureFreshSession() } }.awaitAll()
+
+    assertEquals(1, refreshes)
+  }
+
+  @Test
+  fun aRefreshEndingAfterSignOutIsDropped() = runTest {
+    val store = FakeSessionStore(session(expired = true))
+    val requested = CompletableDeferred<Unit>()
+    val release = CompletableDeferred<Unit>()
+    val service =
+      service(
+        store,
+        apiWith(
+          onToken = {
+            requested.complete(Unit)
+            release.await()
+            respond(tokenBody, HttpStatusCode.OK, jsonHeaders)
+          }
+        ),
+      )
+
+    val refresh = async { service.sessionForRequest() }
+    requested.await()
+    store.clear()
+    release.complete(Unit)
+    refresh.await()
+
+    assertNull(store.session.value, "a refresh that ends after sign-out must not save the session")
   }
 
   @Test
@@ -254,6 +303,21 @@ class AuthServiceTest {
     assertEquals("app://callback", params["redirect_uri"])
     assertNotNull(params["state"])
     assertNotNull(params["code_challenge"])
+  }
+
+  @Test
+  fun login_isRefusedWhenThePhoneHoldsAnotherUsersWork() = runTest {
+    val store = FakeSessionStore(null)
+    admission = Admission.Blocked("another user's unsynced work")
+    val launcher =
+      FakeLauncher("app://callback") {
+        AuthResult.Success("app://callback?code=abc123&state=" + Url(it).parameters["state"])
+      }
+
+    val outcome = service(store, apiWith()).login(launcher)
+
+    assertEquals(LoginOutcome.Error("another user's unsynced work"), outcome)
+    assertNull(store.session.value)
   }
 
   @Test

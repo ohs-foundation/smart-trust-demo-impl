@@ -80,6 +80,7 @@ class UserContextViewModelTest {
       )::fetch,
       FakeSessionStore(session),
       resetSync = {},
+      freshSession = { session },
     )
 
   @Test

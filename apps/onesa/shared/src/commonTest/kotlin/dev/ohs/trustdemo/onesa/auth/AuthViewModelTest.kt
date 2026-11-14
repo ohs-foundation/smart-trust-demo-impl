@@ -15,6 +15,7 @@
  */
 package dev.ohs.trustdemo.onesa.auth
 
+import dev.ohs.trustdemo.onesa.data.sync.Admission
 import dev.ohs.trustdemo.onesa.data.sync.FakeSyncManager
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -130,6 +131,7 @@ class AuthViewModelTest {
         OAuthConfig("https://idp.example.org", "c", "openid"),
         FakeSessionStore(null),
         apiThatNeverGetsCalled(),
+        { Admission.Allowed },
       )
     val viewModel = AuthViewModel(service, FakeSyncManager())
     viewModel.bootstrapForTest()
@@ -144,6 +146,7 @@ class AuthViewModelTest {
         OAuthConfig("https://idp.example.org", "c", "openid"),
         FakeSessionStore(session()),
         apiThatNeverGetsCalled(),
+        { Admission.Allowed },
       )
     val viewModel = AuthViewModel(service, FakeSyncManager())
     viewModel.bootstrapForTest()
@@ -158,6 +161,7 @@ class AuthViewModelTest {
         OAuthConfig("https://idp.example.org", "c", "openid"),
         FakeSessionStore(null),
         apiWithWorkingDiscovery(),
+        { Admission.Allowed },
       )
     val viewModel = AuthViewModel(service, FakeSyncManager())
     val launcher = FakeLauncher("app://callback") { AuthResult.Failure("network down") }
@@ -175,6 +179,7 @@ class AuthViewModelTest {
         OAuthConfig("https://idp.example.org", "c", "openid"),
         FakeSessionStore(null),
         apiWithWorkingDiscovery(),
+        { Admission.Allowed },
       )
     val viewModel = AuthViewModel(service, FakeSyncManager())
     val launcher = FakeLauncher("app://callback") { AuthResult.Failure("network down") }
@@ -193,6 +198,7 @@ class AuthViewModelTest {
         OAuthConfig("https://idp.example.org", "c", "openid"),
         store,
         apiThatNeverGetsCalled(),
+        { Admission.Allowed },
       )
     val syncManager = FakeSyncManager()
     val viewModel = AuthViewModel(service, syncManager)

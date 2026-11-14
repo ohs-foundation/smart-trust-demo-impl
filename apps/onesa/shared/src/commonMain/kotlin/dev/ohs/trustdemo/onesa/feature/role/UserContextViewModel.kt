@@ -49,6 +49,7 @@ internal class UserContextViewModel(
   private val fetchStaffContext: suspend (accessToken: String) -> UserContext?,
   private val store: SessionStore,
   private val resetSync: suspend () -> Unit,
+  private val freshSession: suspend () -> Session?,
 ) : ViewModel() {
   private val _state = MutableStateFlow<UserContextState>(UserContextState.Loading)
   val state: StateFlow<UserContextState> = _state.asStateFlow()
@@ -78,10 +79,14 @@ internal class UserContextViewModel(
 
   private suspend fun contextOf(session: Session): UserContext? {
     val fhirUser = session.user.fhirUser
-    if (fhirUser.isNullOrBlank()) return fetchStaffContext(session.accessToken)
+    if (fhirUser.isNullOrBlank()) return staffContext()
     val (type, id) = FHIR_USER.matchEntire(fhirUser)?.destructured ?: return null
-    return if (type == "Patient") UserContext(AppRole.FAMILY, patientId = id)
-    else fetchStaffContext(session.accessToken)
+    return if (type == "Patient") UserContext(AppRole.FAMILY, patientId = id) else staffContext()
+  }
+
+  private suspend fun staffContext(): UserContext? {
+    val current = freshSession() ?: error("Sign in again to load your role.")
+    return fetchStaffContext(current.accessToken)
   }
 
   private companion object {

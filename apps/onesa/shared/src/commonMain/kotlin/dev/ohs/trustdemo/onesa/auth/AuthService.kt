@@ -15,6 +15,7 @@
  */
 package dev.ohs.trustdemo.onesa.auth
 
+import dev.ohs.trustdemo.onesa.data.sync.Admission
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import kotlin.coroutines.cancellation.CancellationException
@@ -24,20 +25,25 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
+ * One lock for every token refresh and sign-out in the process, whichever [AuthService] runs it.
+ */
+private val refreshLock = Mutex()
+
+/**
  * Drives the Authorization-Code-with-PKCE flow against the configured OIDC provider and keeps the
  * [SessionStore] up to date. UI-agnostic; [AuthViewModel] adapts it to Compose state.
  *
  * Unlike opensrp's version, this constructor has NO default parameter values — Koin always supplies
- * [config], [repository], and [api] (see `authModule` in `AppModule.kt`), so self-constructing
- * defaults would be dead code here.
+ * [config], [repository], [api] and [admit] (see `authModule` in `AppModule.kt`), so
+ * self-constructing defaults would be dead code here. [admit] decides, once the provider has said
+ * who signed in, whether that user may use the records on this phone.
  */
 internal class AuthService(
   private val config: OAuthConfig,
   private val repository: SessionStore,
   private val api: OidcAuthApi,
+  private val admit: suspend (subject: String) -> Admission,
 ) {
-  private val requestRefresh = Mutex()
-
   /** Starts an interactive login. */
   suspend fun login(launcher: AuthorizationLauncherApi): LoginOutcome {
     val pkce = Pkce.generate()
@@ -72,7 +78,13 @@ internal class AuthService(
 
     return runCatching {
         val tokens = api.exchangeCode(code, pending.codeVerifier, redirectUri)
-        val session = tokens.toSession(api.fetchUserInfo(tokens.accessToken))
+        val user = api.fetchUserInfo(tokens.accessToken)
+        if (user.subject.isBlank()) return LoginOutcome.Error("The sign-in did not say who you are")
+        when (val admission = admit(user.subject)) {
+          is Admission.Blocked -> return LoginOutcome.Error(admission.message)
+          Admission.Allowed -> Unit
+        }
+        val session = tokens.toSession(user)
         repository.save(session)
         LoginOutcome.Authenticated(session)
       }
@@ -87,19 +99,19 @@ internal class AuthService(
    * while the access token is still locally valid is caught separately (and non-blockingly) by
    * [revalidateSession].
    */
-  suspend fun ensureFreshSession(): Session? {
-    val session = repository.load() ?: return null
-    if (!session.isAccessTokenExpired(now())) return session
+  suspend fun ensureFreshSession(): Session? =
+    refreshLock.withLock {
+      val session = repository.load() ?: return@withLock null
+      if (!session.isAccessTokenExpired(now())) return@withLock session
 
-    val refreshed = tryRefresh(session)
-    return refreshed ?: repository.session.value
-  }
+      tryRefresh(session) ?: repository.session.value
+    }
 
   /**
    * The session for a call straight to a server, as [ensureFreshSession] gives it; concurrent
    * callers share one refresh.
    */
-  suspend fun sessionForRequest(): Session? = requestRefresh.withLock { ensureFreshSession() }
+  suspend fun sessionForRequest(): Session? = ensureFreshSession()
 
   /**
    * Confirms a locally-valid session is still alive server-side via the userinfo probe. Clears it
@@ -110,7 +122,7 @@ internal class AuthService(
     val session = repository.session.value ?: repository.load() ?: return false
     return when (api.sessionStatus(session.accessToken)) {
       SessionStatus.Revoked -> {
-        repository.clear()
+        clearIfCurrent(session)
         false
       }
       SessionStatus.Active,
@@ -119,34 +131,48 @@ internal class AuthService(
   }
 
   /** Refresh hook for [FhirBearerAuthenticator]'s eventual retry path, and internal use. */
-  internal suspend fun refreshTokensForRequest(): Session? {
-    val session = repository.session.value ?: repository.load() ?: return null
-    return tryRefresh(session)
-  }
+  internal suspend fun refreshTokensForRequest(): Session? =
+    refreshLock.withLock {
+      val session = repository.session.value ?: repository.load() ?: return@withLock null
+      tryRefresh(session)
+    }
 
+  /**
+   * Refreshes [session]'s tokens. What comes back is saved, or the session cleared, only while the
+   * stored session is still [session]'s sign-in: a sign-out or another user's login that happened
+   * meanwhile is never undone.
+   */
   private suspend fun tryRefresh(session: Session): Session? {
     val refreshToken =
       session.refreshToken
         ?: run {
-          repository.clear()
+          clearIfCurrent(session)
           return null
         }
     return try {
       val tokens = api.refresh(refreshToken)
-      tokens.toSession(session.user).copy(context = session.context).also { repository.save(it) }
+      val stored = repository.session.value
+      if (stored == null || stored.refreshToken != refreshToken) stored
+      else tokens.toSession(stored.user).copy(context = stored.context).also { repository.save(it) }
     } catch (cancellation: CancellationException) {
       throw cancellation
     } catch (rejected: AuthException) {
-      repository.clear()
+      clearIfCurrent(session)
       null
     } catch (offline: Throwable) {
       null
     }
   }
 
+  private suspend fun clearIfCurrent(session: Session) {
+    if (repository.session.value?.refreshToken == session.refreshToken) repository.clear()
+  }
+
   suspend fun logout() {
-    repository.session.value?.refreshToken?.let { api.logout(it) }
-    repository.clear()
+    refreshLock.withLock {
+      repository.session.value?.refreshToken?.let { api.logout(it) }
+      repository.clear()
+    }
   }
 
   private suspend fun buildAuthorizationUrl(

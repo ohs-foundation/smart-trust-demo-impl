@@ -48,6 +48,7 @@ import dev.ohs.trustdemo.onesa.data.sharing.ShareService
 import dev.ohs.trustdemo.onesa.data.sharing.SharedLinks
 import dev.ohs.trustdemo.onesa.data.sync.DataStoreInitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.InitialSyncStore
+import dev.ohs.trustdemo.onesa.data.sync.StoreOwnership
 import dev.ohs.trustdemo.onesa.data.sync.SyncManager
 import dev.ohs.trustdemo.onesa.data.sync.createSyncTimestampDataStore
 import dev.ohs.trustdemo.onesa.data.verification.DoseMatchService
@@ -173,6 +174,7 @@ internal val serviceModule = module {
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.VHL_BASE_URL,
       links = get(),
+      family = { SessionRepository.session.value?.context?.patientId },
       names = get<ShareService>()::nameOf,
       refresh = { get<SyncManager>().syncNow() },
     )
@@ -187,6 +189,7 @@ internal val serviceModule = module {
 internal val syncModule = module {
   single { FhirEngineProvider.getFhirDataStore() }
   single<InitialSyncStore> { DataStoreInitialSyncStore(createSyncTimestampDataStore()) }
+  single { StoreOwnership(get(), createSyncTimestampDataStore(), get()) }
 }
 
 /**
@@ -197,7 +200,7 @@ internal val authModule = module {
   single { OAuthConfig.Default }
   single<SessionStore> { SessionRepository }
   single { OidcAuthApi(get()) }
-  single { AuthService(get(), get(), get()) }
+  single { AuthService(get(), get(), get(), get<StoreOwnership>()::admit) }
   single { PractitionerDetailsApi() }
 }
 
@@ -239,6 +242,7 @@ internal val viewModelModule = module {
       get<PractitionerDetailsApi>()::fetch,
       get(),
       resetSync = get<InitialSyncStore>()::reset,
+      freshSession = get<AuthService>()::sessionForRequest,
     )
   }
   viewModel { InitialSyncViewModel(get(), get()) }

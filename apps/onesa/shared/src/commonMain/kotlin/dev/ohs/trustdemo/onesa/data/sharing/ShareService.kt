@@ -89,21 +89,49 @@ class ShareService(
   fun observeHousehold(selfId: String?): Flow<List<Person>> =
     repository.revision.map { household(selfId) }
 
-  /** The people the synced Groups hold, [selfId] first. */
-  suspend fun household(selfId: String?): List<Person> =
-    repository
+  /**
+   * The people of [selfId]'s households, [selfId] first: the synced Groups managed by a related
+   * person of theirs, or that they belong to. A phone another family used may hold other Groups.
+   */
+  suspend fun household(selfId: String?): List<Person> {
+    if (selfId == null) return emptyList()
+    val related = relatedPersonsOf(selfId)
+    return repository
       .all("Group")
-      .flatMap { group ->
-        val members = group.toJson()["member"]?.jsonArray.orEmpty().map { it.jsonObject }
-        members
-          .filterNot { it["inactive"]?.jsonPrimitive?.contentOrNull == "true" }
-          .mapNotNull { it["entity"]?.jsonObject?.get("reference")?.jsonPrimitive?.contentOrNull }
+      .map { it.toJson() }
+      .filter { group ->
+        group.reference("managingEntity") in related || selfId in group.memberIds()
       }
-      .filter { it.startsWith("Patient/") }
-      .map { it.removePrefix("Patient/") }
+      .flatMap { it.memberIds() }
       .distinct()
       .map { Person(it, nameOf(it)) }
       .sortedByDescending { it.id == selfId }
+  }
+
+  private suspend fun relatedPersonsOf(selfId: String): Set<String> =
+    repository
+      .get("Patient", selfId)
+      ?.toJson()
+      ?.get("link")
+      ?.jsonArray
+      .orEmpty()
+      .mapNotNull { it.jsonObject["other"]?.jsonObject?.reference() }
+      .filter { it.startsWith("RelatedPerson/") }
+      .toSet()
+
+  private fun JsonObject.memberIds(): List<String> =
+    this["member"]
+      ?.jsonArray
+      .orEmpty()
+      .map { it.jsonObject }
+      .filterNot { it["inactive"]?.jsonPrimitive?.contentOrNull == "true" }
+      .mapNotNull { it["entity"]?.jsonObject?.reference() }
+      .filter { it.startsWith("Patient/") }
+      .map { it.removePrefix("Patient/") }
+
+  private fun JsonObject.reference(name: String): String? = this[name]?.jsonObject?.reference()
+
+  private fun JsonObject.reference(): String? = this["reference"]?.jsonPrimitive?.contentOrNull
 
   suspend fun purgeExpired() = links.purgeExpired(now())
 

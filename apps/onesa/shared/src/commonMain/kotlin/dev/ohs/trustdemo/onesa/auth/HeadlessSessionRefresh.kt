@@ -22,9 +22,10 @@ package dev.ohs.trustdemo.onesa.auth
  *
  * Builds its own [AuthService] over the baked [OAuthConfig.Default] and the singleton
  * [SessionRepository] rather than resolving one from Koin: background launches don't call
- * `initKoin`, so nothing is registered there. Offline-safe — a transient/offline failure keeps the
- * stored session (see [AuthService.ensureFreshSession]); it only returns null when there is no
- * usable session at all, in which case the sync will simply 401 and be retried later.
+ * `initKoin`, so nothing is registered there. It shares the process's one refresh lock with the
+ * foreground service. Offline-safe — a transient/offline failure keeps the stored session (see
+ * [AuthService.ensureFreshSession]); it only returns null when there is no usable session at all,
+ * in which case the sync will simply 401 and be retried later.
  */
 internal suspend fun ensureFreshSessionForSync() {
   headlessAuthService.ensureFreshSession()
@@ -35,5 +36,7 @@ internal suspend fun ensureFreshSessionForSync() {
  * [OidcAuthApi]'s underlying HTTP client.
  */
 private val headlessAuthService: AuthService by lazy {
-  AuthService(OAuthConfig.Default, SessionRepository, OidcAuthApi(OAuthConfig.Default))
+  AuthService(OAuthConfig.Default, SessionRepository, OidcAuthApi(OAuthConfig.Default)) {
+    error("A background refresh never signs a user in")
+  }
 }

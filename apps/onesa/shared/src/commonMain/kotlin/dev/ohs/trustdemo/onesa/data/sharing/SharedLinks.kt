@@ -105,8 +105,9 @@ sealed interface WithdrawOutcome {
 
 /**
  * The household's shares as the synced Consents and access AuditEvents describe them, and the
- * withdrawal of a share. An access is tied to its share by the Consent its audit names. [refresh]
- * pulls the server's state after a withdrawal.
+ * withdrawal of a share. An access is tied to its share by the Consent its audit names. Only the
+ * shares the signed-in [family] member made are listed: a phone another family used may still hold
+ * theirs. [refresh] pulls the server's state after a withdrawal.
  */
 class SharedLinks(
   private val repository: FhirRepository,
@@ -114,6 +115,7 @@ class SharedLinks(
   private val httpClient: HttpClient,
   private val baseUrl: String,
   private val links: LinkStore,
+  private val family: () -> String?,
   private val names: suspend (String) -> String?,
   private val refresh: suspend () -> Unit,
   private val today: () -> LocalDate = { Clock.System.todayIn(TimeZone.UTC) },
@@ -124,11 +126,17 @@ class SharedLinks(
   fun observe(): Flow<List<SharedLink>> = repository.revision.map { list() }
 
   suspend fun list(): List<SharedLink> {
+    val self = family() ?: return emptyList()
     val consents =
       repository
         .all("Consent")
         .map { it.toJson() }
         .filter { CONSENT_POLICY in it["policyRule"].codes() }
+        .filter { consent ->
+          consent["performer"]?.jsonArray.orEmpty().any {
+            it.jsonObject["reference"]?.text() == "Patient/$self"
+          }
+        }
     val kept = links.get(consents.mapNotNull { it["id"]?.text() }).map { it.consentId }.toSet()
     val looks =
       repository
