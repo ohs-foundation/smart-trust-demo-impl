@@ -63,9 +63,9 @@ Production: 228 packages. MIT 194, ISC 14, Apache-2.0 7, BSD-3-Clause 3, MPL-2.0
 | Plus Jakarta Sans, JetBrains Mono (7 TTFs) | `apps/onesa/shared/.../composeResources/font/` | OFL-1.1, copyright in each file | yes, texts in `files/licenses/` (bundled with the app) |
 | the same four fonts | Keycloak theme `resources/fonts/` | OFL-1.1 | yes, `*_ofl.txt` beside them |
 | the same fonts, self-hosted by the client | `@fontsource-variable/*` 5.3.0 | OFL-1.1 | yes, each package's `LICENSE` stays in `node_modules`, which the image keeps |
-| Theme favicon (shield path) | Keycloak theme `resources/img/favicon.svg` | Lucide ISC, Feather MIT | yes, `LICENSE-lucide.txt` beside it |
+| Theme line icons (info, alert and shield paths) | Keycloak theme `template.ftl` | Lucide ISC, Feather MIT | yes, `LICENSE-lucide.txt` in `resources/img/` |
 | Keycloak theme | `stack/onesa/keycloak/themes/onesa/` | the demo's own, on Keycloak's `base` theme (Apache-2.0); `login.ftl` follows Keycloak's structure | yes, Apache-2.0 both ways |
-| App logo and launcher icons | `apps/onesa/` | seeded from `ohs-foundation/player-reference` (Apache-2.0) | yes |
+| Brand assets: mark, lockup, app icons, favicons | `docs/brand/` and what its `render.py` writes into `apps/onesa/`, `apps/taifafeki-client/public/` and the Keycloak theme | the project's own, Apache-2.0; the lockup's text is Plus Jakarta Sans (OFL-1.1) outlined | yes |
 | `infra/` | derived from `ohs-player-reference-infrastructure@5c87af6` | Apache-2.0, no `NOTICE` upstream, no copyright line in its `LICENSE` | yes, the README names the source and the files are changed in place |
 
 ## IG and WHO material

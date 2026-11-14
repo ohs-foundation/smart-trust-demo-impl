@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <title>SMART Trust Demonstrator</title>
+  <path id="upper" fill="#b45309" d="M3.24 16.71L20.65 34.11L38.83 7.75A22 22 0 0 0 3.24 16.71Z"/>
+  <path id="lower" fill="#0f766e" d="M2.05 22.58L21.35 41.89L42.21 11.65A22 22 0 1 1 2.05 22.58Z"/>
+</svg>
