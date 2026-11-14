@@ -12,3 +12,5 @@ TEST ONLY. Fictional stand-in keys and certificates for the trust demo, never pr
 Regenerate with `./gradlew :libs:trustkit:generateTestKit`. Existing keys and certificates are kept, so the list is re-signed from the same keys; delete a key and certificate pair to rotate it. The proof's `created` and `nonce` are fixed, but ECDSA signatures are randomised, so a re-signed list differs in its `jws`.
 
 Golden vectors in `libs/trustkit/src/test/resources/golden/` are copied from WorldHealthOrganization/smart-trust-tools at `d94e21d` (`vectors/gdhcn-dev-trustlist/`): `XXR-DSC-did-2026-10-23.json`, `XXR-DSC-did.doc.nq`, `XXR-DSC-did.proof-options.nq`, `WHO-signing-did.json`.
+
+`who/` holds the GDHCN DEV root list (`root-did.json`) and its signer document, copied from WorldHealthOrganization/smart-trust-tools at `d94e21d` (see `who/SOURCE.yaml`).

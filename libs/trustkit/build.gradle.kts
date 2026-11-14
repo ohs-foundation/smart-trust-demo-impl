@@ -25,9 +25,10 @@ sourceSets.test { resources.srcDir(rootProject.file("ig/resources")) }
 dependencies {
   implementation(libs.bouncycastle.bcpkix)
   implementation(libs.bouncycastle.bcprov)
+  implementation(libs.hcert.core)
   implementation(libs.kotlinx.serialization.json)
+  api(libs.ohs.fhir.model.r4)
 
-  testImplementation(libs.hcert.core)
   testImplementation(libs.kotlin.testJunit)
 }
 

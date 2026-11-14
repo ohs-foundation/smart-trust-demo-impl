@@ -1,0 +1,6 @@
+# Copied from WorldHealthOrganization/smart-trust-tools at d94e21d,
+# vectors/gdhcn-dev-trustlist/. TEST DATA from the GDHCN DEV network.
+retrieved: 2026-10-23T07:58Z
+files:
+  root-did.json: https://tng-cdn-dev.who.int/v2/trustlist/did.json (234 keys)
+  WHO-signing-did.json: did:web document of the proof's verificationMethod
