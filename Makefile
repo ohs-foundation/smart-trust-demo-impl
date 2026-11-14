@@ -1,4 +1,4 @@
-.PHONY: build test ig-check stack-up stack-down stack-reset stack-check
+.PHONY: build test ig-check hcert-js stack-up stack-down stack-reset stack-check
 
 build:
 	./gradlew assemble
@@ -9,7 +9,10 @@ test:
 ig-check:
 	./ig/build.sh --check
 
-stack-up:
+hcert-js:
+	./stack/build-hcert-js.sh
+
+stack-up: hcert-js
 	./stack/init-env.sh
 	./stack/init-tls.sh
 	./gradlew :services:vhl:installDist
