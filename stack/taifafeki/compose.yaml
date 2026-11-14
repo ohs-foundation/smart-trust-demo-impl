@@ -38,7 +38,7 @@ services:
     environment:
       MEDPLUM_PORT: 8103
       MEDPLUM_BASE_URL: http://medplum.kesaro.${STACK_HOST}:${PROXY_PORT}/
-      MEDPLUM_APP_BASE_URL: http://client.kesaro.${STACK_HOST}:${PROXY_PORT}/
+      MEDPLUM_APP_BASE_URL: https://client.kesaro.${STACK_HOST}:${VHL_TLS_PORT}/
       MEDPLUM_STORAGE_BASE_URL: http://medplum.kesaro.${STACK_HOST}:${PROXY_PORT}/storage/
       MEDPLUM_DATABASE_HOST: medplum-postgres
       MEDPLUM_DATABASE_PORT: 5432
@@ -53,7 +53,7 @@ services:
       MEDPLUM_MAX_JSON_SIZE: 1mb
       MEDPLUM_MAX_BATCH_SIZE: 50mb
       MEDPLUM_VM_CONTEXT_BOTS_ENABLED: "false"
-      MEDPLUM_ALLOWED_ORIGINS: http://client.kesaro.${STACK_HOST}:${PROXY_PORT}
+      MEDPLUM_ALLOWED_ORIGINS: https://client.kesaro.${STACK_HOST}:${VHL_TLS_PORT}
       MEDPLUM_INTROSPECTION_ENABLED: "true"
       MEDPLUM_SHUTDOWN_TIMEOUT_MILLISECONDS: 30000
       # Applied when the database is first seeded, so Medplum never has its public default login.
@@ -83,9 +83,9 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3000
-      MEDPLUM_BASE_URL: http://medplum.kesaro.${STACK_HOST}:${PROXY_PORT}
+      MEDPLUM_BASE_URL: https://medplum.kesaro.${STACK_HOST}:${VHL_TLS_PORT}
       MEDPLUM_INTERNAL_URL: http://medplum:8103
-      CLIENT_ORIGIN: http://client.kesaro.${STACK_HOST}:${PROXY_PORT}
+      CLIENT_ORIGIN: https://client.kesaro.${STACK_HOST}:${VHL_TLS_PORT}
       MEDPLUM_CLIENT_ID_FILE: /run/secrets/medplum-client-id
       NODE_EXTRA_CA_CERTS: /run/secrets/tls/ca.crt
       ONESA_VHL_HOSTS: vhl.onesa.${STACK_HOST}:${VHL_TLS_PORT}

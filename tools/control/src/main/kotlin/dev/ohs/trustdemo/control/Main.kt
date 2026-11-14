@@ -42,7 +42,7 @@ private class Stack(env: StackEnv) {
   val hapiUrl = "http://127.0.0.1:${env.require("HAPI_HOST_PORT")}/fhir"
   val medplumUrl = "http://medplum.kesaro.${env.require("STACK_HOST")}:${env.require("PROXY_PORT")}"
   val clientOrigin =
-    "http://client.kesaro.${env.require("STACK_HOST")}:${env.require("PROXY_PORT")}"
+    "https://client.kesaro.${env.require("STACK_HOST")}:${env.require("VHL_TLS_PORT")}"
   val watchPort = env.require("WATCH_PORT").toInt()
   val onesa = FhirServer(hapiUrl, { null }, CIO.create())
   val kesaro =

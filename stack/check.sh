@@ -47,10 +47,13 @@ check "Medplum issues the super-admin client a token" yes \
     -d "client_secret=${MEDPLUM_SUPER_ADMIN_CLIENT_SECRET}" "http://medplum.kesaro.${base}/oauth2/token" |
     jq -e '.access_token' >/dev/null && echo yes || echo no)"
 
-check "Facility client health" 200 "$(status "http://client.kesaro.${base}/")"
+tls="${STACK_HOST}:${VHL_TLS_PORT}"
+check "Facility client health over TLS" 200 "$(status --cacert "$here/tls/ca.crt" "https://client.kesaro.${tls}/")"
+check "Facility client's plain-HTTP address redirects to TLS" 301 "$(status "http://client.kesaro.${base}/")"
 check "Facility client sends sign-in to Medplum with a PKCE challenge" yes \
-  "$(curl -s -o /dev/null -w '%{redirect_url}' --max-time 10 "http://client.kesaro.${base}/signin" |
-    grep -q "^http://medplum.kesaro.${base}/oauth2/authorize?.*code_challenge_method=S256" && echo yes || echo no)"
+  "$(curl -s -o /dev/null -w '%{redirect_url}' --max-time 10 --cacert "$here/tls/ca.crt" "https://client.kesaro.${tls}/signin" |
+    grep -q "^https://medplum.kesaro.${tls}/oauth2/authorize?.*code_challenge_method=S256" && echo yes || echo no)"
+check "Medplum health over TLS" 200 "$(status --cacert "$here/tls/ca.crt" "https://medplum.kesaro.${tls}/healthcheck")"
 
 served=$(curl -s --max-time 10 "http://trust.gdhcn.${base}/local-test-list.json")
 check "trust host serves the local test list" same \

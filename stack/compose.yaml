@@ -23,4 +23,6 @@ services:
       - ./proxy/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./tls/vhl.crt:/etc/nginx/tls/vhl.crt:ro
       - ./tls/vhl.key:/etc/nginx/tls/vhl.key:ro
+      - ./tls/kesaro.crt:/etc/nginx/tls/kesaro.crt:ro
+      - ./tls/kesaro.key:/etc/nginx/tls/kesaro.key:ro
     mem_limit: 64m

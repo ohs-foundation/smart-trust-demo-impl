@@ -38,10 +38,37 @@ server {
 server {
   listen 80;
   server_name client.kesaro.${STACK_HOST};
-  add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://medplum.kesaro.${STACK_HOST}:${PROXY_PORT}; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'" always;
+  return 301 https://$host:${VHL_TLS_PORT}$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  server_name client.kesaro.${STACK_HOST};
+  ssl_certificate /etc/nginx/tls/kesaro.crt;
+  ssl_certificate_key /etc/nginx/tls/kesaro.key;
+  proxy_set_header Host $http_host;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto https;
+  proxy_set_header X-Forwarded-Host $http_host;
+  proxy_set_header X-Forwarded-Port ${VHL_TLS_PORT};
+  add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://medplum.kesaro.${STACK_HOST}:${VHL_TLS_PORT}; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'" always;
   add_header Referrer-Policy "no-referrer" always;
   add_header X-Content-Type-Options "nosniff" always;
   location / { set $u http://client:3000; proxy_pass $u; }
+}
+
+server {
+  listen 443 ssl;
+  server_name medplum.kesaro.${STACK_HOST};
+  ssl_certificate /etc/nginx/tls/kesaro.crt;
+  ssl_certificate_key /etc/nginx/tls/kesaro.key;
+  proxy_set_header Host $http_host;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto https;
+  proxy_set_header X-Forwarded-Host $http_host;
+  proxy_set_header X-Forwarded-Port ${VHL_TLS_PORT};
+  location ~* ^/fhir/R4/\$graphql$ { return 403; }
+  location / { set $u http://medplum:8103; proxy_pass $u; }
 }
 
 server {
