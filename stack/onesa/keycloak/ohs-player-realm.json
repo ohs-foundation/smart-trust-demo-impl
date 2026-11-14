@@ -1,7 +1,8 @@
 {
   "id": "ohs-player",
   "realm": "ohs-player",
-  "loginTheme": "ohs",
+  "displayName": "OHS Player · Onesa",
+  "loginTheme": "onesa",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": false,
