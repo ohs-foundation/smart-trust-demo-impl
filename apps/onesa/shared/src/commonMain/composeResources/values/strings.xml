@@ -173,4 +173,8 @@
     <string name="schedule_booked">Visit booked from %1$s for %2$d doses. The referral is complete.</string>
     <string name="schedule_referral_changed">The referral changed meanwhile. Nothing was saved. Check the schedule and book again.</string>
     <string name="schedule_could_not_load">The schedule could not be read or saved. Check the connection and try again.</string>
+    <string name="schedule_booked_stale">The list may be out of date until the next sync.</string>
+    <string name="schedule_incomplete">Part of the schedule could not be evaluated, so no visit can be booked. Fix the dose or the schedule first.</string>
+    <string name="schedule_not_open">The referral is no longer open.</string>
+    <string name="schedule_nothing_due">No dose is due.</string>
 </resources>

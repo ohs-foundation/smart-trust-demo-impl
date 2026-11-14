@@ -54,6 +54,7 @@ import kotlin.time.Instant
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate as Day
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -467,7 +468,7 @@ class CardVerificationTest {
             SchedulePlans.parse(protocol("TrustDemoDT03"), protocol("TrustDemoOnesaInfantSchedule"))
           },
         ) {
-          Day.parse("2026-11-14")
+          Day.parse("2026-01-20")
         },
       session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
       httpClient = HttpClient(gateway.engine),
@@ -497,7 +498,7 @@ class CardVerificationTest {
   fun bookingSatisfiesTheJ3bContract() = runTest {
     withMappedDosesAndReferral()
 
-    val outcome = assertIs<BookingOutcome.Booked>(booking.book(referral.id, patientId))
+    val outcome = assertIs<BookingOutcome.Booked>(book())
 
     assertEquals(3, outcome.doses)
     assertEquals("2026-02-12", outcome.date.toString())
@@ -545,27 +546,125 @@ class CardVerificationTest {
     }
   }
 
+  private suspend fun book() = booking.book(booking.open(referral.id), patientId)
+
+  private fun reopenReferral() {
+    gateway.serviceRequests[referral.id] =
+      JsonObject(
+        gateway.serviceRequests.getValue(referral.id) + ("status" to JsonPrimitive("active"))
+      )
+  }
+
   @Test
   fun bookingTwiceWritesOneRecommendation() = runTest {
     withMappedDosesAndReferral()
 
-    booking.book(referral.id, patientId)
-    booking.book(referral.id, patientId)
+    book()
+    reopenReferral()
+    book()
+    reopenReferral()
+    repository.upsert(
+      decode(
+        FhirJson.instance
+          .parseToJsonElement(
+            """{"resourceType":"Patient","id":"$patientId","birthDate":"2026-01-08"}"""
+          )
+          .jsonObject
+      )
+    )
+    book()
 
     assertEquals(1, gateway.recommendations.size)
     assertEquals(1, gateway.tasks.size)
+    assertEquals(
+      "2026-02-19",
+      gateway.tasks.values
+        .single()
+        .getValue("restriction")
+        .jsonObject
+        .getValue("period")
+        .jsonObject
+        .text("start"),
+    )
     assertEquals("completed", gateway.serviceRequests.getValue(referral.id).text("status"))
   }
 
   @Test
   fun aReferralChangedMeanwhileIsNotOverwritten() = runTest {
     withMappedDosesAndReferral()
-    gateway.beforeTransaction = { gateway.touch("ServiceRequest/${referral.id}") }
+    val open = booking.open(referral.id)
+    gateway.touch("ServiceRequest/${referral.id}")
 
-    assertIs<BookingOutcome.Changed>(booking.book(referral.id, patientId))
+    assertIs<BookingOutcome.Changed>(booking.book(open, patientId))
 
     assertEquals(0, gateway.recommendations.size)
     assertEquals("active", gateway.serviceRequests.getValue(referral.id).text("status"))
+  }
+
+  @Test
+  fun aReferralClosedElsewhereIsNotOverwritten() = runTest {
+    withMappedDosesAndReferral()
+    val open = booking.open(referral.id)
+    gateway.serviceRequests[referral.id] =
+      JsonObject(
+        gateway.serviceRequests.getValue(referral.id) + ("status" to JsonPrimitive("revoked"))
+      )
+    gateway.touch("ServiceRequest/${referral.id}")
+    assertIs<BookingOutcome.Changed>(booking.book(open, patientId))
+
+    assertIs<BookingOutcome.NoLongerOpen>(book())
+
+    assertEquals(0, gateway.recommendations.size)
+    assertEquals("revoked", gateway.serviceRequests.getValue(referral.id).text("status"))
+  }
+
+  @Test
+  fun bookingIsRefusedWhileAnActionCouldNotBeEvaluated() = runTest {
+    withMappedDosesAndReferral()
+    val broken =
+      VisitBooking(
+        schedule =
+          ScheduleService(
+            repository,
+            {
+              SchedulePlans.parse(
+                protocol("TrustDemoDT03"),
+                protocol("TrustDemoOnesaInfantSchedule")
+                  .replace(
+                    "(%counted.coding.code contains %code).not() and",
+                    "(%counted contains and",
+                  ),
+              )
+            },
+          ) {
+            Day.parse("2026-01-20")
+          },
+        session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
+        httpClient = HttpClient(gateway.engine),
+        baseUrl = "http://gateway/fhir",
+        refresh = {},
+        clock = { Instant.fromEpochSeconds(nowSeconds) },
+      )
+
+    assertIs<BookingOutcome.Incomplete>(broken.book(broken.open(referral.id), patientId))
+
+    assertEquals(0, gateway.recommendations.size)
+    assertEquals(0, gateway.tasks.size)
+  }
+
+  @Test
+  fun pentavalentCitesOnlyTheHepBDoseAndTheReminderIsNamedByItsVisit() = runTest {
+    withMappedDosesAndReferral()
+
+    book()
+
+    val entries = gateway.recommendations.values.single().getValue("recommendation").jsonArray
+    val cited = entries.map { it.jsonObject["supportingImmunization"]?.jsonArray?.size ?: 0 }
+    assertEquals(listOf(1, 0, 0), cited)
+    assertEquals(
+      "Immunization appointment reminder: 6-week doses",
+      gateway.tasks.values.single().getValue("code").jsonObject.text("text"),
+    )
   }
 
   private fun codings(dose: JsonObject): List<Pair<String, String>> =

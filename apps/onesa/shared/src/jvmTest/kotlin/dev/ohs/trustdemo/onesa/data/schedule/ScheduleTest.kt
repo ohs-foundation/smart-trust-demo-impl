@@ -38,7 +38,7 @@ class ScheduleTest {
   private val repository = InMemorySampleFhirRepository()
   private val plans =
     SchedulePlans.parse(File("$PROTOCOLS/PlanDefinition-TrustDemoDT03.json").readText(), infant())
-  private val service = ScheduleService(repository, { plans }) { LocalDate.parse("2026-11-14") }
+  private val service = ScheduleService(repository, { plans }) { LocalDate.parse("2025-11-14") }
 
   private fun infant(): String = File("$PROTOCOLS/$INFANT").readText()
 
@@ -54,10 +54,11 @@ class ScheduleTest {
     primarySource: Boolean,
     vararg codings: Pair<String, String>,
     date: String = "2025-10-28",
+    status: String = "completed",
   ) {
     val coding = codings.joinToString(",") { """{"system":"${it.first}","code":"${it.second}"}""" }
     upsert(
-      """{"resourceType":"Immunization","id":"$id","status":"completed","primarySource":$primarySource,
+      """{"resourceType":"Immunization","id":"$id","status":"$status","primarySource":$primarySource,
       "patient":{"reference":"Patient/somsak"},"occurrenceDateTime":"$date",
       "vaccineCode":{"coding":[$coding]}}"""
     )
@@ -151,7 +152,7 @@ class ScheduleTest {
       )
 
     val items =
-      ScheduleService(repository, { plans }) { LocalDate.parse("2026-11-14") }
+      ScheduleService(repository, { plans }) { LocalDate.parse("2025-11-14") }
         .evaluate("somsak")
         .items
 
@@ -183,6 +184,108 @@ class ScheduleTest {
             }
           JsonObject(action.jsonObject + ("action" to JsonArray(children)))
         }
+      }
+    return JsonObject(plan + ("action" to JsonArray(actions))).toString()
+  }
+
+  @Test
+  fun aMissedDoseIsDueWithTheNextVisitsDoses() = runTest {
+    child()
+    dose("hepb", true, hepB)
+
+    val items = service.evaluate("somsak").items
+
+    assertEquals(
+      listOf(
+        Standing.Complete,
+        Standing.Due(LocalDate.parse(BIRTH)),
+        Standing.Due(LocalDate.parse("2025-12-09")),
+        Standing.Due(LocalDate.parse("2025-12-09")),
+        Standing.Due(LocalDate.parse("2025-12-09")),
+        Standing.NotYet(LocalDate.parse("2026-07-28")),
+      ),
+      items.map { it.standing },
+    )
+  }
+
+  @Test
+  fun aFailedActionNeverDecidesTheNextVisit() = runTest {
+    child()
+    dose("bcg", true, bcg)
+    val plans =
+      SchedulePlans.parse(
+        File("$PROTOCOLS/PlanDefinition-TrustDemoDT03.json").readText(),
+        broken("hepb-birth"),
+      )
+
+    val items =
+      ScheduleService(repository, { plans }) { LocalDate.parse("2025-11-14") }
+        .evaluate("somsak")
+        .items
+
+    assertEquals(
+      listOf("CouldNotEvaluate", "Complete", "Due", "Due", "Due", "NotYet"),
+      items.map { it.standing::class.simpleName },
+    )
+  }
+
+  @Test
+  fun anActionWithoutAnAgeFailsAlone() = runTest {
+    child()
+    dose("hepb", true, hepB)
+    dose("bcg", true, bcg)
+    val plans =
+      SchedulePlans.parse(
+        File("$PROTOCOLS/PlanDefinition-TrustDemoDT03.json").readText(),
+        withoutAge("mr-1"),
+      )
+
+    val items =
+      ScheduleService(repository, { plans }) { LocalDate.parse("2025-11-14") }
+        .evaluate("somsak")
+        .items
+
+    assertEquals(
+      listOf("Complete", "Complete", "Due", "Due", "Due", "CouldNotEvaluate"),
+      items.map { it.standing::class.simpleName },
+    )
+  }
+
+  @Test
+  fun aDoseEnteredInErrorNeverCounts() = runTest {
+    child()
+    dose("bad", true, hepB, status = "entered-in-error")
+
+    val schedule = service.evaluate("somsak")
+
+    assertEquals(emptyList(), schedule.counted)
+    assertEquals(Standing.Due(LocalDate.parse(BIRTH)), standing("hepb-birth"))
+    assertEquals(emptyList(), schedule.unreadable)
+  }
+
+  @Test
+  fun aDoseWithNoPrimarySourceIsReportedNotVerified() = runTest {
+    child()
+    upsert(
+      """{"resourceType":"Immunization","id":"unknown","status":"completed",
+      "patient":{"reference":"Patient/somsak"},"occurrenceDateTime":"2025-10-28",
+      "vaccineCode":{"coding":[{"system":"${hepB.first}","code":"${hepB.second}"}]}}"""
+    )
+
+    val schedule = service.evaluate("somsak")
+
+    assertEquals(listOf("unknown"), schedule.reported.map { it.id })
+    assertEquals(emptyList(), schedule.counted)
+  }
+
+  /** The IG schedule with the age of [actionId] removed. */
+  private fun withoutAge(actionId: String): String {
+    val plan = plansJson()
+    val actions =
+      plan.getValue("action").jsonArray.map { action ->
+        if (action.jsonObject.getValue("id").jsonPrimitive.content == actionId)
+          JsonObject(action.jsonObject - "timingAge")
+        else action
       }
     return JsonObject(plan + ("action" to JsonArray(actions))).toString()
   }

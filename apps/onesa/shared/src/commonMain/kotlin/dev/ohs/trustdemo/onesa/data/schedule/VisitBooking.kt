@@ -34,6 +34,7 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlin.time.Clock
 import kotlin.time.Instant
+import kotlinx.coroutines.CancellationException
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
@@ -47,22 +48,40 @@ import kotlinx.serialization.json.putJsonObject
 
 /** What booking the next visit came to. */
 sealed interface BookingOutcome {
-  /** The visit is recommended from [date] for [doses] doses, and the referral is completed. */
-  data class Booked(val date: LocalDate, val doses: Int) : BookingOutcome
+  /**
+   * The visit is recommended from [date] for [doses] doses, and the referral is completed. When
+   * [listStale] the booking is in but the local copy could not be refreshed.
+   */
+  data class Booked(val date: LocalDate, val doses: Int, val listStale: Boolean = false) :
+    BookingOutcome
 
   /** The referral changed since the nurse looked; nothing was written. */
   data object Changed : BookingOutcome
+
+  /** The referral is no longer open, so there is nothing to complete; nothing was written. */
+  data object NoLongerOpen : BookingOutcome
+
+  /** An action or a dose could not be evaluated, so the schedule is not booked over the gap. */
+  data object Incomplete : BookingOutcome
 
   /** No dose is due, so there is no visit to book. */
   data object NothingDue : BookingOutcome
 }
 
+/** The referral as S5 loaded it: booking is written only at this version, and only if open. */
+data class OpenReferral(
+  val id: String,
+  val status: String?,
+  val version: String,
+  val body: JsonObject,
+)
+
 /**
  * S5's "Book 6-Week Visit & Complete Referral": one transaction writes the recommendation for the
- * doses due, the reminder Task for the visit, and completes the referral. The ids follow from the
- * child and the due date, so booking again replaces the records rather than adding to them. The
- * referral is written only at the version just read: if it has moved, nothing is written and the
- * nurse is asked again.
+ * doses due, the reminder Task for the visit, and completes the referral. The recommendation's id
+ * follows from the child and the Task's from the recommendation, so booking again replaces both
+ * rather than adding to them. The referral is written only at the version S5 loaded, and only while
+ * it is active: if it has moved, nothing is written and the nurse is asked again.
  */
 class VisitBooking(
   private val schedule: ScheduleService,
@@ -74,13 +93,21 @@ class VisitBooking(
 ) {
   private val json = FhirJson.instance
 
-  suspend fun book(referralId: String, patientId: String): BookingOutcome {
+  /** Reads the referral from the gateway, with the version a booking will be held to. */
+  suspend fun open(referralId: String): OpenReferral {
     val current = session() ?: error("Sign in again to book the visit.")
+    val body = read(current, referralId)
+    return OpenReferral(referralId, body.text("status"), versionOf(body), body)
+  }
+
+  suspend fun book(referral: OpenReferral, patientId: String): BookingOutcome {
+    val current = session() ?: error("Sign in again to book the visit.")
+    if (referral.status != "active") return BookingOutcome.NoLongerOpen
     val evaluated = schedule.evaluate(patientId)
+    if (!evaluated.complete) return BookingOutcome.Incomplete
     val due = evaluated.items.filter { it.standing is Standing.Due }
-    val visit =
-      due.minOfOrNull { (it.standing as Standing.Due).date } ?: return BookingOutcome.NothingDue
-    val referral = read(current, referralId)
+    if (due.isEmpty()) return BookingOutcome.NothingDue
+    val visit = evaluated.visit
     val now = Instant.fromEpochSeconds(clock().epochSeconds)
     val recommendation = recommendationId(patientId)
     val transaction = buildJsonObject {
@@ -97,12 +124,23 @@ class VisitBooking(
         add(
           createEntry(
             "Task",
-            reminderId(recommendation, visit),
-            reminder(patientId, recommendation, visit, due.first().age, current, now),
+            reminderId(recommendation),
+            reminder(
+              patientId,
+              recommendation,
+              due.filter { (it.standing as Standing.Due).date == visit }.ifEmpty { due }.last().age,
+              visit,
+              current,
+              now,
+            ),
           )
         )
         add(
-          putEntry("ServiceRequest/$referralId", completed(referral), ifMatch = version(referral))
+          putEntry(
+            "ServiceRequest/${referral.id}",
+            completed(referral.body),
+            ifMatch = referral.version,
+          )
         )
       }
     }
@@ -112,18 +150,25 @@ class VisitBooking(
         contentType(ContentType("application", "fhir+json"))
         setBody(json.encodeToString(JsonObject.serializer(), transaction))
       }
-    val outcome =
-      when {
-        reply.status == HttpStatusCode.PreconditionFailed ||
-          reply.status == HttpStatusCode.Conflict -> BookingOutcome.Changed
-        reply.status.isSuccess() -> BookingOutcome.Booked(visit, due.size)
-        else ->
-          error(
-            "The booking was not accepted (HTTP ${reply.status.value}): ${reply.bodyAsText().take(300)}"
-          )
+    return when {
+      reply.status == HttpStatusCode.PreconditionFailed -> BookingOutcome.Changed
+      reply.status.isSuccess() -> {
+        val stale =
+          try {
+            refresh()
+            false
+          } catch (e: CancellationException) {
+            throw e
+          } catch (_: Exception) {
+            true
+          }
+        BookingOutcome.Booked(visit, due.size, stale)
       }
-    refresh()
-    return outcome
+      else ->
+        error(
+          "The booking was not accepted (HTTP ${reply.status.value}): ${reply.bodyAsText().take(300)}"
+        )
+    }
   }
 
   private fun recommendation(
@@ -137,7 +182,7 @@ class VisitBooking(
     put("date", now.toString())
     putJsonObject("authority") { put("reference", "Organization/${current.organizationId}") }
     putJsonArray("recommendation") {
-      due.forEachIndexed { index, item ->
+      due.forEach { item ->
         add(
           buildJsonObject {
             putJsonArray("vaccineCode") {
@@ -162,9 +207,11 @@ class VisitBooking(
                 }
               )
             }
-            if (index == 0 && evaluated.counted.isNotEmpty()) {
+            val supporting =
+              evaluated.counted.filter { dose -> dose.codes.any { it in item.supportedBy } }
+            if (supporting.isNotEmpty()) {
               putJsonArray("supportingImmunization") {
-                evaluated.counted.forEach {
+                supporting.forEach {
                   add(buildJsonObject { put("reference", "Immunization/${it.id}") })
                 }
               }
@@ -178,8 +225,8 @@ class VisitBooking(
   private fun reminder(
     patientId: String,
     recommendation: String,
-    visit: LocalDate,
     age: String,
+    visit: LocalDate,
     current: RegistrationSession,
     now: Instant,
   ): JsonObject = buildJsonObject {
@@ -207,7 +254,7 @@ class VisitBooking(
     return json.parseToJsonElement(reply.bodyAsText()).jsonObject
   }
 
-  private fun version(resource: JsonObject): String {
+  private fun versionOf(resource: JsonObject): String {
     val id = resource["meta"]?.jsonObject?.text("versionId")
     return "W/\"${checkNotNull(id) { "The gateway sent no version for ${resource.text("id")}." }}\""
   }
@@ -237,8 +284,8 @@ class VisitBooking(
     fun recommendationId(patientId: String): String =
       ScanTransactions.idFrom(CertificateFingerprint.of("recommendation:$patientId"))
 
-    /** One reminder per recommendation and visit date. */
-    fun reminderId(recommendationId: String, visit: LocalDate): String =
-      ScanTransactions.idFrom(CertificateFingerprint.of("reminder:$recommendationId:$visit"))
+    /** One current reminder per recommendation: a moved visit replaces it. */
+    fun reminderId(recommendationId: String): String =
+      ScanTransactions.idFrom(CertificateFingerprint.of("reminder:$recommendationId"))
   }
 }

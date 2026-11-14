@@ -6,7 +6,7 @@
   "name": "TrustDemoOnesaInfantSchedule",
   "title": "National infant immunization schedule (illustrative excerpt)",
   "status": "active",
-  "description": "The IG's national infant schedule with TD.DT.04 as FHIRPath. Each action has a child that applies when the dose is complete (rule 1) and one that applies when it is due (rule 2); neither applying is rule 3, not yet. %code is the action's schedule code; %counted and %nextVisit are CodeableConcepts holding the schedule codes TD.DT.03 counts and the codes of the next visit.",
+  "description": "The IG's national infant schedule with TD.DT.04 as FHIRPath. Each action has a child that applies when the dose is complete (rule 1) and one that applies when it is due (rule 2); neither applying is rule 3, not yet. %code is the action's schedule code; %counted and %nextVisit are CodeableConcepts holding the schedule codes TD.DT.03 counts and the codes of the next visit. The supported-by extension names the schedule codes whose doses share an antigen with the action (pentavalent contains hepatitis B).",
   "type": {
     "coding": [
       {
@@ -160,6 +160,12 @@
               }
             }
           ]
+        }
+      ],
+      "extension": [
+        {
+          "url": "http://ohs.dev/fhir/trust-demo/StructureDefinition/supported-by",
+          "valueCode": "XXK-EPI-HEPB-BD"
         }
       ]
     },

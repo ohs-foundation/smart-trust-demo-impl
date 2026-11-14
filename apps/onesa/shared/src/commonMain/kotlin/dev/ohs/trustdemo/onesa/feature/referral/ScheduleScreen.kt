@@ -47,11 +47,15 @@ import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.scan_back
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_book
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_booked
+import dev.ohs.trustdemo.onesa.generated.resources.schedule_booked_stale
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_complete
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_could_not
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_could_not_load
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_due
+import dev.ohs.trustdemo.onesa.generated.resources.schedule_incomplete
+import dev.ohs.trustdemo.onesa.generated.resources.schedule_not_open
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_not_yet
+import dev.ohs.trustdemo.onesa.generated.resources.schedule_nothing_due
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_referral_changed
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_reported
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_title
@@ -126,10 +130,21 @@ fun ScheduleScreen(referralId: String, onBack: () -> Unit) {
           stringResource(Res.string.schedule_booked, it.date.toString(), it.doses),
           style = MaterialTheme.typography.titleMedium,
         )
+        if (it.listStale) Text(stringResource(Res.string.schedule_booked_stale))
+      }
+      val gap = state.schedule?.complete == false
+      if (gap)
+        Text(
+          stringResource(Res.string.schedule_incomplete),
+          color = MaterialTheme.colorScheme.error,
+        )
+      if (state.open != null && !state.isOpen) Text(stringResource(Res.string.schedule_not_open))
+      if (state.schedule?.let { it.complete && !it.hasDue } == true && state.booked == null) {
+        Text(stringResource(Res.string.schedule_nothing_due))
       }
       Button(
         onClick = viewModel::book,
-        enabled = !state.busy && state.booked == null && state.schedule != null,
+        enabled = state.canBook,
         modifier = Modifier.fillMaxWidth(),
       ) {
         Text(stringResource(Res.string.schedule_book))

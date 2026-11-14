@@ -6,18 +6,18 @@
   "name": "TrustDemoDT03",
   "title": "TD.DT.03 Does the national schedule count this dose?",
   "status": "active",
-  "description": "Applied to one Immunization as the subject. The first rule whose condition holds applies: 1 reported, not verified; 2 unmapped; 3 counted as given.",
+  "description": "Applied to one Immunization as the subject. The first rule whose condition holds applies: 1 reported, not verified; 2 unmapped; 3 counted as given when it is completed and dated.",
   "action": [
     {
       "id": "rule-1",
       "title": "Rule 1",
-      "description": "Reported, not verified",
+      "description": "Reported, not verified (also a dose with no primarySource)",
       "condition": [
         {
           "kind": "applicability",
           "expression": {
             "language": "text/fhirpath",
-            "expression": "primarySource = false"
+            "expression": "primarySource.empty() or primarySource = false"
           }
         }
       ]
@@ -45,7 +45,7 @@
           "kind": "applicability",
           "expression": {
             "language": "text/fhirpath",
-            "expression": "primarySource = true and vaccineCode.coding.where(system = 'http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule').exists()"
+            "expression": "primarySource = true and status = 'completed' and occurrence.exists() and vaccineCode.coding.where(system = 'http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule').exists()"
           }
         }
       ]

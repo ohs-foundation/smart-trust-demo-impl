@@ -18,6 +18,7 @@ package dev.ohs.trustdemo.onesa.feature.referral
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.ohs.trustdemo.onesa.data.schedule.BookingOutcome
+import dev.ohs.trustdemo.onesa.data.schedule.OpenReferral
 import dev.ohs.trustdemo.onesa.data.schedule.Schedule
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
 import dev.ohs.trustdemo.onesa.data.schedule.VisitBooking
@@ -35,10 +36,17 @@ data class ScheduleUiState(
   val referral: Referral? = null,
   val schedule: Schedule? = null,
   val busy: Boolean = true,
+  val open: OpenReferral? = null,
   val booked: BookingOutcome.Booked? = null,
   val referralChanged: Boolean = false,
   val failed: Boolean = false,
-)
+) {
+  val isOpen: Boolean
+    get() = open?.status == "active"
+
+  val canBook: Boolean
+    get() = !busy && booked == null && isOpen && schedule?.complete == true && schedule.hasDue
+}
 
 /** Evaluates a referred child's national schedule and books the visit it recommends. */
 class ScheduleViewModel(
@@ -58,15 +66,18 @@ class ScheduleViewModel(
   fun book() {
     val state = _uiState.value
     val referral = state.referral ?: return
-    if (state.busy || state.booked != null) return
+    val open = state.open ?: return
+    if (!state.canBook) return
     _uiState.update { it.copy(busy = true, failed = false, referralChanged = false) }
     viewModelScope.launch {
-      when (val outcome = attempt { booking.book(referralId, referral.patientId) }) {
+      when (val outcome = attempt { booking.book(open, referral.patientId) }) {
         is BookingOutcome.Booked -> {
-          _uiState.update { it.copy(busy = false, booked = outcome) }
+          _uiState.update { it.copy(busy = false, booked = outcome, open = null) }
           reload(referral)
         }
-        BookingOutcome.Changed -> {
+        BookingOutcome.Changed,
+        BookingOutcome.NoLongerOpen -> {
+          reopen()
           reload(referral)
           _uiState.update { it.copy(referralChanged = true) }
         }
@@ -79,7 +90,15 @@ class ScheduleViewModel(
     val referral = inbox.get(referralId)
     _uiState.update { it.copy(referral = referral) }
     if (referral == null) _uiState.update { it.copy(busy = false, failed = true) }
-    else reload(referral)
+    else {
+      reopen()
+      reload(referral)
+    }
+  }
+
+  private suspend fun reopen() {
+    val open = attempt { booking.open(referralId) }
+    _uiState.update { it.copy(open = open, failed = open == null) }
   }
 
   private suspend fun reload(referral: Referral) {

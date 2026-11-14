@@ -68,10 +68,11 @@ data class ScheduleItem(
   val age: String,
   val dueDate: LocalDate?,
   val standing: Standing,
+  val supportedBy: List<String> = emptyList(),
 )
 
 /** A dose of the child's record as the schedule read it. */
-data class ScheduleDose(val id: String, val label: String)
+data class ScheduleDose(val id: String, val label: String, val codes: List<String> = emptyList())
 
 /**
  * The national schedule evaluated for one child. [counted] doses count (TD.DT.03 rule 3),
@@ -86,7 +87,15 @@ data class Schedule(
   val reported: List<ScheduleDose>,
   val unmapped: List<ScheduleDose>,
   val unreadable: List<ScheduleDose>,
-)
+  val visit: LocalDate,
+) {
+  /** Every action and every dose evaluated, so nothing in the schedule is a guess. */
+  val complete: Boolean
+    get() = unreadable.isEmpty() && items.none { it.standing is Standing.CouldNotEvaluate }
+
+  val hasDue: Boolean
+    get() = items.any { it.standing is Standing.Due }
+}
 
 /**
  * Evaluates the national infant schedule with fhir-workflow's `$apply`, in FHIRPath.
@@ -125,16 +134,52 @@ class ScheduleService(
     val counted = verdicts.filterValues { it == COUNTED }.keys
     val countedCodes = counted.flatMap { it.toJson().scheduleCodes() }
 
-    val planned = plans.infantSchedule.action.map { Planned(it, birthDate) }
-    val nextVisit = nextVisit(planned.filter { it.code !in countedCodes })
+    val planned = plans.infantSchedule.action.map { Planned(it) }
+    val readings = planned.associateWith { runCatching { it.read(birthDate) } }
+    val sound =
+      planned.filter { plan ->
+        val reading = readings.getValue(plan).getOrNull() ?: return@filter false
+        standing(plans, patient, plan, reading, countedCodes, emptySet()) !is
+          Standing.CouldNotEvaluate
+      }
+    val (visit, nextVisit) =
+      nextVisit(sound.map { readings.getValue(it).getOrThrow() }, countedCodes)
     return Schedule(
       patientId = patientId,
       birthDate = birthDate,
-      items = planned.map { it.item(plans, patient, countedCodes, nextVisit) },
+      items =
+        planned.map { plan ->
+          val reading = readings.getValue(plan)
+          reading.fold(
+            onSuccess = {
+              ScheduleItem(
+                plan.id,
+                plan.title,
+                EpiDose(it.code, it.display),
+                it.age,
+                it.due,
+                if (plan in sound) standing(plans, patient, plan, it, countedCodes, nextVisit)
+                else Standing.CouldNotEvaluate("A condition could not be evaluated."),
+                it.supportedBy,
+              )
+            },
+            onFailure = {
+              ScheduleItem(
+                plan.id,
+                plan.title,
+                EpiDose("", ""),
+                "",
+                null,
+                Standing.CouldNotEvaluate(it.message ?: "The action could not be read."),
+              )
+            },
+          )
+        },
       counted = counted.map(::scheduleDose),
       reported = verdicts.filterValues { it == REPORTED }.keys.map(::scheduleDose),
       unmapped = verdicts.filterValues { it == UNMAPPED }.keys.map(::scheduleDose),
       unreadable = verdicts.filterValues { it == null }.keys.map(::scheduleDose),
+      visit = visit,
     )
   }
 
@@ -162,36 +207,41 @@ class ScheduleService(
       .single()
       .action
 
-  private suspend fun Planned.item(
+  private suspend fun standing(
     plans: SchedulePlans,
     patient: Patient,
+    plan: Planned,
+    reading: Reading,
     counted: List<String>,
     nextVisit: Set<String>,
-  ): ScheduleItem {
-    val isolated = plans.infantSchedule.copy(action = listOf(action))
-    val variables =
-      mapOf("code" to code, "counted" to codes(counted), "nextVisit" to codes(nextVisit))
-    val standing =
-      try {
-        val children = apply(isolated, patient, variables).single().action
-        val due = checkNotNull(due) { "The action's age does not give a date." }
-        when {
-          children.any { it.id == "counted" } -> Standing.Complete
-          children.any { it.id == "due" } -> Standing.Due(due)
-          else -> Standing.NotYet(due)
-        }
-      } catch (e: CancellationException) {
-        throw e
-      } catch (e: Exception) {
-        Standing.CouldNotEvaluate(e.message ?: "The condition could not be evaluated.")
+  ): Standing =
+    try {
+      val isolated = plans.infantSchedule.copy(action = listOf(plan.action))
+      val variables =
+        mapOf("code" to reading.code, "counted" to codes(counted), "nextVisit" to codes(nextVisit))
+      val children = apply(isolated, patient, variables).single().action
+      when {
+        children.any { it.id == "counted" } -> Standing.Complete
+        children.any { it.id == "due" } -> Standing.Due(reading.due)
+        else -> Standing.NotYet(reading.due)
       }
-    return ScheduleItem(action.id.orEmpty(), title, EpiDose(code, display), age, due, standing)
-  }
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      Standing.CouldNotEvaluate(e.message ?: "The condition could not be evaluated.")
+    }
 
-  /** The codes of the actions that fall on the earliest date among those not yet counted. */
-  private fun nextVisit(notCounted: List<Planned>): Set<String> {
-    val first = notCounted.mapNotNull { it.due }.minOrNull() ?: return emptySet()
-    return notCounted.filter { it.due == first }.map { it.code }.toSet()
+  /**
+   * The codes due at the next visit: the earliest uncounted age the child has not passed, or today
+   * when every uncounted action is already past, with every earlier uncounted action (catch-up).
+   */
+  private fun nextVisit(
+    readings: List<Reading>,
+    counted: List<String>,
+  ): Pair<LocalDate, Set<String>> {
+    val open = readings.filter { it.code !in counted }
+    val visit = open.map { it.due }.filter { it >= today() }.minOrNull() ?: today()
+    return visit to open.filter { it.due <= visit }.map { it.code }.toSet()
   }
 
   /** FHIRPath reads a list handed to it as one value, so the codes travel as a CodeableConcept. */
@@ -206,7 +256,11 @@ class ScheduleService(
       product?.text("code")?.let { NewbornRegistration.PRODUCTS[it] ?: it }
         ?: codings.firstNotNullOfOrNull { it.text("display") ?: it.text("code") }
     val date = dose.text("occurrenceDateTime")?.substringBefore('T')
-    return ScheduleDose(dose.text("id").orEmpty(), listOfNotNull(name, date).joinToString(", "))
+    return ScheduleDose(
+      dose.text("id").orEmpty(),
+      listOfNotNull(name, date).joinToString(", "),
+      dose.scheduleCodes(),
+    )
   }
 
   private fun JsonObject.scheduleCodes(): List<String> =
@@ -220,28 +274,52 @@ class ScheduleService(
   private fun Resource.toJson(): JsonObject =
     json.encodeToJsonElement(Resource.serializer(), this).jsonObject
 
-  /** An action of the schedule with what its `timingAge` and first code say. */
-  private inner class Planned(val action: PlanDefinition.Action, birthDate: LocalDate) {
+  private class Reading(
+    val code: String,
+    val display: String,
+    val age: String,
+    val due: LocalDate,
+    val supportedBy: List<String>,
+  )
+
+  /** An action of the schedule; what its code and `timingAge` say is read, and may fail, apart. */
+  private inner class Planned(val action: PlanDefinition.Action) {
     private val raw =
       json.encodeToJsonElement(PlanDefinition.Action.serializer(), action).jsonObject
-    private val coding =
-      raw
-        .getValue("code")
-        .jsonArray
-        .first()
-        .jsonObject
-        .getValue("coding")
-        .jsonArray
-        .first()
-        .jsonObject
+    val id: String = action.id.orEmpty()
     val title: String = raw.text("title").orEmpty()
-    val code: String = coding.text("code").orEmpty()
-    val display: String = coding.text("display") ?: code
-    val age: String =
-      raw.getValue("timingAge").jsonObject.let {
-        "${it.text("value")}-${it.text("unit").orEmpty().removeSuffix("s")}"
-      }
-    val due: LocalDate? = runCatching { birthDate.plus(raw.getValue("timingAge")) }.getOrNull()
+
+    fun read(birthDate: LocalDate): Reading {
+      val coding =
+        raw["code"]
+          ?.jsonArray
+          ?.firstOrNull()
+          ?.jsonObject
+          ?.get("coding")
+          ?.jsonArray
+          ?.firstOrNull()
+          ?.jsonObject
+      val code = checkNotNull(coding?.text("code")) { "The action has no schedule code." }
+      val age = checkNotNull(raw["timingAge"]?.jsonObject) { "The action has no age." }
+      return Reading(
+        code = code,
+        display = coding.text("display") ?: code,
+        age = ageLabel(age),
+        due = birthDate.plus(age),
+        supportedBy =
+          raw["extension"]
+            ?.jsonArray
+            .orEmpty()
+            .map { it.jsonObject }
+            .filter { it.text("url") == SUPPORTED_BY }
+            .mapNotNull { it.text("valueCode") },
+      )
+    }
+  }
+
+  private fun ageLabel(age: JsonObject): String {
+    val value = age.getValue("value").jsonPrimitive.doubleOrNull?.toInt() ?: error("no age")
+    return if (value == 0) "Birth" else "$value-${age.text("unit").orEmpty().removeSuffix("s")}"
   }
 
   private fun LocalDate.plus(age: JsonElement): LocalDate {
@@ -260,5 +338,6 @@ class ScheduleService(
     const val UNMAPPED = "rule-2"
     const val COUNTED = "rule-3"
     const val NO_RULE = "none"
+    const val SUPPORTED_BY = "http://ohs.dev/fhir/trust-demo/StructureDefinition/supported-by"
   }
 }
