@@ -85,6 +85,31 @@ fun Application.vhlModule(deps: VhlDeps) {
           call.respondFailure(HttpStatusCode.InternalServerError, e)
         }
       }
+      post("/vhl/\$withdraw") {
+        val caller =
+          fhirUser(checkNotNull(call.principal<JWTPrincipal>()).payload.getClaim("fhirUser"))!!
+        try {
+          service.withdraw(caller, consentOf(call.receiveText()))
+          call.respondOutcome(
+            HttpStatusCode.OK,
+            "informational",
+            Exception("withdrawn"),
+            "information",
+          )
+        } catch (e: BadRequest) {
+          call.respondOutcome(HttpStatusCode.BadRequest, "invalid", e)
+        } catch (e: NotYourConsent) {
+          call.respondOutcome(HttpStatusCode.Forbidden, "forbidden", e)
+        } catch (e: NoSuchConsent) {
+          call.respondOutcome(HttpStatusCode.NotFound, "not-found", e)
+        } catch (e: BackendRefused) {
+          call.respondFailure(HttpStatusCode.BadGateway, e)
+        } catch (e: CancellationException) {
+          throw e
+        } catch (e: Exception) {
+          call.respondFailure(HttpStatusCode.InternalServerError, e)
+        }
+      }
     }
   }
 }
@@ -101,13 +126,14 @@ private suspend fun ApplicationCall.respondOutcome(
   status: HttpStatusCode,
   code: String,
   cause: Exception,
+  severity: String = "error",
 ) {
   val outcome: JsonObject = buildJsonObject {
     put("resourceType", "OperationOutcome")
     putJsonArray("issue") {
       add(
         buildJsonObject {
-          put("severity", "error")
+          put("severity", severity)
           put("code", code)
           put("diagnostics", cause.message.orEmpty())
         }

@@ -16,8 +16,11 @@
 package dev.ohs.trustdemo.vhl
 
 import com.auth0.jwk.JwkProvider
+import io.ktor.http.HttpStatusCode
 import java.time.Clock
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -81,10 +84,43 @@ class VhlService(private val deps: VhlDeps) {
         Triple(share, jwe, deps.signer.sign(link, now, request.expires))
       }
 
-    issued.forEach { (share, _, _) -> deps.passcodes.keep(share.consent.id(), request.passcode) }
     deps.hapi.transaction(records.transaction(issued.map { (share, jwe, _) -> share to jwe }))
+    keepPasscodes(issued.map { (share, _, _) -> share.consent }, request.passcode)
     return response(issued.map { (share, _, hc1) -> share to hc1 })
   }
+
+  /** Inactivates a share's Consent and forgets its passcode; only the Consent's performer may. */
+  suspend fun withdraw(caller: String, consentId: String) {
+    val consent =
+      try {
+        deps.hapi.read("Consent/$consentId")
+      } catch (e: BackendRefused) {
+        if (e.status == HttpStatusCode.NotFound.value) throw NoSuchConsent("no such consent")
+        throw e
+      }
+    val performers =
+      consent["performer"]?.jsonArray?.mapNotNull { it.jsonObject.text("reference") }.orEmpty()
+    if ("Patient/$caller" !in performers) throw NotYourConsent("the consent is not yours")
+    deps.hapi.update("Consent/$consentId", inactive(consent))
+    deps.passcodes.remove(consentId)
+  }
+
+  private suspend fun keepPasscodes(consents: List<JsonObject>, passcode: String) {
+    try {
+      consents.forEach { deps.passcodes.keep(it.id(), passcode) }
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      consents.forEach { consent ->
+        runCatching { deps.hapi.update("Consent/${consent.id()}", inactive(consent)) }
+        runCatching { deps.passcodes.remove(consent.id()) }
+      }
+      throw BackendRefused(false, "the passcodes could not be stored")
+    }
+  }
+
+  private fun inactive(consent: JsonObject) =
+    JsonObject(consent + ("status" to JsonPrimitive("inactive")))
 
   /**
    * The patients of the households the caller manages, as the gateway's household check reads them.

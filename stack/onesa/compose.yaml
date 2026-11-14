@@ -133,10 +133,12 @@ services:
       VHL_TLS_PORT: ${VHL_TLS_PORT}
       LINK_KEY_FILE: /run/keys/XXK_LINK.key.pem
       LINK_CERT_FILE: /run/keys/XXK_LINK.crt.pem
+      VHL_DB_PATH: /data/vhl
       JAVA_OPTS: -Xmx200m
     volumes:
       - ../../testkit/XXK_LINK.key.pem:/run/keys/XXK_LINK.key.pem:ro
       - ../../testkit/XXK_LINK.crt.pem:/run/keys/XXK_LINK.crt.pem:ro
+      - onesa_vhl:/data
     mem_limit: 384m
     depends_on:
       hapi:
@@ -152,3 +154,4 @@ services:
 
 volumes:
   onesa_postgres:
+  onesa_vhl:

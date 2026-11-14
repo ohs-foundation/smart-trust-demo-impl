@@ -241,20 +241,38 @@ class FakeHapi {
 
   val transactions = mutableListOf<JsonObject>()
 
+  val stored = mutableMapOf<String, JsonObject>()
+
+  val puts = mutableListOf<String>()
+
   val engine = MockEngine { request ->
-    check(request.method == HttpMethod.Post && request.url.encodedPath == "/fhir") {
-      "unexpected ${request.method} ${request.url}"
-    }
+    val path = request.url.encodedPath.removePrefix("/fhir").removePrefix("/")
     failWith?.let {
       return@MockEngine respond("", it)
     }
-    transactions += Json.parseToJsonElement((request.body as TextContent).text).jsonObject
-    respondFhir(
-      buildJsonObject {
-        put("resourceType", "Bundle")
-        put("type", "transaction-response")
+    when (request.method) {
+      HttpMethod.Post -> {
+        check(path.isEmpty()) { "unexpected POST ${request.url}" }
+        val bundle = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+        transactions += bundle
+        bundle.resources().forEach { stored["${it.type()}/${it.text("id")}"] = it }
+        respondFhir(
+          buildJsonObject {
+            put("resourceType", "Bundle")
+            put("type", "transaction-response")
+          }
+        )
       }
-    )
+      HttpMethod.Put -> {
+        puts += path
+        val resource = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+        stored[path] = resource
+        respondFhir(resource)
+      }
+      HttpMethod.Get ->
+        stored[path]?.let { respondFhir(it) } ?: respond("", HttpStatusCode.NotFound)
+      else -> error("unexpected ${request.method} ${request.url}")
+    }
   }
 }
 

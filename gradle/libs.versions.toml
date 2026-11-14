@@ -17,6 +17,7 @@ composeAdaptive = "1.2.0"
 composeHotReload = "1.1.1"
 composeMaterialIcons = "1.7.3"
 composeMultiplatform = "1.11.0"
+h2 = "2.5.252"
 ionspin-bignum = "0.3.10"
 junit = "4.13.2"
 kermit = "2.1.0"
@@ -102,6 +103,7 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigation-compose" }
 ohs-fhir-engine = { module = "dev.ohs.fhir:fhir-engine", version.ref = "ohsFhirEngine" }
 ohs-fhir-model-r4 = { module = "dev.ohs.fhir:fhir-model-r4", version.ref = "ohsFhirModelR4" }
+h2-database = { module = "com.h2database:h2", version.ref = "h2" }
 hcert-core = { module = "io.github.litlfred:hcert-core", version = "0.1.0" }
 ohs-player-client = { module = "dev.ohs.player:client", version.ref = "ohsPlayerClient" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version = "2.0.17" }

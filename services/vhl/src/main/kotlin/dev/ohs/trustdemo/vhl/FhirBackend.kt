@@ -21,6 +21,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -79,6 +80,15 @@ class FhirBackend(
     decode(response.status, response.bodyAsText(), "POST transaction")
   }
 
+  suspend fun update(path: String, resource: JsonObject) {
+    val response =
+      client.put("$baseUrl/$path") {
+        header(HttpHeaders.Accept, fhirContentType.toString())
+        setBody(TextContent(resource.toString(), fhirContentType))
+      }
+    decode(response.status, response.bodyAsText(), "PUT")
+  }
+
   private suspend fun get(url: String, params: Map<String, String>, bearer: String?): JsonObject {
     val response =
       client.get(url) {
@@ -97,11 +107,12 @@ class FhirBackend(
       val denied =
         relaysCaller &&
           (status == HttpStatusCode.Forbidden || status == HttpStatusCode.Unauthorized)
-      throw BackendRefused(denied, "$what answered ${status.value}")
+      throw BackendRefused(denied, "$what answered ${status.value}", status.value)
     }
     return Json.parseToJsonElement(text).jsonObject
   }
 }
 
 /** A backend answered with a failure; [deniedCaller] when the caller's own token was refused. */
-class BackendRefused(val deniedCaller: Boolean, message: String) : Exception(message)
+class BackendRefused(val deniedCaller: Boolean, message: String, val status: Int = 0) :
+  Exception(message)

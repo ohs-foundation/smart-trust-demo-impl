@@ -24,6 +24,8 @@ kotlin { jvmToolchain(21) }
 application { mainClass = "dev.ohs.trustdemo.vhl.MainKt" }
 
 dependencies {
+  implementation(libs.bouncycastle.bcprov)
+  implementation(libs.h2.database)
   implementation(libs.hcert.core)
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.ktor.client.cio)

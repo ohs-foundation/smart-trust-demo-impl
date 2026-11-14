@@ -27,10 +27,12 @@ import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import java.io.File
 import java.security.cert.CertificateFactory
+import java.sql.DriverManager
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Base64
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -82,7 +84,8 @@ class GenerateVhlTest {
       File(TESTKIT, "XXK_LINK.crt.pem").readText(),
       "XK",
     )
-  private val kept = mutableListOf<Pair<String, String>>()
+  private val database = "jdbc:h2:mem:${UUID.randomUUID()};DB_CLOSE_DELAY=-1"
+  private var passcodes: PasscodeStore = H2PasscodeStore(database)
 
   private fun withService(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
     application {
@@ -95,7 +98,7 @@ class GenerateVhlTest {
           hapi = FhirBackend("http://hapi:8080/fhir", hapi.engine),
           gateway = FhirBackend("http://gateway:8080/fhir", gateway.engine, relaysCaller = true),
           signer = signer,
-          passcodes = PasscodeStore { consentId, passcode -> kept += consentId to passcode },
+          passcodes = passcodes,
           clock = Clock.fixed(now, ZoneOffset.UTC),
         )
       )
@@ -155,7 +158,37 @@ class GenerateVhlTest {
 
   private fun bounmyToken() = idp.token("Patient/bounmy")
 
-  private class Link(val person: String, val hc1: String, val records: Map<String, String>)
+  private class Link(val person: String, val hc1: String, val records: Map<String, String>) {
+    fun consentId() = records.getValue("consent").substringAfter('/')
+  }
+
+  private suspend fun ApplicationTestBuilder.withdraw(
+    token: String?,
+    consent: String,
+  ): HttpResponse =
+    client.post("/vhl/\$withdraw") {
+      token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
+      header(HttpHeaders.ContentType, ContentType.parse("application/fhir+json").toString())
+      setBody(
+        buildJsonObject {
+            put("resourceType", "Parameters")
+            putJsonArray("parameter") {
+              add(
+                buildJsonObject {
+                  put("name", "consent")
+                  putJsonObject("valueReference") { put("reference", "Consent/$consent") }
+                }
+              )
+            }
+          }
+          .toString()
+      )
+    }
+
+  private fun status(consentId: String) = hapi.stored.getValue("Consent/$consentId").text("status")
+
+  private suspend fun ApplicationTestBuilder.share(passcode: String, vararg people: String) =
+    links(generate(bounmyToken(), parameters(*people, passcode = passcode)).bodyAsText())
 
   private fun links(response: String): List<Link> =
     Json.parseToJsonElement(response).jsonObject.getValue("parameter").jsonArray.objects().map {
@@ -273,7 +306,7 @@ class GenerateVhlTest {
     val ids = written().map { it.text("id")!! }
     assertEquals(ids.size, ids.toSet().size)
     assertTrue(ids.none { it.startsWith("TrustDemo") })
-    assertEquals(issued.map { it.records.getValue("consent").substringAfter('/') to "4821" }, kept)
+    issued.forEach { assertEquals(PasscodeCheck.MATCH, passcodes.check(it.consentId(), "4821")) }
 
     val immunizationsPerPerson =
       issued.map { decryptedIps(it).resources().count { r -> r.type() == "Immunization" } }
@@ -290,7 +323,6 @@ class GenerateVhlTest {
 
     assertEquals(HttpStatusCode.Forbidden, response.status)
     assertEquals(emptyList(), hapi.transactions)
-    assertEquals(emptyList(), kept)
   }
 
   @Test
@@ -375,7 +407,6 @@ class GenerateVhlTest {
 
     assertEquals(HttpStatusCode.InternalServerError, response.status)
     assertEquals(emptyList(), hapi.transactions)
-    assertEquals(emptyList(), kept)
   }
 
   @Test
@@ -418,5 +449,112 @@ class GenerateVhlTest {
 
     assertEquals(HttpStatusCode.Forbidden, generate(bounmyToken(), parameters("somsak")).status)
     assertEquals(emptyList(), hapi.transactions)
+  }
+
+  @Test
+  fun passcode0482RoundTripsAsAString() = withService {
+    val link = share("0482", "bounmy").single()
+
+    assertEquals(PasscodeCheck.MATCH, passcodes.check(link.consentId(), "0482"))
+    assertEquals(0, passcodes.wrongAttempts(link.consentId()))
+    assertEquals(PasscodeCheck.WRONG, passcodes.check(link.consentId(), "482"))
+    assertEquals(1, passcodes.wrongAttempts(link.consentId()))
+    assertEquals(PasscodeCheck.UNKNOWN, passcodes.check("no-such-consent", "0482"))
+  }
+
+  @Test
+  fun twoActiveSharesForOnePersonKeepSeparateConsentsAndPasscodes() = withService {
+    val first = share("1111", "bounmy").single()
+    val second = share("2222", "bounmy").single()
+
+    assertNotEquals(first.consentId(), second.consentId())
+    assertEquals("active", status(first.consentId()))
+    assertEquals("active", status(second.consentId()))
+    assertEquals(PasscodeCheck.MATCH, passcodes.check(first.consentId(), "1111"))
+    assertEquals(PasscodeCheck.WRONG, passcodes.check(first.consentId(), "2222"))
+    assertEquals(PasscodeCheck.MATCH, passcodes.check(second.consentId(), "2222"))
+    assertEquals(PasscodeCheck.WRONG, passcodes.check(second.consentId(), "1111"))
+    assertEquals(1, passcodes.wrongAttempts(first.consentId()))
+    assertEquals(1, passcodes.wrongAttempts(second.consentId()))
+  }
+
+  @Test
+  fun withdrawingOneShareLeavesTheOtherWorking() = withService {
+    val first = share("1111", "bounmy").single()
+    val second = share("2222", "bounmy").single()
+
+    assertEquals(HttpStatusCode.OK, withdraw(bounmyToken(), first.consentId()).status)
+
+    assertEquals("inactive", status(first.consentId()))
+    assertEquals(PasscodeCheck.UNKNOWN, passcodes.check(first.consentId(), "1111"))
+    assertEquals("active", status(second.consentId()))
+    assertEquals(PasscodeCheck.MATCH, passcodes.check(second.consentId(), "2222"))
+    assertEquals(listOf("Consent/${first.consentId()}"), hapi.puts)
+  }
+
+  @Test
+  fun noFhirRecordContainsThePasscodeOrItsHash() = withService {
+    val response = generate(bounmyToken(), parameters("bounmy", "somsak", passcode = "482913"))
+    val everything = written().joinToString { it.toString() } + response.bodyAsText()
+    val rows =
+      DriverManager.getConnection(database).use { connection ->
+        connection.createStatement().use { statement ->
+          statement.executeQuery("SELECT hash, salt FROM passcode").use { result ->
+            buildList {
+              while (result.next()) add(result.getBytes("hash") to result.getBytes("salt"))
+            }
+          }
+        }
+      }
+
+    assertEquals(2, rows.size)
+    assertFalse("482913" in everything)
+    rows
+      .flatMap { it.toList() }
+      .forEach { bytes ->
+        val encodings =
+          listOf(
+            bytes.joinToString("") { "%02x".format(it) },
+            Base64.getEncoder().encodeToString(bytes),
+            Base64.getUrlEncoder().withoutPadding().encodeToString(bytes),
+          )
+        encodings.forEach { assertFalse(it in everything, it) }
+      }
+  }
+
+  @Test
+  fun onlyTheSharerCanWithdraw() = withService {
+    val link = share("1111", "bounmy").single()
+    val consent = link.consentId()
+
+    assertEquals(HttpStatusCode.Unauthorized, withdraw(null, consent).status)
+    assertEquals(
+      HttpStatusCode.Unauthorized,
+      withdraw(idp.token("Patient/bounmy", azp = "another-client"), consent).status,
+    )
+    assertEquals(HttpStatusCode.Forbidden, withdraw(idp.token("Patient/khamla"), consent).status)
+    assertEquals("active", status(consent))
+    assertEquals(PasscodeCheck.MATCH, passcodes.check(consent, "1111"))
+    assertEquals(emptyList(), hapi.puts)
+
+    assertEquals(HttpStatusCode.NotFound, withdraw(bounmyToken(), "no-such-consent").status)
+    assertEquals(HttpStatusCode.OK, withdraw(bounmyToken(), consent).status)
+    assertEquals("inactive", status(consent))
+  }
+
+  @Test
+  fun aStoreFailureInactivatesTheNewConsents() = withService {
+    passcodes =
+      object : PasscodeStore by H2PasscodeStore(database) {
+        override suspend fun keep(consentId: String, passcode: String) = error("disk full")
+      }
+
+    val response = generate(bounmyToken(), parameters("bounmy", "somsak"))
+
+    assertEquals(HttpStatusCode.BadGateway, response.status)
+    val consents = hapi.stored.values.filter { it.type() == "Consent" }
+    assertEquals(2, consents.size)
+    assertEquals(listOf("inactive", "inactive"), consents.map { it.text("status") })
+    assertFalse("482913" in response.bodyAsText())
   }
 }

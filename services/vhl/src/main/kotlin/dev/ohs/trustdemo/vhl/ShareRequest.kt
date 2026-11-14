@@ -34,6 +34,10 @@ class BadRequest(message: String) : Exception(message)
 /** The caller is not allowed to share what they asked to share. */
 class NotYourHousehold(message: String) : Exception(message)
 
+class NotYourConsent(message: String) : Exception(message)
+
+class NoSuchConsent(message: String) : Exception(message)
+
 private const val MIN_PASSCODE = 4
 private const val MAX_PASSCODE = 12
 private const val PURPOSE = "TREAT"
@@ -121,4 +125,29 @@ class ShareRequest(
         OffsetDateTime.parse(text).toInstant()
       }
   }
+}
+
+private val CONSENT_REFERENCE = Regex("""Consent/([A-Za-z0-9\-.]{1,64})""")
+
+/** The id of the Consent a withdraw Parameters names. */
+fun consentOf(text: String): String {
+  val reference =
+    try {
+      Json.parseToJsonElement(text)
+        .jsonObject["parameter"]
+        ?.jsonArray
+        ?.map { it.jsonObject }
+        ?.singleOrNull { it["name"]?.jsonPrimitive?.content == "consent" }
+        ?.get("valueReference")
+        ?.jsonObject
+        ?.get("reference")
+        ?.jsonPrimitive
+        ?.content
+    } catch (e: SerializationException) {
+      null
+    } catch (e: IllegalArgumentException) {
+      null
+    }
+  return reference?.let { CONSENT_REFERENCE.matchEntire(it)?.groupValues?.get(1) }
+    ?: throw BadRequest("exactly one consent reference is needed")
 }
