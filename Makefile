@@ -17,6 +17,7 @@ stack-up: hcert-js
 	./stack/init-tls.sh
 	./gradlew :services:vhl:installDist
 	docker compose -f stack/compose.yaml up -d --build --wait
+	docker compose -f stack/compose.yaml restart proxy
 
 stack-down:
 	docker compose -f stack/compose.yaml down

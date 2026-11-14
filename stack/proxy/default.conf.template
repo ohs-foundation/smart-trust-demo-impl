@@ -35,6 +35,12 @@ server {
 
 server {
   listen 80;
+  server_name client.kesaro.${STACK_HOST};
+  location / { set $u http://client:3000; proxy_pass $u; }
+}
+
+server {
+  listen 80;
   server_name trust.gdhcn.${STACK_HOST};
   location / { set $u http://gdhcn:80; proxy_pass $u; }
 }
