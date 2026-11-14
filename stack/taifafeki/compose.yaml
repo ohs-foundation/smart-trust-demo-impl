@@ -21,12 +21,12 @@ services:
       retries: 5
 
   medplum-redis:
-    image: redis:8.2.11-alpine
+    image: valkey/valkey:8.1.11-alpine3.24
     restart: unless-stopped
-    command: ["redis-server", "--requirepass", "${MEDPLUM_REDIS_PASSWORD}"]
+    command: ["valkey-server", "--requirepass", "${MEDPLUM_REDIS_PASSWORD}"]
     mem_limit: 128m
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${MEDPLUM_REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "valkey-cli", "-a", "${MEDPLUM_REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
