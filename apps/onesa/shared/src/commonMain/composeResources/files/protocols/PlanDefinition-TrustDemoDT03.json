@@ -1,0 +1,54 @@
+{
+  "resourceType": "PlanDefinition",
+  "id": "TrustDemoDT03",
+  "url": "http://ohs.dev/fhir/trust-demo/PlanDefinition/TrustDemoDT03",
+  "version": "1.0.0",
+  "name": "TrustDemoDT03",
+  "title": "TD.DT.03 Does the national schedule count this dose?",
+  "status": "active",
+  "description": "Applied to one Immunization as the subject. The first rule whose condition holds applies: 1 reported, not verified; 2 unmapped; 3 counted as given.",
+  "action": [
+    {
+      "id": "rule-1",
+      "title": "Rule 1",
+      "description": "Reported, not verified",
+      "condition": [
+        {
+          "kind": "applicability",
+          "expression": {
+            "language": "text/fhirpath",
+            "expression": "primarySource = false"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rule-2",
+      "title": "Rule 2",
+      "description": "Unmapped",
+      "condition": [
+        {
+          "kind": "applicability",
+          "expression": {
+            "language": "text/fhirpath",
+            "expression": "primarySource = true and vaccineCode.coding.where(system = 'http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule').exists().not()"
+          }
+        }
+      ]
+    },
+    {
+      "id": "rule-3",
+      "title": "Rule 3",
+      "description": "Counted as given",
+      "condition": [
+        {
+          "kind": "applicability",
+          "expression": {
+            "language": "text/fhirpath",
+            "expression": "primarySource = true and vaccineCode.coding.where(system = 'http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule').exists()"
+          }
+        }
+      ]
+    }
+  ]
+}

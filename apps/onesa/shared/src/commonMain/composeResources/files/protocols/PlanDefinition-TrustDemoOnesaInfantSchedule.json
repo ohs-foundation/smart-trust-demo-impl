@@ -1,0 +1,314 @@
+{
+  "resourceType": "PlanDefinition",
+  "id": "TrustDemoOnesaInfantSchedule",
+  "url": "http://ohs.dev/fhir/trust-demo/PlanDefinition/TrustDemoOnesaInfantSchedule",
+  "version": "1.0.0",
+  "name": "TrustDemoOnesaInfantSchedule",
+  "title": "National infant immunization schedule (illustrative excerpt)",
+  "status": "active",
+  "description": "The IG's national infant schedule with TD.DT.04 as FHIRPath. Each action has a child that applies when the dose is complete (rule 1) and one that applies when it is due (rule 2); neither applying is rule 3, not yet. %code is the action's schedule code; %counted and %nextVisit are CodeableConcepts holding the schedule codes TD.DT.03 counts and the codes of the next visit.",
+  "type": {
+    "coding": [
+      {
+        "code": "clinical-protocol",
+        "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type"
+      }
+    ]
+  },
+  "action": [
+    {
+      "id": "hepb-birth",
+      "title": "Birth doses",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-HEPB-BD",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "Hepatitis B birth dose"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 0,
+        "code": "d",
+        "system": "http://unitsofmeasure.org",
+        "unit": "days"
+      },
+      "action": [
+        {
+          "id": "counted",
+          "title": "Complete",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "%counted.coding.code contains %code"
+              }
+            }
+          ]
+        },
+        {
+          "id": "due",
+          "title": "Due",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "(%counted.coding.code contains %code).not() and (%nextVisit.coding.code contains %code)"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bcg",
+      "title": "BCG",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-BCG",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "BCG"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 0,
+        "code": "d",
+        "system": "http://unitsofmeasure.org",
+        "unit": "days"
+      },
+      "action": [
+        {
+          "id": "counted",
+          "title": "Complete",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "%counted.coding.code contains %code"
+              }
+            }
+          ]
+        },
+        {
+          "id": "due",
+          "title": "Due",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "(%counted.coding.code contains %code).not() and (%nextVisit.coding.code contains %code)"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "penta-1",
+      "title": "6 weeks: pentavalent 1",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-PENTA-1",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "Pentavalent (DTP-HepB-Hib), dose 1"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 6,
+        "code": "wk",
+        "system": "http://unitsofmeasure.org",
+        "unit": "weeks"
+      },
+      "action": [
+        {
+          "id": "counted",
+          "title": "Complete",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "%counted.coding.code contains %code"
+              }
+            }
+          ]
+        },
+        {
+          "id": "due",
+          "title": "Due",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "(%counted.coding.code contains %code).not() and (%nextVisit.coding.code contains %code)"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "opv-1",
+      "title": "6 weeks: bOPV 1",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-OPV-1",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "bOPV, dose 1"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 6,
+        "code": "wk",
+        "system": "http://unitsofmeasure.org",
+        "unit": "weeks"
+      },
+      "action": [
+        {
+          "id": "counted",
+          "title": "Complete",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "%counted.coding.code contains %code"
+              }
+            }
+          ]
+        },
+        {
+          "id": "due",
+          "title": "Due",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "(%counted.coding.code contains %code).not() and (%nextVisit.coding.code contains %code)"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pcv-1",
+      "title": "6 weeks: PCV 1",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-PCV-1",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "PCV, dose 1"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 6,
+        "code": "wk",
+        "system": "http://unitsofmeasure.org",
+        "unit": "weeks"
+      },
+      "action": [
+        {
+          "id": "counted",
+          "title": "Complete",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "%counted.coding.code contains %code"
+              }
+            }
+          ]
+        },
+        {
+          "id": "due",
+          "title": "Due",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "(%counted.coding.code contains %code).not() and (%nextVisit.coding.code contains %code)"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mr-1",
+      "title": "9 months: measles-rubella 1",
+      "code": [
+        {
+          "coding": [
+            {
+              "code": "XXK-EPI-MR-1",
+              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
+              "display": "Measles-rubella, dose 1"
+            }
+          ]
+        }
+      ],
+      "timingAge": {
+        "value": 9,
+        "code": "mo",
+        "system": "http://unitsofmeasure.org",
+        "unit": "months"
+      },
+      "action": [
+        {
+          "id": "counted",
+          "title": "Complete",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "%counted.coding.code contains %code"
+              }
+            }
+          ]
+        },
+        {
+          "id": "due",
+          "title": "Due",
+          "condition": [
+            {
+              "kind": "applicability",
+              "expression": {
+                "language": "text/fhirpath",
+                "expression": "(%counted.coding.code contains %code).not() and (%nextVisit.coding.code contains %code)"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

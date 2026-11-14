@@ -39,6 +39,7 @@ navigation-compose = "2.9.2"
 ohsFhirDataCapture = "2.0.0-alpha04"
 ohsFhirEngine   = "2.0.0-alpha04"
 ohsFhirModelR4  = "1.0.0-rc03"
+ohsFhirWorkflow = "2.0.0-alpha01"
 ohsPlayerClient = "1.0.0-alpha03"
 spotless = "8.10.1"
 zxing = "3.5.4"
@@ -105,6 +106,7 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigation-compose" }
 ohs-fhir-engine = { module = "dev.ohs.fhir:fhir-engine", version.ref = "ohsFhirEngine" }
 ohs-fhir-model-r4 = { module = "dev.ohs.fhir:fhir-model-r4", version.ref = "ohsFhirModelR4" }
+ohs-fhir-workflow = { module = "dev.ohs.fhir:fhir-workflow", version.ref = "ohsFhirWorkflow" }
 h2-database = { module = "com.h2database:h2", version.ref = "h2" }
 hcert-core = { module = "io.github.litlfred:hcert-core", version = "0.1.0" }
 ohs-player-client = { module = "dev.ohs.player:client", version.ref = "ohsPlayerClient" }
