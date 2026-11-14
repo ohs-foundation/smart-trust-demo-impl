@@ -15,9 +15,47 @@
  */
 plugins {
   alias(libs.plugins.kotlinJvm)
+  application
   id("spotless-conventions")
 }
 
 kotlin { jvmToolchain(21) }
 
-sourceSets.main { resources.srcDir(rootProject.file("ig/resources")) }
+application {
+  mainClass = "dev.ohs.trustdemo.control.MainKt"
+  applicationName = "trust-demo"
+}
+
+distributions.main { distributionBaseName = "control" }
+
+val igDir = rootProject.file("ig/resources")
+val igIndexDir = layout.buildDirectory.dir("generated/ig-index")
+
+val igIndex =
+  tasks.register("igIndex") {
+    val source = igDir
+    val target = igIndexDir.map { it.file("ig-index.txt").asFile }
+    inputs.dir(source)
+    outputs.file(target)
+    doLast {
+      val names = source.listFiles { file -> file.extension == "json" }.map { it.name }.sorted()
+      target.get().apply {
+        parentFile.mkdirs()
+        writeText(names.joinToString("\n"))
+      }
+    }
+  }
+
+sourceSets.main { resources.srcDirs(igDir, files(igIndexDir).builtBy(igIndex)) }
+
+dependencies {
+  implementation(libs.clikt)
+  implementation(libs.ktor.client.cio)
+  implementation(libs.ktor.client.core)
+  api(libs.ohs.fhir.model.r4)
+  implementation(libs.kotlinx.serialization.json)
+
+  testImplementation(libs.kotlin.testJunit)
+  testImplementation(libs.kotlinx.coroutines.test)
+  testImplementation(libs.ktor.client.mock)
+}
