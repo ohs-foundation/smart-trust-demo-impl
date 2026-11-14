@@ -89,10 +89,14 @@ services:
       MEDPLUM_CLIENT_ID_FILE: /run/secrets/medplum-client-id
       NODE_EXTRA_CA_CERTS: /run/secrets/tls/ca.crt
       ONESA_VHL_HOSTS: vhl.onesa.${STACK_HOST}:${VHL_TLS_PORT}
+      CLINIC_KEY_FILE: /run/secrets/clinic-viewer.key
+      CLINIC_CERT_FILE: /run/secrets/clinic-viewer.crt
       TRUST_LIST_URL: http://gdhcn/local-test-list.json
       DEV_TRUST_LIST_URL: http://gdhcn/dev/v2/trustlist/did.json
     volumes:
       - ./secrets/medplum-client-id:/run/secrets/medplum-client-id:ro
+      - ./secrets/clinic-viewer.key:/run/secrets/clinic-viewer.key:ro
+      - ./secrets/clinic-viewer.crt:/run/secrets/clinic-viewer.crt:ro
       - ../tls/ca.crt:/run/secrets/tls/ca.crt:ro
     mem_limit: 256m
     healthcheck:

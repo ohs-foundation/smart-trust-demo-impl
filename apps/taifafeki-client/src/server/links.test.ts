@@ -49,6 +49,7 @@ async function viewer(fetchText?: (url: string) => Promise<string>): Promise<Vie
   return {
     trust,
     handles: new LinkHandles(() => NOW),
+    clinic: { hosts: [], identity: () => { throw new Error("no clinic key"); }, send: fetch },
     session: async (token) => {
       if (token !== "anan-token") throw new NoSession();
       return "Practitioner/anan";

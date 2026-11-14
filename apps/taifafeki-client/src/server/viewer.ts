@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { checkLink, type Link } from "./checkLink";
+import type { Clinic } from "./summary";
 import type { TrustLists } from "./trustLists";
 
 const HANDLE_SECONDS = 600;
@@ -35,6 +36,7 @@ export class LinkHandles {
 export interface Viewer {
   trust: TrustLists;
   handles: LinkHandles;
+  clinic: Clinic;
   session: (token: string | undefined) => Promise<string>;
   now: () => number;
 }

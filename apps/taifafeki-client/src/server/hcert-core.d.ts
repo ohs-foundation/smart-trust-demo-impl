@@ -25,6 +25,24 @@ declare module "smart-trust-kotlin-hcert-core" {
     alg: "es256";
     allowDevelopmentSubclaims: boolean;
   }
+  interface SignatureRequest {
+    method: string;
+    authority: string;
+    path: string;
+    contentType?: string;
+    body?: Uint8Array;
+    keyid: string;
+    alg: string;
+    created: number;
+  }
+  export const WitVhl: {
+    getInstance(): {
+      buildManifestRequest(link: Omit<VhlPayload, "exp"> & { exp?: number }, recipient: string, passcode: string | null, embeddedLengthMax: number | null): { url: string; contentType: string; body: string };
+      parseManifest(bundleJson: string): { url?: string; reference?: string; contentType?: string; title?: string }[];
+      buildSignatureBase(request: SignatureRequest): { contentDigest?: string; signatureInput: string; base: Uint8Array };
+      signatureHeader(signature: Uint8Array, alg: string): string;
+    };
+  };
   export class WitRegistry {
     constructor();
   }

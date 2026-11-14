@@ -16,3 +16,11 @@ export const trustListStatuses = createServerFn({ method: "POST" })
     await viewer.session(data.token);
     return viewer.trust.statuses();
   });
+
+export const fetchSummary = createServerFn({ method: "POST" })
+  .validator((input: { token: string; handle: string; passcode: string }) => input)
+  .handler(async ({ data }) => {
+    const { runtime } = await import("./runtime");
+    const { fetchSummary: fetchFromOnesa } = await import("./summary");
+    return fetchFromOnesa(runtime(), data);
+  });

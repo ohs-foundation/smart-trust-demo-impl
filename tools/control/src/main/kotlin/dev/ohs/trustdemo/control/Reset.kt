@@ -127,11 +127,8 @@ class Reset(
 
   private fun writePem(path: Path, label: String, der: ByteArray) {
     val body = Base64.getMimeEncoder(64, "\n".toByteArray()).encodeToString(der)
-    Files.deleteIfExists(path)
-    Files.createFile(
-      path,
-      PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")),
-    )
+    if (!Files.exists(path)) Files.createFile(path)
+    Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"))
     Files.writeString(path, "-----BEGIN $label-----\n$body\n-----END $label-----\n")
   }
 }

@@ -1,4 +1,5 @@
 import { requireSession } from "./session";
+import { loadIdentity } from "./signing";
 import { DEV_SIGNER, LOCAL_SIGNER, TrustLists } from "./trustLists";
 import { LinkHandles, type Viewer } from "./viewer";
 
@@ -40,6 +41,11 @@ export function runtime(env = process.env): Viewer {
   setInterval(() => {
     if (now() - refreshedAt >= HOUR) void refresh();
   }, RETRY_MILLIS).unref();
-  viewer = { trust, handles: new LinkHandles(now), session: (token) => requireSession(medplumUrl, token), now };
+  const clinic = {
+    hosts: required(env, "ONESA_VHL_HOSTS").split(",").map((host) => host.trim()),
+    identity: () => loadIdentity(env.CLINIC_KEY_FILE ?? "clinic-viewer.key", env.CLINIC_CERT_FILE ?? "clinic-viewer.crt"),
+    send: fetch,
+  };
+  viewer = { trust, handles: new LinkHandles(now), clinic, session: (token) => requireSession(medplumUrl, token), now };
   return viewer;
 }
