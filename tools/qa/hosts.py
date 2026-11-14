@@ -21,6 +21,7 @@ ALLOWED = {
     "registry.opentofu.org": "the OpenTofu provider registry recorded in the GCP config's lock file",
     "services.gradle.org": "where the Gradle wrapper downloads its pinned distribution",
     "host.docker.internal": "Docker's alias for the machine running the stack",
+    "openfontlicense.org": "the OFL text shipped with JetBrains Mono links its FAQ, never called",
     "smart.who.int": "canonical URL base of the IG and of WHO SMART profiles, an identifier",
     "hapifhir.io": "extension canonical HAPI adds to its own Subscription resources, an identifier",
     "ohs.dev": "canonical URL base of the Player's ViewDefinition, ViewJoinMap, ViewConfig and the demo's identifier systems, an identifier",

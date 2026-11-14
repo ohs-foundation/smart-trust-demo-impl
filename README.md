@@ -226,4 +226,4 @@ The same CLI, apps and check run against a server brought up from `infra/` (`BAS
 | [OpenTofu](https://opentofu.org/docs/) | provisions `infra/gcp` |
 | [Artifact Registry](https://cloud.google.com/artifact-registry/docs/docker/authentication), [IAP TCP forwarding](https://cloud.google.com/iap/docs/using-tcp-forwarding) | the image registry and the SSH path |
 
-Licensed under Apache-2.0.
+Licensed under Apache-2.0. Third-party licenses: [docs/licenses.md](docs/licenses.md).
