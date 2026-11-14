@@ -34,7 +34,7 @@ Runtime classpaths of `apps/onesa` (shared, Android release, desktop), `services
 | Room | 2.5.0, 3.0.2 | Apache-2.0 | yes |
 | KScan | 0.9.2 | Apache-2.0 | yes; its Android scanner is ML Kit |
 | Bouncy Castle | 1.86 | Bouncy Castle licence | yes |
-| ML Kit barcode scanning, Play services | 17.3.0, 18.x | Google ML Kit Terms of Service, Android SDK License | yes for an APK; not redistributable source, needs Google Play services |
+| ML Kit barcode scanning, Play services | 17.3.0, 18.x | Google ML Kit Terms of Service, Android SDK License | accepted for the demo: free, not open source, needs Google Play services. A ZXing-based scanner (Apache-2.0) is the open alternative |
 | COSE, CBOR | none | implemented inside `hcert-core` | n/a |
 
 Every library comes from Maven Central, Google Maven or `mavenLocal` (only `io.github.litlfred`, built by `make hcert-js` and `stack/smart-trust-tools.sh`); there is no JitPack dependency.
@@ -72,10 +72,10 @@ Production: 228 packages. MIT 194, ISC 14, Apache-2.0 7, BSD-3-Clause 3, MPL-2.0
 
 | Material | Source | Stated terms | Redistribution here |
 | --- | --- | --- | --- |
-| `ig/resources/` (163 FHIR resources) | `litlfred/smart-trust-demo@6512c3b` | `sushi-config.yaml` and the ImplementationGuide resource say CC0-1.0; the source README says Apache-2.0 "to be confirmed"; no `LICENSE` file | permissive either way; owner to confirm |
+| `ig/resources/` (163 FHIR resources) | `litlfred/smart-trust-demo@6512c3b` | `sushi-config.yaml` and the ImplementationGuide resource say CC0-1.0; the source README says Apache-2.0 "to be confirmed"; no `LICENSE` file | permissive either way. CC0-1.0 is declared in `sushi-config.yaml` and the ImplementationGuide resource; the upstream has no `LICENSE` file, and a request to add one is drafted for the owner |
 | `testkit/who/root-did.json`, `WHO-signing-did.json`, `libs/trustkit` golden vectors, `libs/hcert` test vectors | `WorldHealthOrganization/smart-trust-tools@d94e21d` | Apache-2.0 (its `LICENSE`) | under Apache-2.0, as that repo ships them |
-| `testkit/who/dvc-qr-example-XXR.json` and the two WHO test cards | a conformance vector of `WorldHealthOrganization/smart-trust@af75be2`, carried in smart-trust-tools | smart-trust's `LICENSE`: CC BY-NC-SA 3.0 IGO for the IG text, BSD-3-Clause for software | open question, see below |
-| GDHCN DEV trust list and signer in `apps/onesa/.../files/trust/`, `testkit/who/root-did.json` | WHO's DEV trust-list CDN, retrieved 2026-10-23 | none stated for the list; public keys and DIDs of a DEV network | owner to confirm |
+| `testkit/who/dvc-qr-example-XXR.json` and the two WHO test cards | a conformance vector of `WorldHealthOrganization/smart-trust@af75be2`, carried in smart-trust-tools | smart-trust's `LICENSE`: CC BY-NC-SA 3.0 IGO for the IG text, BSD-3-Clause for software | CC BY-NC-SA 3.0 IGO (non-commercial, share-alike) for the IG text; the repo's Apache-2.0 does not apply to these files, which are used unmodified as test vectors; marked in `testkit/who/README.md` |
+| GDHCN DEV trust list and signer in `apps/onesa/.../files/trust/`, `testkit/who/root-did.json` | WHO's DEV trust-list CDN, retrieved 2026-10-23 | no licence stated; public operational data (public keys and DIDs of a DEV network), source URLs in `testkit/who/SOURCE.yaml` and `files/trust/README.md` | kept as published |
 | `testkit/` keys and lists | generated here | TEST ONLY, Apache-2.0 | yes |
 
 ## Deployed, not shipped
@@ -86,7 +86,7 @@ Production: 228 packages. MIT 194, ISC 14, Apache-2.0 7, BSD-3-Clause 3, MPL-2.0
 | Keycloak | 26.5.0 | Apache-2.0 | |
 | Medplum server | 5.2.13 | Apache-2.0 | |
 | PostgreSQL | 16.15, 18, 18.6 | PostgreSQL License | |
-| Redis | 8.2.11 | RSALv2, SSPLv1 or AGPLv3, at your option | see below |
+| Valkey (Medplum's cache; service `medplum-redis`, Redis protocol) | 8.1.11 | BSD-3-Clause | |
 | nginx | 1.27, 1.29.8 | BSD-2-Clause | |
 | FHIR gateway (OHS fork) | built from source | Apache-2.0 | |
 | FHIR Data Pipes, Apache Superset | `--pipes` profile, not pinned in the compose | Apache-2.0 | |
@@ -94,4 +94,4 @@ Production: 228 packages. MIT 194, ISC 14, Apache-2.0 7, BSD-3-Clause 3, MPL-2.0
 | certbot, Ubuntu 24.04 | apt on the VM | Apache-2.0, mixed (per package) | not redistributed |
 | OpenTofu and the Google provider | 1.8+, 7.46.2 | MPL-2.0 | used unmodified |
 
-Redis 8.x is no longer BSD: from 8.0 it is RSALv2, SSPLv1 or AGPLv3, your choice. Running it unmodified as a private, per-deployment cache behind Medplum, as the demo does, meets any of them: nothing is offered to others as a Redis service and no Redis code is changed or distributed. Redis 7.2 and earlier, or Valkey (BSD-3-Clause), would avoid the question.
+Medplum's cache runs on Valkey 8 (BSD-3-Clause), not Redis 8, which is RSALv2, SSPLv1 or AGPLv3. Valkey speaks the Redis protocol, so Medplum's `MEDPLUM_REDIS_*` settings and the service name are unchanged.
