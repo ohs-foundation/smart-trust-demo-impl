@@ -64,6 +64,7 @@ fun Application.vhlModule(deps: VhlDeps) {
   }
   routing {
     get("/vhl/health") { call.respondText("ok") }
+    signedRoutes(deps)
     authenticate(AUTH) {
       post("/vhl/\$generate-vhl") {
         val caller =
@@ -119,12 +120,12 @@ fun Application.vhlModule(deps: VhlDeps) {
 private val log = LoggerFactory.getLogger("dev.ohs.trustdemo.vhl")
 
 /** Logs only what the failure was and where; nothing of the request itself. */
-private suspend fun ApplicationCall.respondFailure(status: HttpStatusCode, cause: Exception) {
+internal suspend fun ApplicationCall.respondFailure(status: HttpStatusCode, cause: Exception) {
   log.error("{} on {}", cause::class.simpleName, request.path())
   respondOutcome(status, "exception", Exception("the service could not complete the request"))
 }
 
-private suspend fun ApplicationCall.respondOutcome(
+internal suspend fun ApplicationCall.respondOutcome(
   status: HttpStatusCode,
   code: String,
   cause: Exception,

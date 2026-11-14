@@ -16,21 +16,34 @@
 package dev.ohs.trustdemo.vhl
 
 import com.auth0.jwk.JwkProviderBuilder
+import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.server.cio.CIO as ServerCio
 import io.ktor.server.engine.embeddedServer
 import java.io.File
 import java.net.URI
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.launch
 
 private const val LINK_ISSUER_COUNTRY = "XK"
 private const val PORT = 8080
+private const val TRUST_DOMAINS_RESOURCE = "/CodeSystem-TrustDemoTrustDomain.json"
 
 fun main() {
   val env = System.getenv()
 
   fun required(name: String) = checkNotNull(env[name]) { "$name is not set" }
 
+  val trustList =
+    ClinicTrustList(
+      source =
+        HttpTrustListSource(
+          HttpClient(CIO),
+          env["TRUST_LIST_URL"] ?: "http://gdhcn/local-test-list.json",
+          env["TRUST_LIST_SIGNER_URL"] ?: "http://gdhcn/signing/did.json",
+        ),
+      trustDomains = checkNotNull(TRUST_DOMAINS_RESOURCE.readResource()),
+    )
   val deps =
     VhlDeps(
       publicUrl = "https://vhl.onesa.${required("STACK_HOST")}:${required("VHL_TLS_PORT")}",
@@ -50,6 +63,13 @@ fun main() {
           LINK_ISSUER_COUNTRY,
         ),
       passcodes = H2PasscodeStore("jdbc:h2:file:${required("VHL_DB_PATH")};DB_CLOSE_DELAY=-1"),
+      clinicAnchor = trustList,
     )
-  embeddedServer(ServerCio, port = PORT) { vhlModule(deps) }.start(wait = true)
+  embeddedServer(ServerCio, port = PORT) {
+      vhlModule(deps)
+      launch { trustList.keepFresh() }
+    }
+    .start(wait = true)
 }
+
+private fun String.readResource(): String? = object {}.javaClass.getResource(this)?.readText()

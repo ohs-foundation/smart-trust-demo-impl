@@ -23,6 +23,10 @@ kotlin { jvmToolchain(21) }
 
 application { mainClass = "dev.ohs.trustdemo.vhl.MainKt" }
 
+tasks.processResources {
+  from(rootProject.file("ig/resources")) { include("CodeSystem-TrustDemoTrustDomain.json") }
+}
+
 dependencies {
   implementation(libs.bouncycastle.bcprov)
   implementation(libs.h2.database)
@@ -36,6 +40,7 @@ dependencies {
   implementation(libs.ktor.server.core)
   runtimeOnly(libs.slf4j.simple)
 
+  testImplementation(projects.libs.trustkit)
   testImplementation(libs.kotlin.testJunit)
   testImplementation(libs.ktor.client.mock)
   testImplementation(libs.ktor.server.testHost)

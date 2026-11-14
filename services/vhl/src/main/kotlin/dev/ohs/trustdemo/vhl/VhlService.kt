@@ -51,6 +51,8 @@ class VhlDeps(
   val signer: LinkSigner,
   val passcodes: PasscodeStore,
   val clock: Clock = Clock.systemUTC(),
+  val clinicAnchor: ClinicAnchor = ClinicAnchor { null },
+  val release: ReleaseDecision = DenyRelease,
 )
 
 /** Records a consent per person and publishes their IPS behind a signed link. */

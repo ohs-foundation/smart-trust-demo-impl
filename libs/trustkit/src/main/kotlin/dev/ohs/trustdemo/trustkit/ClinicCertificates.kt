@@ -33,19 +33,22 @@ import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 
 object ClinicCertificates {
-  /** A fresh viewer key and a certificate for it issued by the clinic anchor. */
+  /**
+   * A fresh viewer key and a certificate for it issued by [issuer], the clinic anchor by default.
+   */
   fun issueClinicViewer(
-    subject: String = "CN=clinic-viewer.kesaro.example"
+    subject: String = "CN=clinic-viewer.kesaro.example",
+    issuer: StandIn = StandIn.XXR_CLINIC_ANCHOR,
   ): Pair<PrivateKey, X509Certificate> {
     val key = newKeyPair()
-    val anchor = TestKeys.certificate(StandIn.XXR_CLINIC_ANCHOR)
+    val anchor = TestKeys.certificate(issuer)
     val now = Instant.now()
     val cert =
       certificate(
         issuer = anchor.subjectX500Principal.encoded,
         subject = subject,
         subjectKey = key,
-        signer = TestKeys.privateKey(StandIn.XXR_CLINIC_ANCHOR),
+        signer = TestKeys.privateKey(issuer),
         notBefore = now.minus(1, ChronoUnit.DAYS),
         notAfter = now.plus(365, ChronoUnit.DAYS),
         ca = false,
