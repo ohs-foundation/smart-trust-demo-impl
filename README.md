@@ -210,6 +210,8 @@ The same CLI, apps and check run against a server brought up from `infra/` (`BAS
 
 `infra/` is the server stack, derived from [`ohs-player-reference-infrastructure`](https://github.com/ohs-foundation/ohs-player-reference-infrastructure/tree/5c87af6) at `5c87af6`, with `infra/gcp/` provisioning a Google Cloud VM. The end-to-end runbook, from `tofu apply` to the phones, is [docs/deploy.md](docs/deploy.md); the pieces are in [infra/README.md](infra/README.md) and [infra/gcp/README.md](infra/gcp/README.md).
 
+`infra/gcp/server.sh` runs the server steps from the laptop; `infra/gcp/server.sh status` verifies a live server (container health, every public endpoint, certificate expiry). The runbook's [Troubleshooting](docs/deploy.md#troubleshooting) covers the snags met deploying it.
+
 ## Links
 
 | | |

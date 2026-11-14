@@ -33,3 +33,5 @@ With `github_repository` set, a workload identity pool trusts GitHub's OIDC toke
 | `LIVE_BASE_DOMAIN` | `base_domain` from `config.yaml` |
 
 The server then runs `../dev.sh` as `../README.md` describes.
+
+`server.sh` runs the server steps from the laptop over IAP (`setup`, `nginx`, `up`, `cli`, `trust-demo`, `check`, `ssh`), and `server.sh status` verifies the services: container health, every public endpoint, certificate expiry.

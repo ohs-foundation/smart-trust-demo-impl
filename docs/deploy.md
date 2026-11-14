@@ -173,7 +173,36 @@ gcloud auth configure-docker <region>-docker.pkg.dev    # once
 
 `--pull` is needed because the checkout has `gradlew`, which otherwise makes `up` build from source. `GATEWAY_PLUGIN_DIR` must be set but can be any path while pulling.
 
+### Verify the services
+
+```
+infra/gcp/server.sh status
+```
+
+It lists every container's health and the server's memory, probes each public endpoint for its expected answer, and prints every certificate's expiry; it exits non-zero on any failure:
+
+```
+OK    Keycloak realm              (OpenID discovery, 200)
+OK    gateway metadata            (200)
+OK    gateway refuses no token    (/fhir/Patient, 401)
+OK    VHL service · trust list · Medplum · Taifafeki client · web portal
+cert  keycloak.onesa.demo.example.org: <expiry>
+```
+
+Run it after `up` and whenever something looks off. `server.sh check` is the deeper test once the story is seeded (step 5).
+
 ### 5. Seed and check (server)
+
+With the wrapper, from the laptop:
+
+```
+infra/gcp/server.sh cli                   # build and ship trust-demo
+infra/gcp/server.sh trust-demo reset      # seed both countries; writes the Taifafeki secrets
+infra/gcp/server.sh up --taifafeki        # restart so the facility client reads them
+infra/gcp/server.sh check
+```
+
+By hand, the same steps:
 
 `trust-demo` needs only a Java 21 runtime, its install directory and the `.env`. The IG resources and the WHO example card are packed into its jar. It writes the facility client's secrets to `stack/taifafeki/secrets/`, resolved from the `.env` path as `../stack/taifafeki/secrets`, so run it inside the checkout. `stack/check.sh` needs `curl` and `jq`.
 
@@ -214,6 +243,18 @@ Install the APK on the phones. Release trusts the system CAs, so the public cert
 ### 7. Walk the story
 
 Run `trust-demo watch --stack-env infra/.env` on the server and follow [Walk the story](../README.md#walk-the-story). Logins are in `infra/.env` (`TRUSTDEMO_USER_PASSWORD`).
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| Names resolve to addresses other than `server_ip` | the DNS records are proxied (e.g. Cloudflare's orange cloud) | set them to DNS only |
+| `./dev.sh nginx` warns "No certificate for <host>" | certbot failed for that name | `sudo tail -50 /var/log/letsencrypt/letsencrypt.log` on the server; check port 80 reaches it |
+| An image is missing from the registry after `./dev.sh push` | the push stopped partway | `docker push <REGISTRY>/<image>:<tag>` again |
+| A laptop build cannot resolve `registry-1.docker.io` after a network change | the buildx builder kept the old DNS | `docker restart buildx_buildkit_<builder>` (`docker buildx ls`) |
+| Old realm or client names after updating the repo | `.env` keeps the values of the `.env.example` it was made from | compare `infra/.env` with `.env.example` and set the changed defaults |
+| `permission denied` on `docker` on the server | the user is not in the `docker` group | `server.sh setup` adds it; the next session has it |
+| The facility client cannot sign in after `reset` | it started before `reset` wrote its secrets | `server.sh up --taifafeki` |
 
 ## Update
 
