@@ -28,8 +28,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 /** Why the last sync ended without success — the screen maps each to a localized message. */
 enum class SyncError {
@@ -39,7 +37,7 @@ enum class SyncError {
 
 data class HomeUiState(
   val isSyncing: Boolean = false,
-  val lastSyncedAt: String? = null,
+  val lastSyncedAt: Instant? = null,
   val syncError: SyncError? = null,
 )
 
@@ -54,7 +52,7 @@ class HomeViewModel(
 
   init {
     viewModelScope.launch {
-      val lastSyncedAt = fhirDataStore.readLastSyncTimestamp()?.toDisplayString()
+      val lastSyncedAt = fhirDataStore.readLastSyncTimestamp()
       _uiState.update { it.copy(lastSyncedAt = lastSyncedAt) }
     }
   }
@@ -78,7 +76,7 @@ class HomeViewModel(
         }
       when (result) {
         is SyncJobStatus.Succeeded -> {
-          val lastSyncedAt = fhirDataStore.readLastSyncTimestamp()?.toDisplayString()
+          val lastSyncedAt = fhirDataStore.readLastSyncTimestamp()
           _uiState.update { it.copy(isSyncing = false, lastSyncedAt = lastSyncedAt) }
         }
         else -> {
@@ -99,10 +97,4 @@ class HomeViewModel(
   fun clearSyncError() {
     _uiState.update { it.copy(syncError = null) }
   }
-}
-
-private fun Instant.toDisplayString(): String {
-  val local = toLocalDateTime(TimeZone.currentSystemDefault())
-  return "${local.date} ${local.hour.toString().padStart(2, '0')}:" +
-    local.minute.toString().padStart(2, '0')
 }

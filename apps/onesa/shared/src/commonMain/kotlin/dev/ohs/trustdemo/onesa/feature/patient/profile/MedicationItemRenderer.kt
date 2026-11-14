@@ -15,16 +15,16 @@
  */
 package dev.ohs.trustdemo.onesa.feature.patient.profile
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import dev.ohs.player.client.renderer.ComponentRenderer
 import dev.ohs.player.client.renderer.RenderOptions
-import dev.ohs.trustdemo.onesa.feature.component.common.StatusChipData
-import dev.ohs.trustdemo.onesa.feature.component.common.StatusRow
 import dev.ohs.trustdemo.onesa.generated.config.MedicationItemConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.medication_unknown
 import dev.ohs.trustdemo.onesa.generated.state.PatientMedicationState
+import dev.ohs.trustdemo.onesa.ui.RecordRow
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import org.jetbrains.compose.resources.stringResource
 
 class MedicationItemRenderer : ComponentRenderer<PatientMedicationState, MedicationItemConfig> {
@@ -34,29 +34,20 @@ class MedicationItemRenderer : ComponentRenderer<PatientMedicationState, Medicat
     config: MedicationItemConfig,
     options: RenderOptions,
   ) {
-    val isStopped = item.medStatus?.lowercase() == "stopped"
-    StatusRow(
-      title = item.medicationName ?: stringResource(Res.string.medication_unknown),
+    RecordRow(
+      label = item.medicationName ?: stringResource(Res.string.medication_unknown),
       modifier = options.modifier,
-      subtitle = if (config.showDosage != false) item.dosage else null,
-      accentColor =
-        if (isStopped) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+      detail = if (config.showDosage != false) item.dosage else null,
       status =
         if (config.showStatus != false)
           item.medStatus?.let {
-            val (bg, fg) =
+            val tone =
               when (it.lowercase()) {
-                "active" ->
-                  MaterialTheme.colorScheme.primaryContainer to
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                "stopped" ->
-                  MaterialTheme.colorScheme.errorContainer to
-                    MaterialTheme.colorScheme.onErrorContainer
-                else ->
-                  MaterialTheme.colorScheme.surfaceVariant to
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                "active" -> Tone.Info
+                "stopped" -> Tone.Danger
+                else -> Tone.Neutral
               }
-            StatusChipData(it.replaceFirstChar { c -> c.uppercaseChar() }, bg, fg)
+            Status(it.replaceFirstChar { c -> c.uppercaseChar() }, tone)
           }
         else null,
     )

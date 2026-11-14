@@ -17,6 +17,8 @@ package dev.ohs.trustdemo.onesa.feature.login
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -41,7 +43,7 @@ class LoginScreenTest {
       }
     }
 
-    onNodeWithText("Continue to sign in", ignoreCase = true).performClick()
+    onNode(hasText("Sign in") and hasClickAction()).performClick()
 
     assertTrue(clicked)
   }

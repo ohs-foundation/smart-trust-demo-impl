@@ -55,10 +55,12 @@ import dev.ohs.trustdemo.onesa.feature.scan.ScanCardScreen
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncGateState
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncScreen
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
+import dev.ohs.trustdemo.onesa.feature.sync.SyncStepsViewModel
 import dev.ohs.trustdemo.onesa.feature.wallet.IssuedLinksScreen
 import dev.ohs.trustdemo.onesa.feature.wallet.ShareScreen
 import dev.ohs.trustdemo.onesa.feature.wallet.SharedLinksScreen
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaTheme
+import dev.ohs.trustdemo.onesa.ui.theme.brand
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import org.koin.compose.koinInject
@@ -108,7 +110,11 @@ fun App() {
                 CircularProgressIndicator()
               }
             UserContextState.NoRole ->
-              NoRoleScreen(message = null, onRetry = null, onSignOut = { authViewModel.logout() })
+              NoRoleScreen(
+                message = null,
+                onRetry = { contextViewModel.resolve() },
+                onSignOut = { authViewModel.logout() },
+              )
             is UserContextState.Failed ->
               NoRoleScreen(
                 message = state.message,
@@ -116,11 +122,13 @@ fun App() {
                 onSignOut = { authViewModel.logout() },
               )
             is UserContextState.Ready ->
-              SignedInApp(
-                userName = userName,
-                role = state.context.role,
-                onSignOut = { authViewModel.logout() },
-              )
+              OnesaTheme(brand = state.context.role.brand) {
+                SignedInApp(
+                  userName = userName,
+                  role = state.context.role,
+                  onSignOut = { authViewModel.logout() },
+                )
+              }
           }
         }
       }
@@ -137,17 +145,25 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
   when (gateState) {
     InitialSyncGateState.Checking,
     InitialSyncGateState.Syncing,
-    is InitialSyncGateState.Failed ->
-      InitialSyncScreen(
-        state = gateState,
-        onRetry = { initialSyncViewModel.retry() },
-        onContinueAnyway = { initialSyncViewModel.continueAnyway() },
-      )
+    is InitialSyncGateState.Failed -> {
+      val stepsViewModel: SyncStepsViewModel = koinViewModel()
+      val progress by stepsViewModel.state.collectAsStateWithLifecycle()
+      OnesaTheme {
+        InitialSyncScreen(
+          state = gateState,
+          onRetry = { initialSyncViewModel.retry() },
+          onContinueAnyway = { initialSyncViewModel.continueAnyway() },
+          progress = progress,
+          userName = userName,
+          role = role,
+        )
+      }
+    }
     InitialSyncGateState.Passed -> {
       val navController = rememberNavController()
       NavHost(navController = navController, startDestination = "home") {
 
-        // Screen 1: Home (adaptive navigation drawer shell around the household list)
+        // Screen 1: Home (the role's header and tabs)
         composable("home") {
           HomeScreen(
             userName = userName,

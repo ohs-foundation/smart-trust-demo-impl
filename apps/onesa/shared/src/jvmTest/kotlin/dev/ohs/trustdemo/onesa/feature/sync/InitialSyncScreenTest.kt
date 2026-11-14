@@ -73,7 +73,7 @@ class InitialSyncScreenTest {
       }
     }
 
-    onNodeWithText("Continue without syncing", ignoreCase = true).performClick()
+    onNodeWithText("Continue Offline", ignoreCase = true).performClick()
 
     assertTrue(continued)
   }

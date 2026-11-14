@@ -24,7 +24,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-/** Spec check 13: every renderer the app registers has the ViewDefinition, ViewJoinMap and ViewConfig it reads. */
+/**
+ * Spec check 13: every renderer the app registers has the ViewDefinition, ViewJoinMap and
+ * ViewConfig it reads.
+ */
 class ScreensAgreementTest {
   private val kotlinRoot = File("src/commonMain/kotlin")
   private val files = File("src/commonMain/composeResources/files")
@@ -32,10 +35,16 @@ class ScreensAgreementTest {
   private val sources = kotlinRoot.walkTopDown().filter { it.extension == "kt" }.toList()
   private val sourceText = sources.joinToString("\n") { it.readText() }
 
-  private val registration = Regex("""register(Component|Layout)<(\w+)(?:,\s*(\w+))?>\(\s*([\w.]+)""")
+  private val registration =
+    Regex("""register(Component|Layout)<(\w+)(?:,\s*(\w+))?>\(\s*([\w.]+)""")
   private val listLayouts = Regex("""\w+ListRenderer\.VIEW_TYPE""")
 
-  private class Registered(val kind: String, val state: String, val config: String?, val viewType: String)
+  private class Registered(
+    val kind: String,
+    val state: String,
+    val config: String?,
+    val viewType: String,
+  )
 
   private fun registrars(): List<String> =
     Regex("""(register\w+)\(\)""").findAll(registry.readText()).map { it.groupValues[1] }.toList()
@@ -43,19 +52,31 @@ class ScreensAgreementTest {
   private fun registered(registrar: String): List<Registered> {
     val declaration = Regex("""fun ViewRegistry\.$registrar\(\)""")
     val body =
-      sources.map { it.readText() }.firstNotNullOfOrNull { text ->
-        declaration.find(text)?.let { text.substring(it.range.last) }
-      } ?: error("$registrar is called in AppViewRegistry.kt but declared nowhere")
+      sources
+        .map { it.readText() }
+        .firstNotNullOfOrNull { text ->
+          declaration.find(text)?.let { text.substring(it.range.last) }
+        } ?: error("$registrar is called in AppViewRegistry.kt but declared nowhere")
     return registration
       .findAll(body)
-      .map { Registered(it.groupValues[1], it.groupValues[2], it.groupValues[3].ifEmpty { null }, it.groupValues[4]) }
+      .map {
+        Registered(
+          it.groupValues[1],
+          it.groupValues[2],
+          it.groupValues[3].ifEmpty { null },
+          it.groupValues[4],
+        )
+      }
       .toList()
   }
 
   private fun json(path: String): JsonObject? =
-    File(files, path).takeIf { it.isFile }?.let { Json.parseToJsonElement(it.readText()).jsonObject }
+    File(files, path)
+      .takeIf { it.isFile }
+      ?.let { Json.parseToJsonElement(it.readText()).jsonObject }
 
-  // TrustListState is a hand-written display state of the trust-list status screen, not a FHIR record, so it has no view of FHIR data.
+  // TrustListState is a hand-written display state of the trust-list status screen, not a FHIR
+  // record, so it has no view of FHIR data.
   private fun handWritten(state: String) = Regex("""class $state\(""").containsMatchIn(sourceText)
 
   @Test
@@ -63,7 +84,10 @@ class ScreensAgreementTest {
     val registrars = registrars()
     val all = registrars.flatMap { registered(it) }
     val components = all.filter { it.kind == "Component" }
-    assertTrue(registrars.size >= 5, "found only ${registrars.size} registration functions in AppViewRegistry.kt")
+    assertTrue(
+      registrars.size >= 5,
+      "found only ${registrars.size} registration functions in AppViewRegistry.kt",
+    )
     assertTrue(components.size >= 12, "found only ${components.size} registered components")
 
     val problems = mutableListOf<String>()
@@ -75,12 +99,14 @@ class ScreensAgreementTest {
           problems += "$label: states/Binary-${renderer.state}.json (ViewJoinMap) is missing"
         } else {
           val type = joinMap["resourceType"]?.jsonPrimitive?.content.orEmpty()
-          if (!type.endsWith("/ViewJoinMap")) problems += "$label: ${renderer.state} is a $type, not a ViewJoinMap"
+          if (!type.endsWith("/ViewJoinMap"))
+            problems += "$label: ${renderer.state} is a $type, not a ViewJoinMap"
           val view = joinMap["view"]?.jsonPrimitive?.content
           val definition = view?.let { json("states/Binary-$it.json") }
           val definitionType = definition?.get("resourceType")?.jsonPrimitive?.content.orEmpty()
           if (!definitionType.endsWith("/ViewDefinition")) {
-            problems += "$label: the ViewJoinMap names view $view, which has no ViewDefinition in states/"
+            problems +=
+              "$label: the ViewJoinMap names view $view, which has no ViewDefinition in states/"
           }
         }
       }
@@ -89,17 +115,29 @@ class ScreensAgreementTest {
         val config = json("configs/Binary-${viewType}Config.json")
         val named = renderer.config?.let { json("configs/Binary-$it.json") } ?: config
         val declared = named?.get("viewType")?.jsonPrimitive?.content
-        if (named == null) problems += "$label: configs/Binary-${renderer.config ?: "${viewType}Config"}.json (ViewConfig) is missing"
-        else if (declared != viewType) problems += "$label: its ViewConfig declares viewType $declared"
+        if (named == null)
+          problems +=
+            "$label: configs/Binary-${renderer.config ?: "${viewType}Config"}.json (ViewConfig) is missing"
+        else if (declared != viewType)
+          problems += "$label: its ViewConfig declares viewType $declared"
       }
     }
 
     val registeredTypes = all.map { it.viewType.substringAfter("ViewTypeCS.") }.toSet()
-    File(files, "configs").listFiles { file -> file.name.startsWith("Binary-") }.orEmpty().forEach { file ->
-      val declared = Json.parseToJsonElement(file.readText()).jsonObject["viewType"]?.jsonPrimitive?.content
-      if (declared !in registeredTypes) problems += "${file.name}: no renderer is registered for viewType $declared"
-    }
+    File(files, "configs")
+      .listFiles { file -> file.name.startsWith("Binary-") }
+      .orEmpty()
+      .forEach { file ->
+        val declared =
+          Json.parseToJsonElement(file.readText()).jsonObject["viewType"]?.jsonPrimitive?.content
+        if (declared !in registeredTypes)
+          problems += "${file.name}: no renderer is registered for viewType $declared"
+      }
 
-    assertEquals(emptyList(), problems, "screens without their views (${components.size} components checked)")
+    assertEquals(
+      emptyList(),
+      problems,
+      "screens without their views (${components.size} components checked)",
+    )
   }
 }

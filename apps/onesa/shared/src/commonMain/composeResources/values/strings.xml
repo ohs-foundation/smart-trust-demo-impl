@@ -8,41 +8,94 @@
     <string name="relationship_non_relative">Non-relative</string>
 
     <!-- Login screen -->
-    <string name="login_brand">Trust Demo · Onesa</string>
+    <string name="login_brand">OHS Player · Onesa</string>
+    <string name="login_ministry">Ministry of Health, Onesa (XXK)</string>
+    <string name="login_audience">For health workers, clinic staff and families.</string>
     <string name="login_card_title">Sign in</string>
-    <string name="login_redirect_hint">We'll hand you over to your organization's sign-in page, then bring you straight back.</string>
-    <string name="login_sign_in">Continue to sign in</string>
+    <string name="login_redirect_hint">Enter your username and password on the Ministry of Health sign-in page, which opens next.</string>
+    <string name="login_sign_in">Sign in</string>
+    <string name="login_signing_in">Signing in</string>
+    <string name="login_offline_note">First sign-in needs a connection. After that, works offline for up to 30 days.</string>
     <string name="login_error_title">Sign-in failed</string>
     <string name="login_error_dismiss">Dismiss</string>
 
     <!-- Home screen -->
     <string name="home_destination_households">Households</string>
-    <string name="home_destination_trust_lists">Trust lists</string>
-    <string name="home_registers">Registers</string>
-    <string name="home_signed_in">Signed in</string>
-    <string name="home_last_synced">Last synced: %1$s</string>
-    <string name="home_sync_now">Sync now</string>
+    <string name="home_destination_trust_lists">Trust list</string>
+    <string name="home_destination_sync">Sync</string>
+    <string name="home_account">Account</string>
+    <string name="home_signed_in_as">Signed in as %1$s</string>
+    <string name="home_sync_now">Sync Now</string>
     <string name="home_cancel_sync">Cancel sync</string>
     <string name="home_sync_in_progress">Sync in progress</string>
-    <string name="home_sign_out">Sign out</string>
-    <string name="home_open_navigation_menu">Open navigation menu</string>
+    <string name="home_sign_out">Sign Out</string>
+    <string name="shell_chw_title">Onesa Community Health</string>
+    <string name="shell_chw_subtitle">Catchment %1$s • CHW: %2$s</string>
+    <string name="shell_chw_subtitle_no_place">CHW: %1$s</string>
+    <string name="shell_clinic_title">%1$s — OHS Player Facility EMR</string>
+    <string name="shell_clinic_title_no_place">OHS Player Facility EMR</string>
+    <string name="shell_clinic_subtitle">Practitioner: %1$s</string>
+    <string name="shell_family_title">Onesa Family Health Wallet</string>
+    <string name="shell_family_subtitle">%1$s family • %2$d members</string>
+    <string name="shell_synced">Synced %1$s</string>
+    <string name="shell_offline">Offline (%1$dd)</string>
+    <string name="shell_not_synced">Not synced</string>
+    <string name="shell_portal_connected">National Portal Connected</string>
+    <string name="shell_trust_cached">Trust list cached • %1$s</string>
+    <string name="shell_trust_stale">Trust list out of date</string>
     <string name="home_sync_failed">Sync failed. Please try again.</string>
     <string name="home_sync_cancelled">Sync cancelled.</string>
     <string name="home_select_household">Select a household to view details</string>
 
     <!-- Role screen -->
     <string name="role_none_title">No role assigned</string>
-    <string name="role_none_body">Your account has no community health worker, clinician or family role. Ask your administrator to assign one, then sign in again.</string>
+    <string name="role_none_body">Your account has no role at an Onesan facility yet, so nothing was downloaded. Ask your district health office to assign one.</string>
     <string name="role_failed_title">Couldn't load your role</string>
-    <string name="role_retry">Retry</string>
+    <string name="role_retry">Check Again</string>
 
     <!-- Initial sync screen -->
     <string name="initial_sync_title">Setting up your data…</string>
-    <string name="initial_sync_subtitle">This may take a moment the first time.</string>
     <string name="initial_sync_failed_title">Couldn't sync your data</string>
     <string name="initial_sync_failed_body">Sync failed. Please check your connection and try again.</string>
     <string name="initial_sync_retry">Retry</string>
-    <string name="initial_sync_continue">Continue without syncing</string>
+    <string name="initial_sync_continue">Continue Offline</string>
+    <string name="initial_sync_signed_in_as">Signed in as %1$s • %2$s</string>
+    <string name="initial_sync_place">Getting %1$s ready</string>
+    <string name="initial_sync_your_records">Getting your records ready</string>
+    <string name="initial_sync_steps_done">%1$d of %2$d</string>
+    <string name="initial_sync_records">%1$d records</string>
+    <string name="initial_sync_offline_note">You can work offline once this finishes.</string>
+    <string name="sync_part_organization">Organization and catchment</string>
+    <string name="sync_part_households">Households</string>
+    <string name="sync_part_people">People</string>
+    <string name="sync_part_records">Referrals and immunizations</string>
+    <string name="sync_part_schedule">Schedule and dose map</string>
+    <string name="sync_part_shares">Shared links</string>
+    <string name="sync_part_practitioner">Your practitioner record</string>
+    <string name="sync_state_done">Done</string>
+    <string name="sync_state_downloading">Downloading</string>
+    <string name="sync_state_waiting">Waiting</string>
+    <string name="sync_none_yet">None yet</string>
+    <string name="sync_more">and %1$d more</string>
+    <string name="role_chw">Community health worker</string>
+    <string name="role_clinician">Clinician</string>
+    <string name="role_family">Family</string>
+
+    <!-- Sync status -->
+    <string name="sync_status_waiting">Waiting to upload</string>
+    <string name="sync_status_records">%1$d records</string>
+    <string name="sync_status_nothing">Nothing waiting</string>
+    <string name="sync_status_nothing_body">Everything changed on this phone is on the national server.</string>
+    <string name="sync_status_queued">Queued</string>
+    <string name="sync_status_last_upload">Last upload</string>
+    <string name="sync_status_never">Not yet</string>
+    <string name="sync_status_today">Today, %1$s</string>
+    <string name="sync_status_days_ago">%1$s, %2$d days ago</string>
+    <string name="sync_status_keeps">Phone keeps changes</string>
+    <string name="sync_status_keeps_value">Until they upload</string>
+    <string name="sync_status_signal">Uploads start when there is signal.</string>
+    <string name="sync_status_catchment_only">The national server accepts households in your catchment only.</string>
+    <string name="sync_status_facility_only">The national server accepts records for your facility only.</string>
 
     <!-- Group list screen -->
     <string name="group_list_register_household">Add household</string>

@@ -15,17 +15,16 @@
  */
 package dev.ohs.trustdemo.onesa.feature.patient.profile
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import dev.ohs.player.client.renderer.ComponentRenderer
 import dev.ohs.player.client.renderer.RenderOptions
-import dev.ohs.trustdemo.onesa.feature.component.common.StatusChipData
-import dev.ohs.trustdemo.onesa.feature.component.common.StatusRow
 import dev.ohs.trustdemo.onesa.generated.config.AllergyItemConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.allergy_unknown
 import dev.ohs.trustdemo.onesa.generated.state.PatientAllergyState
+import dev.ohs.trustdemo.onesa.ui.RecordRow
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import org.jetbrains.compose.resources.stringResource
 
 class AllergyItemRenderer : ComponentRenderer<PatientAllergyState, AllergyItemConfig> {
@@ -35,21 +34,19 @@ class AllergyItemRenderer : ComponentRenderer<PatientAllergyState, AllergyItemCo
     config: AllergyItemConfig,
     options: RenderOptions,
   ) {
-    val showCriticality = config.showCriticality != false
-    StatusRow(
-      title = item.substance ?: stringResource(Res.string.allergy_unknown),
+    RecordRow(
+      label = item.substance ?: stringResource(Res.string.allergy_unknown),
       modifier = options.modifier,
-      subtitle =
-        if (showCriticality) item.criticality?.replaceFirstChar { it.uppercaseChar() } else null,
-      subtitleColor = criticalityColor(item.criticality).copy(alpha = 0.85f),
-      accentColor = if (showCriticality) criticalityColor(item.criticality) else null,
+      detail =
+        if (config.showCriticality != false) {
+          item.criticality?.replaceFirstChar { it.uppercaseChar() }
+        } else null,
       status =
         if (config.showStatus != false)
           item.allergyStatus?.let {
-            StatusChipData(
-              label = it.replaceFirstChar { c -> c.uppercaseChar() },
-              containerColor = MaterialTheme.colorScheme.secondaryContainer,
-              contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            Status(
+              it.replaceFirstChar { c -> c.uppercaseChar() },
+              criticalityTone(item.criticality),
             )
           }
         else null,
@@ -57,11 +54,10 @@ class AllergyItemRenderer : ComponentRenderer<PatientAllergyState, AllergyItemCo
   }
 }
 
-@Composable
-fun criticalityColor(criticality: String?): Color =
+fun criticalityTone(criticality: String?): Tone =
   when (criticality?.lowercase()) {
-    "high" -> MaterialTheme.colorScheme.error
-    "moderate" -> Color(0xFFE37400)
-    "low" -> MaterialTheme.colorScheme.tertiary
-    else -> MaterialTheme.colorScheme.onSurfaceVariant
+    "high" -> Tone.Danger
+    "moderate" -> Tone.Warning
+    "low" -> Tone.Success
+    else -> Tone.Neutral
   }

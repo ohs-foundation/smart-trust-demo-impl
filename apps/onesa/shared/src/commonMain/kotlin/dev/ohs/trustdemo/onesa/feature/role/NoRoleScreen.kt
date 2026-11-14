@@ -15,47 +15,51 @@
  */
 package dev.ohs.trustdemo.onesa.feature.role
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.home_sign_out
+import dev.ohs.trustdemo.onesa.generated.resources.login_brand
+import dev.ohs.trustdemo.onesa.generated.resources.login_ministry
 import dev.ohs.trustdemo.onesa.generated.resources.role_failed_title
 import dev.ohs.trustdemo.onesa.generated.resources.role_none_body
 import dev.ohs.trustdemo.onesa.generated.resources.role_none_title
 import dev.ohs.trustdemo.onesa.generated.resources.role_retry
+import dev.ohs.trustdemo.onesa.ui.Action
+import dev.ohs.trustdemo.onesa.ui.AlertCard
+import dev.ohs.trustdemo.onesa.ui.OnesaIcons
+import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
+import dev.ohs.trustdemo.onesa.ui.OnesaTopBar
+import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import org.jetbrains.compose.resources.stringResource
 
 /** Shown instead of the app when the user's role is unknown ([message] null) or failed to load. */
 @Composable
 fun NoRoleScreen(message: String?, onRetry: (() -> Unit)?, onSignOut: () -> Unit) {
-  Column(
-    modifier = Modifier.fillMaxSize().padding(32.dp),
-    verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-    horizontalAlignment = Alignment.CenterHorizontally,
+  OnesaScaffold(
+    topBar = {
+      OnesaTopBar(
+        title = stringResource(Res.string.login_brand),
+        icon = OnesaIcons.ShieldCheck,
+        subtitle = stringResource(Res.string.login_ministry),
+      )
+    },
+    actions = {
+      PrimaryActionBar(
+        listOfNotNull(
+          Action(stringResource(Res.string.home_sign_out), onClick = onSignOut, primary = false),
+          onRetry?.let { Action(stringResource(Res.string.role_retry), onClick = it) },
+        )
+      )
+    },
   ) {
-    Text(
-      stringResource(
-        if (message == null) Res.string.role_none_title else Res.string.role_failed_title
-      ),
-      style = MaterialTheme.typography.headlineSmall,
+    AlertCard(
+      title =
+        stringResource(
+          if (message == null) Res.string.role_none_title else Res.string.role_failed_title
+        ),
+      text = message ?: stringResource(Res.string.role_none_body),
+      tone = if (message == null) Tone.Warning else Tone.Danger,
     )
-    Text(
-      message ?: stringResource(Res.string.role_none_body),
-      style = MaterialTheme.typography.bodyLarge,
-      textAlign = TextAlign.Center,
-    )
-    onRetry?.let { Button(onClick = it) { Text(stringResource(Res.string.role_retry)) } }
-    OutlinedButton(onClick = onSignOut) { Text(stringResource(Res.string.home_sign_out)) }
   }
 }

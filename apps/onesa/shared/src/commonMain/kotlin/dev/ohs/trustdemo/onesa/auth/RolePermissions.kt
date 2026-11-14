@@ -24,11 +24,10 @@ enum class Permission {
   PatientProfile,
   TrustLists,
   Wallet,
+  Upload,
 }
 
-/**
- * The one place a role is tied to what it may do; the drawer, the actions and the routes read it.
- */
+/** The one place a role is tied to what it may do; the tabs, the actions and the routes read it. */
 val ROLE_PERMISSIONS: Map<AppRole, Set<Permission>> =
   mapOf(
     AppRole.CHW to
@@ -37,6 +36,7 @@ val ROLE_PERMISSIONS: Map<AppRole, Set<Permission>> =
         Permission.Register,
         Permission.PatientProfile,
         Permission.TrustLists,
+        Permission.Upload,
       ),
     AppRole.CLINICIAN to
       setOf(
@@ -45,6 +45,7 @@ val ROLE_PERMISSIONS: Map<AppRole, Set<Permission>> =
         Permission.RecordDose,
         Permission.PatientProfile,
         Permission.TrustLists,
+        Permission.Upload,
       ),
     AppRole.FAMILY to setOf(Permission.Wallet),
   )

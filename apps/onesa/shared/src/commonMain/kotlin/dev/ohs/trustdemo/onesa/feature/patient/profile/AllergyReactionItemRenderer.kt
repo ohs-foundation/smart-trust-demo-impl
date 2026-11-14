@@ -27,11 +27,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.ohs.player.client.renderer.ComponentRenderer
 import dev.ohs.player.client.renderer.RenderOptions
-import dev.ohs.trustdemo.onesa.feature.component.common.Chip
 import dev.ohs.trustdemo.onesa.generated.config.AllergyReactionItemConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.allergy_unknown
 import dev.ohs.trustdemo.onesa.generated.state.AllergyReactionState
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.StatusChip
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import org.jetbrains.compose.resources.stringResource
 
 class AllergyReactionItemRenderer :
@@ -74,20 +76,15 @@ fun AllergyReactionItemRow(
     }
     if (config.showSeverity != false) {
       item.severity?.let { severity ->
-        Chip(
-          label = severity.replaceFirstChar { it.uppercaseChar() },
-          containerColor = severityContainerColor(severity),
-          contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        )
+        StatusChip(Status(severity.replaceFirstChar { it.uppercaseChar() }, severityTone(severity)))
       }
     }
   }
 }
 
-@Composable
-fun severityContainerColor(severity: String?) =
+fun severityTone(severity: String?): Tone =
   when (severity?.lowercase()) {
-    "severe" -> MaterialTheme.colorScheme.errorContainer
-    "moderate" -> MaterialTheme.colorScheme.tertiaryContainer
-    else -> MaterialTheme.colorScheme.secondaryContainer
+    "severe" -> Tone.Danger
+    "moderate" -> Tone.Warning
+    else -> Tone.Neutral
   }

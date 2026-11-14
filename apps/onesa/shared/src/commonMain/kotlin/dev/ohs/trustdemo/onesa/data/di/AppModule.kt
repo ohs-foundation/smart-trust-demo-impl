@@ -69,6 +69,8 @@ import dev.ohs.trustdemo.onesa.feature.referral.VerifyCardsViewModel
 import dev.ohs.trustdemo.onesa.feature.role.UserContextViewModel
 import dev.ohs.trustdemo.onesa.feature.scan.ScanCardViewModel
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
+import dev.ohs.trustdemo.onesa.feature.sync.SyncStatusViewModel
+import dev.ohs.trustdemo.onesa.feature.sync.SyncStepsViewModel
 import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListViewModel
 import dev.ohs.trustdemo.onesa.feature.wallet.IssuedLinksViewModel
 import dev.ohs.trustdemo.onesa.feature.wallet.ShareViewModel
@@ -250,6 +252,8 @@ internal val viewModelModule = module {
     )
   }
   viewModel { InitialSyncViewModel(get(), get()) }
+  viewModel { SyncStepsViewModel(get()) { SessionRepository.session.value?.context } }
+  viewModel { SyncStatusViewModel(get()) { SessionRepository.session.value?.context } }
   viewModel { TrustListViewModel(get()) }
   viewModel { ScanCardViewModel(get(), get()) }
   viewModel { ReferralInboxViewModel(get()) }

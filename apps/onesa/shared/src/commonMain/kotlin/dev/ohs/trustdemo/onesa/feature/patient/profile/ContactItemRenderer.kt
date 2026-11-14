@@ -33,11 +33,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.ohs.player.client.renderer.ComponentRenderer
 import dev.ohs.player.client.renderer.RenderOptions
-import dev.ohs.trustdemo.onesa.feature.component.common.Chip
 import dev.ohs.trustdemo.onesa.generated.config.ContactItemConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.name_unknown
 import dev.ohs.trustdemo.onesa.generated.state.PatientContactState
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.StatusChip
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import org.jetbrains.compose.resources.stringResource
 
 class ContactItemRenderer : ComponentRenderer<PatientContactState, ContactItemConfig> {
@@ -104,13 +106,7 @@ fun ContactItemRow(
       }
     }
     if (config.showRelationship != false) {
-      item.contactRelationship?.let {
-        Chip(
-          label = it,
-          containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-          contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        )
-      }
+      item.contactRelationship?.let { StatusChip(Status(it, Tone.Info)) }
     }
   }
 }

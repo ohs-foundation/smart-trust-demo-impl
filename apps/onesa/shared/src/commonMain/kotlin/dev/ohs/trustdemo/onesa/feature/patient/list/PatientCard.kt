@@ -34,12 +34,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import dev.ohs.trustdemo.onesa.feature.component.common.StatusChip
 import dev.ohs.trustdemo.onesa.generated.config.PatientCardConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.label_age
 import dev.ohs.trustdemo.onesa.generated.resources.name_unknown
 import dev.ohs.trustdemo.onesa.generated.state.PatientSummaryState
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.StatusChip
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -116,7 +118,7 @@ fun PatientCard(
       }
     }
     if (config.showStatusChip != false) {
-      StatusChip(isActive = patient.active ?: false)
+      ActiveChip(patient.active ?: false)
     }
   }
 }
@@ -136,4 +138,10 @@ internal fun calculateAge(
   } catch (_: Exception) {
     null
   }
+}
+
+/** Whether the patient record is active, as a chip. */
+@Composable
+fun ActiveChip(active: Boolean) {
+  StatusChip(if (active) Status("Active", Tone.Success) else Status("Inactive", Tone.Danger))
 }

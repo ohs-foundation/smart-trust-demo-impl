@@ -15,18 +15,19 @@
  */
 package dev.ohs.trustdemo.onesa.feature.patient.profile
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import dev.ohs.player.client.renderer.ComponentRenderer
 import dev.ohs.player.client.renderer.RenderOptions
-import dev.ohs.trustdemo.onesa.feature.component.common.StatusChipData
-import dev.ohs.trustdemo.onesa.feature.component.common.StatusRow
 import dev.ohs.trustdemo.onesa.generated.config.ImmunizationItemConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.immunization_given
 import dev.ohs.trustdemo.onesa.generated.resources.immunization_unknown
 import dev.ohs.trustdemo.onesa.generated.resources.immunization_verified
 import dev.ohs.trustdemo.onesa.generated.state.PatientImmunizationState
+import dev.ohs.trustdemo.onesa.ui.OnesaIcons
+import dev.ohs.trustdemo.onesa.ui.RecordRow
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import org.jetbrains.compose.resources.stringResource
 
 class ImmunizationItemRenderer :
@@ -37,11 +38,11 @@ class ImmunizationItemRenderer :
     config: ImmunizationItemConfig,
     options: RenderOptions,
   ) {
-    val isCompleted = item.immunizationStatus?.lowercase() == "completed"
-    StatusRow(
-      title = item.vaccineName ?: stringResource(Res.string.immunization_unknown),
+    RecordRow(
+      label = item.vaccineName ?: stringResource(Res.string.immunization_unknown),
       modifier = options.modifier,
-      subtitle =
+      icon = OnesaIcons.Syringe,
+      detail =
         listOfNotNull(
             if (config.showDate != false)
               item.occurrenceDate?.let { stringResource(Res.string.immunization_given, it) }
@@ -50,24 +51,16 @@ class ImmunizationItemRenderer :
           )
           .joinToString(", ")
           .ifEmpty { null },
-      accentColor =
-        if (isCompleted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline,
       status =
         if (config.showStatus != false)
           item.immunizationStatus?.let {
-            val (bg, fg) =
+            val tone =
               when (it.lowercase()) {
-                "completed" ->
-                  MaterialTheme.colorScheme.tertiaryContainer to
-                    MaterialTheme.colorScheme.onTertiaryContainer
-                "not-done" ->
-                  MaterialTheme.colorScheme.errorContainer to
-                    MaterialTheme.colorScheme.onErrorContainer
-                else ->
-                  MaterialTheme.colorScheme.surfaceVariant to
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                "completed" -> Tone.Success
+                "not-done" -> Tone.Danger
+                else -> Tone.Neutral
               }
-            StatusChipData(it.replaceFirstChar { c -> c.uppercaseChar() }, bg, fg)
+            Status(it.replaceFirstChar { c -> c.uppercaseChar() }, tone)
           }
         else null,
     )

@@ -40,4 +40,7 @@ interface FhirRepository {
 
   /** Drops the local copy only: the record is already gone from the server. */
   suspend fun remove(resourceType: String, id: String)
+
+  /** The [resourceType] records changed on this phone and not uploaded yet. */
+  suspend fun unsynced(resourceType: String): List<Resource> = emptyList()
 }

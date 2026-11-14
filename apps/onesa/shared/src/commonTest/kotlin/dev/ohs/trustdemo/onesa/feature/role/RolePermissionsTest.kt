@@ -34,7 +34,7 @@ class RolePermissionsTest {
       assertEquals(
         HomeDestination.entries.filter { it.permission in granted },
         role.destinations(),
-        "$role drawer",
+        "$role tabs",
       )
       assertEquals(
         ScreenAction.entries.filter { it.permission in granted }.toSet(),

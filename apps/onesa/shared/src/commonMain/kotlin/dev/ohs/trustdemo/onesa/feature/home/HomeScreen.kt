@@ -15,92 +15,84 @@
  */
 package dev.ohs.trustdemo.onesa.feature.home
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.NavigationRailItemDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass
 import dev.ohs.trustdemo.onesa.auth.AppRole
+import dev.ohs.trustdemo.onesa.auth.SessionRepository
+import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.feature.group.list.GroupListScreen
 import dev.ohs.trustdemo.onesa.feature.group.list.LocalSelectedGroupId
 import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileScreen
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileScreen
 import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxScreen
+import dev.ohs.trustdemo.onesa.feature.sync.SyncStatusContent
+import dev.ohs.trustdemo.onesa.feature.sync.SyncStatusViewModel
+import dev.ohs.trustdemo.onesa.feature.sync.syncAction
+import dev.ohs.trustdemo.onesa.feature.sync.syncedName
 import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListScreen
+import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListViewModel
 import dev.ohs.trustdemo.onesa.feature.wallet.WalletScreen
+import dev.ohs.trustdemo.onesa.feature.wallet.WalletViewModel
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.home_cancel_sync
-import dev.ohs.trustdemo.onesa.generated.resources.home_last_synced
-import dev.ohs.trustdemo.onesa.generated.resources.home_open_navigation_menu
-import dev.ohs.trustdemo.onesa.generated.resources.home_registers
 import dev.ohs.trustdemo.onesa.generated.resources.home_select_household
 import dev.ohs.trustdemo.onesa.generated.resources.home_sign_out
-import dev.ohs.trustdemo.onesa.generated.resources.home_signed_in
+import dev.ohs.trustdemo.onesa.generated.resources.home_signed_in_as
 import dev.ohs.trustdemo.onesa.generated.resources.home_sync_cancelled
 import dev.ohs.trustdemo.onesa.generated.resources.home_sync_failed
-import dev.ohs.trustdemo.onesa.generated.resources.home_sync_in_progress
 import dev.ohs.trustdemo.onesa.generated.resources.home_sync_now
-import kotlinx.coroutines.launch
+import dev.ohs.trustdemo.onesa.generated.resources.shell_chw_subtitle
+import dev.ohs.trustdemo.onesa.generated.resources.shell_chw_subtitle_no_place
+import dev.ohs.trustdemo.onesa.generated.resources.shell_chw_title
+import dev.ohs.trustdemo.onesa.generated.resources.shell_clinic_subtitle
+import dev.ohs.trustdemo.onesa.generated.resources.shell_clinic_title
+import dev.ohs.trustdemo.onesa.generated.resources.shell_clinic_title_no_place
+import dev.ohs.trustdemo.onesa.generated.resources.shell_family_subtitle
+import dev.ohs.trustdemo.onesa.generated.resources.shell_family_title
+import dev.ohs.trustdemo.onesa.generated.resources.shell_not_synced
+import dev.ohs.trustdemo.onesa.generated.resources.shell_offline
+import dev.ohs.trustdemo.onesa.generated.resources.shell_portal_connected
+import dev.ohs.trustdemo.onesa.generated.resources.shell_synced
+import dev.ohs.trustdemo.onesa.generated.resources.shell_trust_cached
+import dev.ohs.trustdemo.onesa.generated.resources.shell_trust_stale
+import dev.ohs.trustdemo.onesa.ui.OnesaIcons
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun HomeScreen(
   userName: String,
@@ -116,13 +108,15 @@ fun HomeScreen(
 ) {
   val homeViewModel: HomeViewModel = koinViewModel()
   val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+  val statusViewModel: SyncStatusViewModel = koinViewModel()
+  val pending by statusViewModel.pending.collectAsStateWithLifecycle()
+  LaunchedEffect(uiState.isSyncing) { if (!uiState.isSyncing) statusViewModel.refresh() }
 
   val destinations = remember(role) { role.destinations() }
-  var selectedDestination by remember { mutableStateOf(destinations.first()) }
+  var selected by rememberSaveable { mutableIntStateOf(0) }
+  val destination = destinations[selected.coerceIn(destinations.indices)]
   var selectedGroupId by rememberSaveable { mutableStateOf<String?>(null) }
   var selectedPatientId by rememberSaveable(selectedGroupId) { mutableStateOf<String?>(null) }
-  val drawerState = rememberDrawerState(DrawerValue.Closed)
-  val scope = rememberCoroutineScope()
   val snackbarHostState = remember { SnackbarHostState() }
 
   val syncErrorMessage =
@@ -138,289 +132,184 @@ fun HomeScreen(
     }
   }
 
-  Box(modifier = Modifier.fillMaxSize()) {
-    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
-    val isExpandedWidth =
-      windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
-    val isMediumWidth =
-      !isExpandedWidth &&
-        windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+  val isExpandedWidth =
+    currentWindowAdaptiveInfo()
+      .windowSizeClass
+      .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
+  val onSyncNow = { homeViewModel.syncNow() }
+  val onCancelSync = { homeViewModel.cancelSync() }
 
-    fun closeDrawerIfCompact() {
-      if (!isExpandedWidth) scope.launch { drawerState.close() }
-    }
-
-    val onDrawer = MaterialTheme.colorScheme.onPrimary
-    val drawerItemColors =
-      NavigationDrawerItemDefaults.colors(
-        selectedContainerColor = onDrawer.copy(alpha = 0.20f),
-        unselectedContainerColor = Color.Transparent,
-        selectedTextColor = onDrawer,
-        unselectedTextColor = onDrawer,
-        selectedIconColor = onDrawer,
-        unselectedIconColor = onDrawer,
+  HomeShell(
+    header = shellHeader(role, userName, uiState.lastSyncedAt),
+    tabs = destinations.map { stringResource(it.label) },
+    selected = destinations.indexOf(destination),
+    onSelect = { selected = it },
+    menu = { close ->
+      DropdownMenuItem(
+        text = { Text(stringResource(Res.string.home_signed_in_as, userName)) },
+        onClick = {},
+        enabled = false,
       )
-    val drawerItems: @Composable () -> Unit = {
-      val syncInProgressDescription = stringResource(Res.string.home_sync_in_progress)
-      Column(modifier = Modifier.fillMaxHeight().padding(horizontal = 12.dp)) {
-        Row(
-          modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 20.dp),
-          horizontalArrangement = Arrangement.spacedBy(12.dp),
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          Box(
-            modifier =
-              Modifier.size(40.dp).clip(CircleShape).background(onDrawer.copy(alpha = 0.2f)),
-            contentAlignment = Alignment.Center,
-          ) {
-            Text(
-              text = userName.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-              style = MaterialTheme.typography.titleMedium,
-              color = onDrawer,
-            )
-          }
+      DropdownMenuItem(
+        text = {
           Text(
-            text = userName.ifBlank { stringResource(Res.string.home_signed_in) },
-            style = MaterialTheme.typography.titleMedium,
-            color = onDrawer,
-            fontWeight = FontWeight.SemiBold,
-          )
-        }
-        Text(
-          text = stringResource(Res.string.home_registers),
-          style = MaterialTheme.typography.titleSmall,
-          color = onDrawer.copy(alpha = 0.7f),
-          modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-        )
-        destinations.forEach { destination ->
-          NavigationDrawerItem(
-            label = { Text(stringResource(destination.label)) },
-            icon = { Icon(destination.icon, contentDescription = null) },
-            selected = destination == selectedDestination,
-            colors = drawerItemColors,
-            onClick = {
-              selectedDestination = destination
-              closeDrawerIfCompact()
-            },
-          )
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        HorizontalDivider(color = onDrawer.copy(alpha = 0.2f))
-        uiState.lastSyncedAt?.let { lastSyncedAt ->
-          Text(
-            text = stringResource(Res.string.home_last_synced, lastSyncedAt),
-            style = MaterialTheme.typography.bodySmall,
-            color = onDrawer.copy(alpha = 0.7f),
-            modifier = Modifier.padding(start = 16.dp, top = 8.dp),
-          )
-        }
-        NavigationDrawerItem(
-          colors = drawerItemColors,
-          label = {
-            Text(
-              stringResource(
-                if (uiState.isSyncing) Res.string.home_cancel_sync else Res.string.home_sync_now
-              )
+            stringResource(
+              if (uiState.isSyncing) Res.string.home_cancel_sync else Res.string.home_sync_now
             )
-          },
-          icon = {
-            Icon(
-              if (uiState.isSyncing) Icons.Filled.Close else Icons.Filled.Refresh,
-              contentDescription = null,
-            )
-          },
-          badge = {
-            if (uiState.isSyncing) {
-              CircularProgressIndicator(
-                modifier =
-                  Modifier.size(16.dp).semantics { contentDescription = syncInProgressDescription },
-                strokeWidth = 2.dp,
-                color = onDrawer,
-              )
-            }
-          },
-          selected = false,
-          onClick = {
-            if (uiState.isSyncing) {
-              homeViewModel.cancelSync()
-            } else {
-              homeViewModel.syncNow()
-            }
-            closeDrawerIfCompact()
-          },
-        )
-        NavigationDrawerItem(
-          colors = drawerItemColors,
-          label = { Text(stringResource(Res.string.home_sign_out)) },
-          icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
-          selected = false,
-          onClick = {
-            onSignOut()
-            closeDrawerIfCompact()
-          },
-        )
-      }
-    }
-
-    val content: @Composable () -> Unit = {
-      when (selectedDestination) {
-        HomeDestination.Households ->
-          if (isExpandedWidth) {
-            Row(modifier = Modifier.fillMaxSize()) {
-              Box(modifier = Modifier.weight(1f).fillMaxSize()) {
-                CompositionLocalProvider(LocalSelectedGroupId provides selectedGroupId) {
-                  GroupListScreen(
-                    role = role,
-                    onGroupClick = { selectedGroupId = it },
-                    onDataCaptureClick = onDataCaptureClick,
-                  )
-                }
-              }
-              VerticalDivider()
-              Box(modifier = Modifier.weight(1.5f).fillMaxSize()) {
-                val patientId = selectedPatientId
-                val groupId = selectedGroupId
-                when {
-                  patientId != null ->
-                    PatientProfileScreen(
-                      patientId = patientId,
-                      role = role,
-                      onBack = { selectedPatientId = null },
-                      onAddClinicalData = { onAddClinicalData(patientId) },
-                    )
-                  groupId != null ->
-                    GroupProfileScreen(
-                      groupId = groupId,
-                      role = role,
-                      onBack = { selectedGroupId = null },
-                      onMemberClick = { selectedPatientId = it },
-                      onAddMembers = { onAddMembers(groupId) },
-                    )
-                  else -> EmptyDetailPlaceholder()
-                }
-              }
-            }
-          } else {
-            GroupListScreen(
-              role = role,
-              onGroupClick = onGroupClick,
-              onDataCaptureClick = onDataCaptureClick,
-            )
-          }
-        HomeDestination.Referrals -> ReferralInboxScreen(onOpen = onOpenReferral)
-        HomeDestination.TrustLists -> TrustListScreen()
-        HomeDestination.Wallet ->
-          WalletScreen(onShare = onShareRecords, onSharedLinks = onSharedLinks)
-      }
-    }
-
-    if (isExpandedWidth) {
-      Row(modifier = Modifier.fillMaxSize()) {
-        Surface(
-          modifier = Modifier.width(260.dp).fillMaxHeight(),
-          color = MaterialTheme.colorScheme.primary,
-        ) {
-          drawerItems()
-        }
-        VerticalDivider()
-        Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
-          Box(modifier = Modifier.padding(padding)) { content() }
-        }
-      }
-    } else if (isMediumWidth) {
-      Row(modifier = Modifier.fillMaxSize()) {
-        val railItemColors =
-          NavigationRailItemDefaults.colors(
-            indicatorColor = onDrawer.copy(alpha = 0.20f),
-            selectedIconColor = onDrawer,
-            unselectedIconColor = onDrawer,
-            selectedTextColor = onDrawer,
-            unselectedTextColor = onDrawer,
           )
-        NavigationRail(containerColor = MaterialTheme.colorScheme.primary) {
-          val syncInProgressDescription = stringResource(Res.string.home_sync_in_progress)
-          destinations.forEach { destination ->
-            NavigationRailItem(
-              selected = destination == selectedDestination,
-              onClick = { selectedDestination = destination },
-              colors = railItemColors,
-              icon = { Icon(destination.icon, contentDescription = null) },
-              label = { Text(stringResource(destination.label)) },
-            )
-          }
-          Spacer(modifier = Modifier.weight(1f))
-          NavigationRailItem(
-            selected = false,
-            colors = railItemColors,
-            onClick = {
-              if (uiState.isSyncing) homeViewModel.cancelSync() else homeViewModel.syncNow()
-            },
-            icon = {
-              if (uiState.isSyncing) {
-                Icon(
-                  Icons.Filled.Close,
-                  contentDescription = null,
-                  modifier = Modifier.semantics { contentDescription = syncInProgressDescription },
-                )
-              } else {
-                Icon(Icons.Filled.Refresh, contentDescription = null)
-              }
-            },
-            label = {
-              Text(
-                stringResource(
-                  if (uiState.isSyncing) Res.string.home_cancel_sync else Res.string.home_sync_now
-                )
-              )
-            },
-          )
-          NavigationRailItem(
-            selected = false,
-            colors = railItemColors,
-            onClick = onSignOut,
-            icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
-            label = { Text(stringResource(Res.string.home_sign_out)) },
-          )
-        }
-        VerticalDivider()
-        Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
-          Box(modifier = Modifier.padding(padding)) { content() }
-        }
-      }
-    } else {
-      ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-          ModalDrawerSheet(
-            modifier = Modifier.width(280.dp),
-            drawerContainerColor = MaterialTheme.colorScheme.primary,
-          ) {
-            drawerItems()
-          }
         },
-      ) {
-        Scaffold(
-          topBar = {
-            TopAppBar(
-              title = { Text(stringResource(selectedDestination.label)) },
-              navigationIcon = {
-                IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                  Icon(
-                    Icons.Filled.Menu,
-                    contentDescription = stringResource(Res.string.home_open_navigation_menu),
+        onClick = {
+          close()
+          if (uiState.isSyncing) onCancelSync() else onSyncNow()
+        },
+      )
+      DropdownMenuItem(
+        text = { Text(stringResource(Res.string.home_sign_out)) },
+        onClick = {
+          close()
+          onSignOut()
+        },
+      )
+    },
+    actions =
+      if (destination == HomeDestination.Sync) {
+        listOf(syncAction(uiState.isSyncing, { onSyncNow() }, onCancelSync))
+      } else null,
+    snackbarHost = { SnackbarHost(snackbarHostState) },
+  ) {
+    when (destination) {
+      HomeDestination.Households ->
+        if (isExpandedWidth) {
+          Row(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+              CompositionLocalProvider(LocalSelectedGroupId provides selectedGroupId) {
+                GroupListScreen(
+                  role = role,
+                  onGroupClick = { selectedGroupId = it },
+                  onDataCaptureClick = onDataCaptureClick,
+                )
+              }
+            }
+            VerticalDivider(color = OnesaColors.Line)
+            Box(modifier = Modifier.weight(1.5f).fillMaxSize()) {
+              val patientId = selectedPatientId
+              val groupId = selectedGroupId
+              when {
+                patientId != null ->
+                  PatientProfileScreen(
+                    patientId = patientId,
+                    role = role,
+                    onBack = { selectedPatientId = null },
+                    onAddClinicalData = { onAddClinicalData(patientId) },
                   )
-                }
-              },
-            )
-          },
-          snackbarHost = { SnackbarHost(snackbarHostState) },
-        ) { padding ->
-          Box(modifier = Modifier.padding(padding)) { content() }
+                groupId != null ->
+                  GroupProfileScreen(
+                    groupId = groupId,
+                    role = role,
+                    onBack = { selectedGroupId = null },
+                    onMemberClick = { selectedPatientId = it },
+                    onAddMembers = { onAddMembers(groupId) },
+                  )
+                else -> EmptyDetailPlaceholder()
+              }
+            }
+          }
+        } else {
+          GroupListScreen(
+            role = role,
+            onGroupClick = onGroupClick,
+            onDataCaptureClick = onDataCaptureClick,
+          )
         }
-      }
+      HomeDestination.Referrals -> ReferralInboxScreen(onOpen = onOpenReferral)
+      HomeDestination.TrustLists -> TrustListScreen()
+      HomeDestination.Wallet ->
+        WalletScreen(onShare = onShareRecords, onSharedLinks = onSharedLinks)
+      HomeDestination.Sync -> SyncStatusContent(pending, uiState.lastSyncedAt, role)
     }
+  }
+}
+
+/** The role's header: who is signed in, where, and how fresh the phone's records are. */
+@Composable
+private fun shellHeader(role: AppRole, userName: String, lastSync: Instant?): ShellHeader {
+  val repository: FhirRepository = koinInject()
+  val session by SessionRepository.session.collectAsStateWithLifecycle()
+  val user = session?.context
+  val place by
+    produceState<String?>(null, user) {
+      value =
+        user?.locationId?.let { repository.get("Location", it) }?.let(::syncedName)
+          ?: user?.organizationId?.let { repository.get("Organization", it) }?.let(::syncedName)
+    }
+  val synced = syncChip(lastSync)
+  return when (role) {
+    AppRole.CHW ->
+      ShellHeader(
+        title = stringResource(Res.string.shell_chw_title),
+        icon = OnesaIcons.Users,
+        subtitle =
+          place?.let { stringResource(Res.string.shell_chw_subtitle, it, userName) }
+            ?: stringResource(Res.string.shell_chw_subtitle_no_place, userName),
+        status = synced,
+      )
+    AppRole.CLINICIAN -> {
+      val trustViewModel: TrustListViewModel = koinViewModel()
+      val lists by trustViewModel.lists.collectAsStateWithLifecycle()
+      LaunchedEffect(Unit) { trustViewModel.load() }
+      val list = lists?.firstOrNull()
+      ShellHeader(
+        title =
+          place?.let { stringResource(Res.string.shell_clinic_title, it) }
+            ?: stringResource(Res.string.shell_clinic_title_no_place),
+        icon = OnesaIcons.Building,
+        subtitle = stringResource(Res.string.shell_clinic_subtitle, userName),
+        chips =
+          listOfNotNull(
+            when {
+              list == null -> null
+              list.stale -> Status(stringResource(Res.string.shell_trust_stale), Tone.Warning)
+              else ->
+                list.fetchedAt?.let {
+                  Status(stringResource(Res.string.shell_trust_cached, it), Tone.Success)
+                }
+            }
+          ),
+      )
+    }
+    AppRole.FAMILY -> {
+      val walletViewModel: WalletViewModel = koinViewModel()
+      val members by walletViewModel.members.collectAsStateWithLifecycle()
+      val family =
+        members?.mapNotNull { it.name?.substringAfterLast(' ') }?.distinct()?.singleOrNull()
+      ShellHeader(
+        title = stringResource(Res.string.shell_family_title),
+        icon = OnesaIcons.Users,
+        subtitle =
+          members?.let {
+            stringResource(Res.string.shell_family_subtitle, family ?: userName, it.size)
+          },
+        status =
+          if (synced.tone == Tone.Success) {
+            Status(stringResource(Res.string.shell_portal_connected), Tone.Success)
+          } else synced,
+      )
+    }
+  }
+}
+
+/** Synced today, or offline for some days, from the last successful sync. */
+@Composable
+private fun syncChip(lastSync: Instant?): Status {
+  lastSync ?: return Status(stringResource(Res.string.shell_not_synced), Tone.Warning)
+  val age = Clock.System.now() - lastSync
+  return if (age < 1.days) {
+    val local = lastSync.toLocalDateTime(TimeZone.currentSystemDefault())
+    val time =
+      "${local.hour.toString().padStart(2, '0')}:${local.minute.toString().padStart(2, '0')}"
+    Status(stringResource(Res.string.shell_synced, time), Tone.Success)
+  } else {
+    Status(stringResource(Res.string.shell_offline, age.inWholeDays.toInt()), Tone.Warning)
   }
 }
 

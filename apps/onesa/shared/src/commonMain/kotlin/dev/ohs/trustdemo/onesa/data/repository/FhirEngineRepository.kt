@@ -68,6 +68,13 @@ class FhirEngineRepository(private val fhirEngine: FhirEngine) : FhirRepository 
     }
   }
 
+  override suspend fun unsynced(resourceType: String): List<Resource> {
+    val type = ResourceType.valueOf(resourceType)
+    return all(resourceType).filter { resource ->
+      resource.id?.let { fhirEngine.getLocalChanges(type, it).isNotEmpty() } == true
+    }
+  }
+
   override suspend fun remove(resourceType: String, id: String) {
     fhirEngine.purge(ResourceType.valueOf(resourceType), id, forcePurge = true)
     DataChangeSignal.notifyChanged()

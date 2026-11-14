@@ -33,6 +33,10 @@ class RoleDownloadWorkManager(
 ) : DownloadWorkManager {
   private var delegate: DownloadWorkManager? = null
 
+  init {
+    DownloadProgress.started()
+  }
+
   private suspend fun delegate(): DownloadWorkManager =
     delegate
       ?: ResourceParamsBasedDownloadWorkManager(
@@ -41,7 +45,8 @@ class RoleDownloadWorkManager(
         )
         .also { delegate = it }
 
-  override suspend fun getNextRequest(): DownloadRequest? = delegate().getNextRequest()
+  override suspend fun getNextRequest(): DownloadRequest? =
+    delegate().getNextRequest().also(DownloadProgress::requested)
 
   override suspend fun getSummaryRequestUrls(): Map<ResourceType, String> =
     delegate().getSummaryRequestUrls()

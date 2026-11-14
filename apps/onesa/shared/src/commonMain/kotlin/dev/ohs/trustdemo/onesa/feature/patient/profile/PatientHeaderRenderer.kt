@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.ohs.player.client.renderer.ComponentRenderer
 import dev.ohs.player.client.renderer.RenderOptions
-import dev.ohs.trustdemo.onesa.feature.component.common.StatusChip
+import dev.ohs.trustdemo.onesa.feature.patient.list.ActiveChip
 import dev.ohs.trustdemo.onesa.feature.patient.list.calculateAge
 import dev.ohs.trustdemo.onesa.generated.config.PatientHeaderConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
@@ -115,7 +115,7 @@ fun PatientHeaderCard(
         )
       }
       if (config.showStatus != false) {
-        StatusChip(isActive = patient.active ?: false)
+        ActiveChip(patient.active ?: false)
       }
     }
   }

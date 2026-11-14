@@ -15,21 +15,18 @@
  */
 package dev.ohs.trustdemo.onesa.feature.patient.profile
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import dev.ohs.player.client.renderer.ComponentRenderer
 import dev.ohs.player.client.renderer.RenderOptions
-import dev.ohs.trustdemo.onesa.feature.component.common.StatusChipData
-import dev.ohs.trustdemo.onesa.feature.component.common.StatusRow
 import dev.ohs.trustdemo.onesa.generated.config.ConditionItemConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.condition_since
 import dev.ohs.trustdemo.onesa.generated.resources.condition_unknown
 import dev.ohs.trustdemo.onesa.generated.state.PatientConditionState
+import dev.ohs.trustdemo.onesa.ui.RecordRow
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import org.jetbrains.compose.resources.stringResource
-
-private val AmberAccent = Color(0xFFE37400)
 
 class ConditionItemRenderer : ComponentRenderer<PatientConditionState, ConditionItemConfig> {
   @Composable
@@ -38,35 +35,23 @@ class ConditionItemRenderer : ComponentRenderer<PatientConditionState, Condition
     config: ConditionItemConfig,
     options: RenderOptions,
   ) {
-    val status = item.conditionStatus?.lowercase()
-    val accentColor =
-      when (status) {
-        "active" -> AmberAccent
-        "resolved" -> MaterialTheme.colorScheme.tertiary
-        else -> MaterialTheme.colorScheme.outline
-      }
-    StatusRow(
-      title = item.conditionCode ?: stringResource(Res.string.condition_unknown),
+    RecordRow(
+      label = item.conditionCode ?: stringResource(Res.string.condition_unknown),
       modifier = options.modifier,
-      subtitle =
+      detail =
         if (config.showOnsetDate != false)
           item.onsetDate?.let { stringResource(Res.string.condition_since, it) }
         else null,
-      accentColor = accentColor,
       status =
         if (config.showStatus != false)
           item.conditionStatus?.let {
-            val (bg, fg) =
+            val tone =
               when (it.lowercase()) {
-                "active" -> AmberAccent.copy(alpha = 0.15f) to AmberAccent
-                "resolved" ->
-                  MaterialTheme.colorScheme.tertiaryContainer to
-                    MaterialTheme.colorScheme.onTertiaryContainer
-                else ->
-                  MaterialTheme.colorScheme.surfaceVariant to
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                "active" -> Tone.Warning
+                "resolved" -> Tone.Success
+                else -> Tone.Neutral
               }
-            StatusChipData(it.replaceFirstChar { c -> c.uppercaseChar() }, bg, fg)
+            Status(it.replaceFirstChar { c -> c.uppercaseChar() }, tone)
           }
         else null,
     )

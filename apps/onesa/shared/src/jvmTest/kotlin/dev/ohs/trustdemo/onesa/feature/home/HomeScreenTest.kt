@@ -93,9 +93,9 @@ class HomeScreenTest {
     waitUntil(timeoutMillis = 5_000L) {
       onAllNodesWithText("No households").fetchSemanticsNodes().isNotEmpty()
     }
-    assertTrue(onAllNodesWithText("Registers").fetchSemanticsNodes().isNotEmpty())
     assertTrue(onAllNodesWithText("Households").fetchSemanticsNodes().isNotEmpty())
-    assertTrue(onAllNodesWithText("Sync now").fetchSemanticsNodes().isNotEmpty())
+    onNodeWithText("Sync").performClick()
+    assertTrue(onAllNodesWithText("Sync Now").fetchSemanticsNodes().isNotEmpty())
   }
 
   @Test
@@ -125,10 +125,11 @@ class HomeScreenTest {
       }
     }
 
+    onNodeWithText("Sync").performClick()
     waitUntil(timeoutMillis = 5_000L) {
-      onAllNodesWithText("Sync now").fetchSemanticsNodes().isNotEmpty()
+      onAllNodesWithText("Sync Now").fetchSemanticsNodes().isNotEmpty()
     }
-    onNodeWithText("Sync now").performClick()
+    onNodeWithText("Sync Now").performClick()
 
     waitUntil(timeoutMillis = 5_000L) { syncStarted.isCompleted }
     waitUntil(timeoutMillis = 5_000L) {
@@ -168,10 +169,11 @@ class HomeScreenTest {
       }
     }
 
+    onNodeWithText("Sync").performClick()
     waitUntil(timeoutMillis = 5_000L) {
-      onAllNodesWithText("Sync now").fetchSemanticsNodes().isNotEmpty()
+      onAllNodesWithText("Sync Now").fetchSemanticsNodes().isNotEmpty()
     }
-    onNodeWithText("Sync now").performClick()
+    onNodeWithText("Sync Now").performClick()
     waitUntil(timeoutMillis = 5_000L) { syncStarted.isCompleted }
     waitUntil(timeoutMillis = 5_000L) {
       onAllNodesWithText("Cancel sync").fetchSemanticsNodes().isNotEmpty()
@@ -206,10 +208,11 @@ class HomeScreenTest {
       }
     }
 
+    onNodeWithText("Sync").performClick()
     waitUntil(timeoutMillis = 5_000L) {
-      onAllNodesWithText("Sync now").fetchSemanticsNodes().isNotEmpty()
+      onAllNodesWithText("Sync Now").fetchSemanticsNodes().isNotEmpty()
     }
-    onNodeWithText("Sync now").performClick()
+    onNodeWithText("Sync Now").performClick()
 
     waitUntil(timeoutMillis = 5_000L) {
       onAllNodesWithText("Sync failed. Please try again.").fetchSemanticsNodes().isNotEmpty()

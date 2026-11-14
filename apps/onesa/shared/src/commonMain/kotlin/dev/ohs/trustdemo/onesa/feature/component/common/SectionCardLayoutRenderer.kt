@@ -18,38 +18,19 @@ package dev.ohs.trustdemo.onesa.feature.component.common
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.ohs.player.client.renderer.ConfiguredRenderer
 import dev.ohs.player.client.renderer.LayoutRenderer
 import dev.ohs.player.client.renderer.RenderOptions
@@ -57,19 +38,19 @@ import dev.ohs.trustdemo.onesa.generated.config.SectionCardConfig
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.section_collapse
 import dev.ohs.trustdemo.onesa.generated.resources.section_expand
+import dev.ohs.trustdemo.onesa.ui.SectionCard
+import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * Layout renderer that introduces a list of items with a flat overline section label — no card,
- * border, or per-row divider. Registered under
- * [dev.ohs.trustdemo.onesa.generated.viewtype.ViewTypeCS.SectionCard].
- *
- * Supports an optional item count and collapsible behavior driven by [SectionCardConfig].
+ * Layout renderer that lists items in a kit [SectionCard] under a [title], with the item count as
+ * its chip. Registered under [dev.ohs.trustdemo.onesa.generated.viewtype.ViewTypeCS.SectionCard].
+ * [SectionCardConfig] can hide the count or let a tap on the card fold the items away.
  */
 class SectionCardLayoutRenderer<T>(
   private val title: String,
   private val icon: ImageVector,
-  private val iconTint: Color? = null,
   private val config: SectionCardConfig = SectionCardConfig(),
 ) : LayoutRenderer<T> {
 
@@ -82,73 +63,25 @@ class SectionCardLayoutRenderer<T>(
     modifier: Modifier,
   ) {
     var expanded by rememberSaveable { mutableStateOf(true) }
-    val tint = iconTint ?: MaterialTheme.colorScheme.primary
     val collapsible = config.collapsible == true
-
-    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-      Row(
-        modifier =
-          Modifier.fillMaxWidth()
-            .then(if (collapsible) Modifier.clickable { expanded = !expanded } else Modifier)
-            .padding(top = 12.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Icon(
-          imageVector = icon,
-          contentDescription = null,
-          tint = tint,
-          modifier = Modifier.size(18.dp),
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-          text = title.uppercase(),
-          style = MaterialTheme.typography.labelLarge,
-          letterSpacing = 0.8.sp,
-          fontWeight = FontWeight.SemiBold,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          modifier = Modifier.weight(1f),
-        )
-        if (config.showItemCount != false) {
-          Text(
-            text = items.size.toString(),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
+    val toggleLabel =
+      stringResource(if (expanded) Res.string.section_collapse else Res.string.section_expand)
+    SectionCard(
+      modifier =
         if (collapsible) {
-          Spacer(modifier = Modifier.width(12.dp))
-          val toggleLabel =
-            stringResource(if (expanded) Res.string.section_collapse else Res.string.section_expand)
-          val barColor = MaterialTheme.colorScheme.onSurfaceVariant
-          Box(
-            modifier = Modifier.size(20.dp).semantics { contentDescription = toggleLabel },
-            contentAlignment = Alignment.Center,
-          ) {
-            Box(
-              Modifier.width(12.dp).height(2.dp).clip(RoundedCornerShape(1.dp)).background(barColor)
-            )
-            if (!expanded) {
-              Box(
-                Modifier.width(2.dp)
-                  .height(12.dp)
-                  .clip(RoundedCornerShape(1.dp))
-                  .background(barColor)
-              )
-            }
-          }
-        }
-      }
-
+          modifier.clickable { expanded = !expanded }.semantics { stateDescription = toggleLabel }
+        } else modifier,
+      title = title,
+      icon = icon,
+      summary =
+        if (config.showItemCount != false) Status(items.size.toString(), Tone.Info) else null,
+    ) {
       AnimatedVisibility(
         visible = expanded,
         enter = expandVertically(),
         exit = shrinkVertically(),
       ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-          HorizontalDivider(
-            modifier = Modifier.padding(bottom = 4.dp),
-            color = MaterialTheme.colorScheme.outlineVariant,
-          )
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
           items.forEach { item ->
             component.Render(item, RenderOptions(onClick = { onItemClick(item) }))
           }
