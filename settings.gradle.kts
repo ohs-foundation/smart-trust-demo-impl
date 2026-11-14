@@ -47,7 +47,7 @@ dependencyResolutionManagement {
       }
     }
     mavenCentral()
-    mavenLocal()
+    mavenLocal { content { includeGroup("io.github.litlfred") } }
   }
 }
 
