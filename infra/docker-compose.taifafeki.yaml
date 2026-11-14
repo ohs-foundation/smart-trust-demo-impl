@@ -1,0 +1,127 @@
+# Taifafeki: Medplum and the facility client. Add-on to docker-compose.yaml, loaded by `./dev.sh up --taifafeki`.
+# It reaches Onesa only through public names, so it can move to its own server with its own .env.
+# `make hcert-js` in the repo root builds the `hcert` build context; `trust-demo reset` writes the
+# secret files under ../stack/taifafeki/secrets.
+
+services:
+  medplum-postgres:
+    image: postgres:16.15-alpine
+    container_name: medplum-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: medplum
+      POSTGRES_PASSWORD: ${MEDPLUM_DB_PASSWORD}
+    volumes:
+      - medplum_postgres:/var/lib/postgresql/data
+    command:
+      - postgres
+      - -c
+      - statement_timeout=60000
+      - -c
+      - default_transaction_isolation=REPEATABLE READ
+    networks: [taifafeki_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medplum"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  medplum-redis:
+    image: redis:8.2.11-alpine
+    container_name: medplum-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${MEDPLUM_REDIS_PASSWORD}"]
+    networks: [taifafeki_net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${MEDPLUM_REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  medplum:
+    image: medplum/medplum-server:5.2.13
+    container_name: medplum
+    restart: unless-stopped
+    command: ["env"]
+    environment:
+      MEDPLUM_PORT: 8103
+      MEDPLUM_BASE_URL: https://${MEDPLUM_HOST:?set MEDPLUM_HOST in .env to the public Medplum hostname}/
+      MEDPLUM_APP_BASE_URL: https://${CLIENT_HOST:?set CLIENT_HOST in .env to the public facility client hostname}/
+      MEDPLUM_STORAGE_BASE_URL: https://${MEDPLUM_HOST}/storage/
+      MEDPLUM_DATABASE_HOST: medplum-postgres
+      MEDPLUM_DATABASE_PORT: 5432
+      MEDPLUM_DATABASE_DBNAME: medplum
+      MEDPLUM_DATABASE_USERNAME: medplum
+      MEDPLUM_DATABASE_PASSWORD: ${MEDPLUM_DB_PASSWORD}
+      MEDPLUM_REDIS_HOST: medplum-redis
+      MEDPLUM_REDIS_PORT: 6379
+      MEDPLUM_REDIS_PASSWORD: ${MEDPLUM_REDIS_PASSWORD}
+      MEDPLUM_BINARY_STORAGE: file:./binary/
+      MEDPLUM_SUPPORT_EMAIL: '"Trust demo" <support@kesaro.example>'
+      MEDPLUM_MAX_JSON_SIZE: 1mb
+      MEDPLUM_MAX_BATCH_SIZE: 50mb
+      MEDPLUM_VM_CONTEXT_BOTS_ENABLED: "false"
+      MEDPLUM_ALLOWED_ORIGINS: https://${CLIENT_HOST}
+      MEDPLUM_INTROSPECTION_ENABLED: "true"
+      MEDPLUM_SHUTDOWN_TIMEOUT_MILLISECONDS: 30000
+      # Applied when the database is first seeded, so Medplum never has its public default login.
+      MEDPLUM_DEFAULT_SUPER_ADMIN_EMAIL: admin@kesaro.example
+      MEDPLUM_DEFAULT_SUPER_ADMIN_PASSWORD: ${MEDPLUM_SUPER_ADMIN_PASSWORD}
+      MEDPLUM_DEFAULT_SUPER_ADMIN_CLIENT_ID: ${MEDPLUM_SUPER_ADMIN_CLIENT_ID}
+      MEDPLUM_DEFAULT_SUPER_ADMIN_CLIENT_SECRET: ${MEDPLUM_SUPER_ADMIN_CLIENT_SECRET}
+    ports:
+      - "127.0.0.1:${MEDPLUM_PORT:-8103}:8103"
+    depends_on:
+      medplum-postgres:
+        condition: service_healthy
+      medplum-redis:
+        condition: service_healthy
+    networks: [taifafeki_net]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8103/healthcheck').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  taifafeki-client:
+    build:
+      context: ../apps/taifafeki-client
+      additional_contexts:
+        hcert: ../build/hcert-js
+    image: trust-demo-taifafeki-client:local
+    container_name: taifafeki-client
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      MEDPLUM_BASE_URL: https://${MEDPLUM_HOST}
+      MEDPLUM_INTERNAL_URL: http://medplum:8103
+      CLIENT_ORIGIN: https://${CLIENT_HOST}
+      MEDPLUM_CLIENT_ID_FILE: /run/secrets/medplum-client-id
+      ONESA_VHL_HOSTS: ${VHL_HOST:?set VHL_HOST in .env to the public VHL hostname}
+      CLINIC_KEY_FILE: /run/secrets/clinic-viewer.key
+      CLINIC_CERT_FILE: /run/secrets/clinic-viewer.crt
+      TRUST_LIST_URL: https://${TRUST_HOST:?set TRUST_HOST in .env to the public trust-list hostname}/local-test-list.json
+      DEV_TRUST_LIST_URL: https://${TRUST_HOST}/dev/v2/trustlist/did.json
+    volumes:
+      - ../stack/taifafeki/secrets/medplum-client-id:/run/secrets/medplum-client-id:ro
+      - ../stack/taifafeki/secrets/clinic-viewer.key:/run/secrets/clinic-viewer.key:ro
+      - ../stack/taifafeki/secrets/clinic-viewer.crt:/run/secrets/clinic-viewer.crt:ro
+    ports:
+      - "127.0.0.1:${CLIENT_PORT:-8087}:3000"
+    depends_on:
+      medplum:
+        condition: service_healthy
+    networks: [taifafeki_net]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+networks:
+  taifafeki_net:
+
+volumes:
+  medplum_postgres:

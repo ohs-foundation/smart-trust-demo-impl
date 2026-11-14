@@ -16,4 +16,6 @@ Set `KEYCLOAK_HOST`, `GATEWAY_HOST`, `WEB_HOST` and `GATEWAY_PLUGIN_DIR` (a chec
 
 The VHL service runs from `../services/vhl/Dockerfile`, which packages `services/vhl/build/install/vhl`: run `./gradlew :services:vhl:installDist` in the repo root before `./dev.sh up`. The trust-list host serves the committed TEST ONLY `../testkit` list and DIDs as they are, so nothing needs generating; `./gradlew :libs:trustkit:generateTestKit` re-signs from the same keys and rewrites `testkit/local-test-list.json` and `testkit/gdhcn-signer-did.json`.
 
+Taifafeki (Medplum and the facility client) is the add-on `docker-compose.taifafeki.yaml`, started with `./dev.sh up --taifafeki`; it needs `make hcert-js` first and `trust-demo reset` to write its secret files, and it shares nothing with Onesa but public names.
+
 Derived from `ohs-foundation/ohs-player-reference-infrastructure@5c87af6`.

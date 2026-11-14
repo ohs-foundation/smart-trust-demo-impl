@@ -8,7 +8,8 @@ set -euo pipefail
 #   init      Create .env from .env.example with a random secret for every [generated]
 #   render    Render the host nginx vhosts from .env
 #   nginx     Install host vhosts and take TLS certificates
-#   up        Render configs and start services (--pipes adds the analytics pipeline and Superset)
+#   up        Render configs and start services (--pipes adds the analytics pipeline and Superset,
+#             --taifafeki adds Medplum and the facility client)
 #   down      Stop all running services
 #   reset     Stop services and wipe named volumes
 #   logs      Tail logs (all services or one)
@@ -98,6 +99,11 @@ generate_secret() {
     fi
 }
 
+generate_uuid() {
+    cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null \
+        || python3 -c 'import uuid; print(uuid.uuid4())'
+}
+
 require_env_file() {
     if [[ ! -f "$ENV_FILE" ]]; then
         local example="$SCRIPT_DIR/.env.example"
@@ -106,11 +112,11 @@ require_env_file() {
         cp "$example" "$ENV_FILE"
         chmod 600 "$ENV_FILE"
     fi
-    if grep -q '=\[generated\]' "$ENV_FILE"; then
+    if grep -q '=\[\(generated\|uuid\)\]' "$ENV_FILE"; then
         info "Replacing [generated] markers in .env with random secrets..."
         # Bash substitution, not `sed -i`, which differs between GNU and BSD. Assign first, then
         # substitute: a failing generate_secret inside the expansion would not trip `set -e`.
-        local tmp line secret
+        local tmp line secret id
         tmp="$(mktemp "${TMPDIR:-/tmp}/ohs-env.XXXXXX")" \
             || error "Cannot create a temporary file to rewrite .env."
         while IFS= read -r line || [[ -n "$line" ]]; do
@@ -121,6 +127,10 @@ require_env_file() {
                     || { rm -f "$tmp"; error "generate_secret produced an empty or non-hexadecimal value; refusing to write unusable credentials to .env."; }
                 line="${line/"=[generated]"/=$secret}"
             done
+            if [[ "$line" == *"=[uuid]"* ]]; then
+                id="$(generate_uuid)"
+                line="${line/"=[uuid]"/=$id}"
+            fi
             printf '%s\n' "$line"
         done < "$ENV_FILE" > "$tmp"
         cat "$tmp" > "$ENV_FILE"
@@ -201,8 +211,12 @@ render_templates() {
 }
 
 # --- Compose helpers ---------------------------------------------------------
+# The Taifafeki add-on loads only with `up --taifafeki`; every other command sees both files so that
+# down, reset, logs and status reach whatever is running.
+COMPOSE_FILES=(-f docker-compose.yaml -f docker-compose.taifafeki.yaml)
+
 compose() {
-    (cd "$SCRIPT_DIR" && docker compose "$@")
+    (cd "$SCRIPT_DIR" && docker compose "${COMPOSE_FILES[@]}" "$@")
 }
 
 # compose, prefixed with the --profile flags parse_profiles selected. The `+` expansion keeps an
@@ -213,10 +227,12 @@ compose_profiles() {
 
 parse_profiles() {
     PROFILE_ARGS=()
+    COMPOSE_FILES=(-f docker-compose.yaml)
     for arg in "$@"; do
         case "$arg" in
-            --pipes) PROFILE_ARGS+=(--profile pipes) ;;
-            *)       error "Unknown flag: $arg (expected --pipes)" ;;
+            --pipes)     PROFILE_ARGS+=(--profile pipes) ;;
+            --taifafeki) COMPOSE_FILES=(-f docker-compose.yaml -f docker-compose.taifafeki.yaml) ;;
+            *)           error "Unknown flag: $arg (expected --pipes or --taifafeki)" ;;
         esac
     done
 }
@@ -232,6 +248,11 @@ cmd_up() {
     parse_profiles "$@"
     check_prerequisites
     render_templates
+    # Bind-mounting a missing file would create a directory; `trust-demo reset` fills these in.
+    local secrets="$SCRIPT_DIR/../stack/taifafeki/secrets"
+    mkdir -p "$secrets"
+    touch "$secrets/medplum-client-id" "$secrets/clinic-viewer.key" "$secrets/clinic-viewer.crt"
+    chmod 600 "$secrets/clinic-viewer.key"
     # --ignore-buildable: the gateway is built from source and exists in no registry, so a plain
     # `pull` fails and set -e would abort before anything starts.
     info "Checking for image updates..."
@@ -398,8 +419,9 @@ Commands:
   nginx                       Install the host nginx vhosts and take a TLS
                               certificate per subdomain. Needs sudo, nginx
                               and certbot.
-  up [--pipes]                Render configs and start services
-                              --pipes  adds the analytics pipeline + Superset
+  up [--pipes] [--taifafeki]  Render configs and start services
+                              --pipes      adds the analytics pipeline + Superset
+                              --taifafeki  adds Medplum and the facility client
   down                        Stop all running services
   reset                       Stop services and wipe named volumes
   logs [service]              Tail logs (all services or one)
