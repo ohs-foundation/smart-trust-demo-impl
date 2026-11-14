@@ -30,7 +30,7 @@ import who.smart.trust.issuer.Validity
 import who.smart.trust.payloads.Payload
 import who.smart.trust.types.CoseAlgorithm
 
-/** Signs WHO DVC cards (HC1 text) through hcert-core's issuer, with a stand-in key. */
+/** Signs WHO DVC cards (HC1 text) through hcert-core's issuer, always with the XXR card key. */
 object CardSigner {
   private const val PRODUCT_SYSTEM =
     "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
@@ -39,12 +39,7 @@ object CardSigner {
   private const val VALID_DAYS = 365L
 
   /** The card for [dose], its dates moved by [clock]; valid from the shifted dose time. */
-  fun sign(
-    dose: Immunization,
-    patient: Patient,
-    clock: StoryClock,
-    key: StandIn = StandIn.XXR_CARD,
-  ): String {
+  fun sign(dose: Immunization, patient: Patient, clock: StoryClock): String {
     val givenAt = OffsetDateTime.parse(dose.occurrence.asDateTime()!!.value.value.toString())
     val issuedAt = givenAt.plusDays(clock.shiftDays())
     val request =
@@ -56,14 +51,14 @@ object CardSigner {
             iat = issuedAt.toEpochSecond(),
             exp = issuedAt.plus(VALID_DAYS, ChronoUnit.DAYS).toEpochSecond(),
           ),
-        dscDer = TestKeys.certificate(key).encoded,
+        dscDer = TestKeys.certificate(StandIn.XXR_CARD).encoded,
         alg = CoseAlgorithm.ES256,
         allowDevelopmentSubclaims = true,
       )
     val pending = ok(Hcert.issuer.prepare(request, Hcert.subclaims.newRegistry()))
     val signature =
       Signature.getInstance("SHA256withECDSA").run {
-        initSign(TestKeys.privateKey(key))
+        initSign(TestKeys.privateKey(StandIn.XXR_CARD))
         update(pending.toBeSigned())
         sign()
       }
