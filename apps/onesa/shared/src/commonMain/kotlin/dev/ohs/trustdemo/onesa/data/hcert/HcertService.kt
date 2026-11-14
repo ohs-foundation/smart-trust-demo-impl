@@ -24,6 +24,7 @@ import dev.ohs.trustdemo.hcert.HcertTrustStore
 import dev.ohs.trustdemo.hcert.ReadResult
 import dev.ohs.trustdemo.hcert.TrustListCache
 import dev.ohs.trustdemo.hcert.TrustListSnapshot
+import dev.ohs.trustdemo.hcert.TrustedDscInfo
 import dev.ohs.trustdemo.hcert.VerificationResult
 import dev.ohs.trustdemo.hcert.loadHcertEngine
 import kotlinx.coroutines.sync.Mutex
@@ -72,6 +73,10 @@ class HcertService(private val local: PinnedTrustList, private val gdhcnDev: Pin
     hc1: String,
     now: Long = HcertClock.nowEpochSeconds(),
   ): VerificationResult = verify(TrustDomain.Dvc, hc1, now)
+
+  /** Where the list that vouched for [dsc] came from: its URL, for a record's provenance. */
+  suspend fun trustListSource(dsc: TrustedDscInfo): String =
+    (if (dsc.domain == TrustDomain.Dvc.code) local else gdhcnDev).cache.current()?.source.orEmpty()
 
   suspend fun verifyLink(
     hc1: String,

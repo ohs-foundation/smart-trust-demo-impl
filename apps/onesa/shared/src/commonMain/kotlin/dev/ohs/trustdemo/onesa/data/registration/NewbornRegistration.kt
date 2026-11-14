@@ -25,6 +25,9 @@ import dev.ohs.trustdemo.hcert.DvcMappingOptions
 import dev.ohs.trustdemo.hcert.DvcMin
 import dev.ohs.trustdemo.onesa.generateId
 import dev.ohs.trustdemo.onesa.util.FhirJson
+import dev.ohs.trustdemo.onesa.util.createEntry
+import dev.ohs.trustdemo.onesa.util.profile
+import dev.ohs.trustdemo.onesa.util.putEntry
 import kotlin.time.Instant
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -80,7 +83,6 @@ object NewbornRegistration {
   const val QUESTIONNAIRE_URL =
     "http://ohs.dev/fhir/trust-demo/Questionnaire/TrustDemoHouseholdRegistration"
 
-  private const val DESIGN = "http://smart.who.int/trust-demo/StructureDefinition"
   private const val ROLE_CODE = "http://terminology.hl7.org/CodeSystem/v3-RoleCode"
   private const val GENDER = "http://hl7.org/fhir/administrative-gender"
   private const val SNOMED = "http://snomed.info/sct"
@@ -369,24 +371,8 @@ object NewbornRegistration {
     }
   }
 
-  /** A new record under a client-assigned id: the gateway's audit cannot record `urn:uuid`. */
-  private fun createEntry(type: String, id: String, resource: JsonObject): JsonObject =
-    putEntry("$type/$id", JsonObject(resource + ("id" to JsonPrimitive(id))))
-
-  private fun putEntry(url: String, resource: JsonObject): JsonObject = buildJsonObject {
-    put("resource", resource)
-    putJsonObject("request") {
-      put("method", "PUT")
-      put("url", url)
-    }
-  }
-
   private fun JsonObjectBuilder.putProfile(name: String) {
     put("meta", profile(name))
-  }
-
-  private fun profile(name: String): JsonObject = buildJsonObject {
-    putJsonArray("profile") { add(JsonPrimitive("$DESIGN/$name")) }
   }
 
   private fun coding(system: String, code: String): JsonObject = buildJsonObject {

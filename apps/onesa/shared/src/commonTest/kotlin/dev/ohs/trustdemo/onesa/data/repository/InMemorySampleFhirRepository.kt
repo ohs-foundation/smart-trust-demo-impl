@@ -48,6 +48,11 @@ class InMemorySampleFhirRepository : FhirRepository {
     return resourcesByType[resourceType]?.values?.toList().orEmpty()
   }
 
+  override suspend fun remove(resourceType: String, id: String) {
+    resourcesByType[resourceType]?.remove(id)
+    _revision.value += 1
+  }
+
   private fun store(resource: Resource) {
     val id = resource.id ?: return
     resourcesByType.getOrPut(resource.resourceType) { mutableMapOf() }[id] = resource

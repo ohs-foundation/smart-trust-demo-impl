@@ -42,6 +42,8 @@ import dev.ohs.trustdemo.onesa.data.sync.DataStoreInitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.InitialSyncStore
 import dev.ohs.trustdemo.onesa.data.sync.SyncManager
 import dev.ohs.trustdemo.onesa.data.sync.createSyncTimestampDataStore
+import dev.ohs.trustdemo.onesa.data.verification.ReferralInbox
+import dev.ohs.trustdemo.onesa.data.verification.VerificationService
 import dev.ohs.trustdemo.onesa.feature.group.list.GroupListViewModel
 import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileViewModel
 import dev.ohs.trustdemo.onesa.feature.home.HomeViewModel
@@ -50,6 +52,8 @@ import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileViewModel
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireHostViewModel
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireLaunchContext
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireService
+import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxViewModel
+import dev.ohs.trustdemo.onesa.feature.referral.VerifyCardsViewModel
 import dev.ohs.trustdemo.onesa.feature.role.UserContextViewModel
 import dev.ohs.trustdemo.onesa.feature.scan.ScanCardViewModel
 import dev.ohs.trustdemo.onesa.feature.sync.InitialSyncViewModel
@@ -83,6 +87,25 @@ internal val serviceModule = module {
     RegistrationService(
       repository = get(),
       scannedCards = get(),
+      session = {
+        SessionRepository.session.value?.let { session ->
+          val context = session.context
+          val practitioner = context?.practitionerId
+          val organization = context?.organizationId
+          if (practitioner == null || organization == null) null
+          else RegistrationSession(session.accessToken, practitioner, organization)
+        }
+      },
+      httpClient = OidcAuthApi.defaultHttpClient(),
+      baseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
+      refresh = { get<SyncManager>().syncNow() },
+    )
+  }
+  single { ReferralInbox(get()) }
+  single {
+    VerificationService(
+      repository = get(),
+      hcert = get(),
       session = {
         SessionRepository.session.value?.let { session ->
           val context = session.context
@@ -165,4 +188,6 @@ internal val viewModelModule = module {
   viewModel { InitialSyncViewModel(get(), get()) }
   viewModel { TrustListViewModel(get()) }
   viewModel { ScanCardViewModel(get(), get()) }
+  viewModel { ReferralInboxViewModel(get()) }
+  viewModel { (referralId: String) -> VerifyCardsViewModel(referralId, get(), get()) }
 }

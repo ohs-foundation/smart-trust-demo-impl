@@ -37,4 +37,7 @@ interface FhirRepository {
   suspend fun get(resourceType: String, id: String): Resource?
 
   suspend fun all(resourceType: String): List<Resource>
+
+  /** Drops the local copy only: the record is already gone from the server. */
+  suspend fun remove(resourceType: String, id: String)
 }

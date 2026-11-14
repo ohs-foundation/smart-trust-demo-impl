@@ -44,6 +44,7 @@ import dev.ohs.trustdemo.onesa.feature.login.LoginScreen
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileScreen
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireHostScreen
 import dev.ohs.trustdemo.onesa.feature.questionnaire.QuestionnaireIds
+import dev.ohs.trustdemo.onesa.feature.referral.VerifyCardsScreen
 import dev.ohs.trustdemo.onesa.feature.role.NoRoleScreen
 import dev.ohs.trustdemo.onesa.feature.role.UserContextState
 import dev.ohs.trustdemo.onesa.feature.role.UserContextViewModel
@@ -154,9 +155,8 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
               )
             },
             onSignOut = onSignOut,
-            destinations =
-              if (role == AppRole.FAMILY) listOf(HomeDestination.Households)
-              else HomeDestination.entries,
+            onOpenReferral = { id -> navController.navigate("verifyCards/$id") },
+            destinations = role.destinations(),
           )
         }
 
@@ -204,6 +204,14 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
         }
 
         composable(
+          route = "verifyCards/{referralId}",
+          arguments = listOf(navArgument("referralId") { type = NavType.StringType }),
+        ) { back ->
+          val referralId = back.arguments?.read { getStringOrNull("referralId") }.orEmpty()
+          VerifyCardsScreen(referralId = referralId, onBack = { navController.popBackStack() })
+        }
+
+        composable(
           route = "scanCard/{groupId}",
           arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
         ) { back ->
@@ -244,6 +252,14 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
     }
   }
 }
+
+private fun AppRole.destinations(): List<HomeDestination> =
+  when (this) {
+    AppRole.FAMILY -> listOf(HomeDestination.Households)
+    AppRole.CHW -> listOf(HomeDestination.Households, HomeDestination.TrustLists)
+    AppRole.CLINICIAN ->
+      listOf(HomeDestination.Referrals, HomeDestination.Households, HomeDestination.TrustLists)
+  }
 
 private fun questionnaireHostRoute(
   questionnaireId: String,

@@ -80,6 +80,7 @@ import dev.ohs.trustdemo.onesa.feature.group.list.GroupListScreen
 import dev.ohs.trustdemo.onesa.feature.group.list.LocalSelectedGroupId
 import dev.ohs.trustdemo.onesa.feature.group.profile.GroupProfileScreen
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileScreen
+import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxScreen
 import dev.ohs.trustdemo.onesa.feature.trustlist.TrustListScreen
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.home_cancel_sync
@@ -107,11 +108,12 @@ fun HomeScreen(
   onAddClinicalData: (String) -> Unit,
   onSignOut: () -> Unit,
   destinations: List<HomeDestination> = HomeDestination.entries,
+  onOpenReferral: (String) -> Unit = {},
 ) {
   val homeViewModel: HomeViewModel = koinViewModel()
   val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
-  var selectedDestination by remember { mutableStateOf(HomeDestination.Households) }
+  var selectedDestination by remember { mutableStateOf(destinations.first()) }
   var selectedGroupId by rememberSaveable { mutableStateOf<String?>(null) }
   var selectedPatientId by rememberSaveable(selectedGroupId) { mutableStateOf<String?>(null) }
   val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -295,6 +297,7 @@ fun HomeScreen(
           } else {
             GroupListScreen(onGroupClick = onGroupClick, onDataCaptureClick = onDataCaptureClick)
           }
+        HomeDestination.Referrals -> ReferralInboxScreen(onOpen = onOpenReferral)
         HomeDestination.TrustLists -> TrustListScreen()
       }
     }

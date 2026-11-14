@@ -68,6 +68,11 @@ class FhirEngineRepository(private val fhirEngine: FhirEngine) : FhirRepository 
     }
   }
 
+  override suspend fun remove(resourceType: String, id: String) {
+    fhirEngine.purge(ResourceType.valueOf(resourceType), id, forcePurge = true)
+    DataChangeSignal.notifyChanged()
+  }
+
   private suspend fun upsertResource(resource: Resource) {
     val withId = if (resource.id == null) resource.withId(generateId()) else resource
     val type = ResourceType.valueOf(withId.resourceType)

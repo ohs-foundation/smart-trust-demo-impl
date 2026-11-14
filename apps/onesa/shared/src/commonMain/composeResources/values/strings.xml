@@ -127,4 +127,19 @@
     <string name="registration_no_doses">No card was read.</string>
     <string name="registration_referred">Referred to %1$s to verify the cards.</string>
     <string name="registration_done">Done</string>
+
+    <string name="home_destination_referrals">Referrals</string>
+    <string name="referral_inbox_empty">No referrals waiting.</string>
+    <string name="referral_inbox_doses">Reported doses: %1$s</string>
+    <string name="referral_inbox_open">Verify the cards</string>
+    <string name="verify_title">Verify cards</string>
+    <string name="verify_use_text">Verify this card</string>
+    <string name="verify_results">Cards scanned</string>
+    <string name="verify_imported">Verified and imported</string>
+    <string name="verify_replaced">The reported dose was replaced.</string>
+    <string name="verify_already_imported">Already imported</string>
+    <string name="verify_failed">Verification failed</string>
+    <string name="verify_failed_reason">%1$s: %2$s</string>
+    <string name="verify_nothing_imported">Nothing was imported. The scan was logged.</string>
+    <string name="verify_could_not_save">The scan could not be saved. Check the connection and scan again.</string>
 </resources>
