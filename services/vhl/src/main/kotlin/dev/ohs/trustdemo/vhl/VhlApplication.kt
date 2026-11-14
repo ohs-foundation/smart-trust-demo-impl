@@ -43,6 +43,8 @@ import kotlinx.serialization.json.putJsonObject
 import org.slf4j.LoggerFactory
 
 private const val AUTH = "keycloak"
+private const val ATTEMPTS_LEFT =
+  "http://ohs.dev/fhir/trust-demo/StructureDefinition/passcode-attempts-left"
 private const val MAX_KEY = 255
 internal val FHIR_JSON = ContentType.parse("application/fhir+json")
 private val PATIENT_REFERENCE = Regex("""Patient/([A-Za-z0-9][A-Za-z0-9\-.]{0,63})""")
@@ -145,15 +147,30 @@ internal suspend fun ApplicationCall.respondOutcome(
   cause: Exception,
   severity: String = "error",
   reason: Refusal? = null,
+  attemptsLeft: Int? = null,
 ) {
   val outcome: JsonObject = buildJsonObject {
     put("resourceType", "OperationOutcome")
     putJsonArray("issue") {
       add(
         buildJsonObject {
+          attemptsLeft?.let {
+            putJsonArray("extension") {
+              add(
+                buildJsonObject {
+                  put("url", ATTEMPTS_LEFT)
+                  put("valueUnsignedInt", it)
+                }
+              )
+            }
+          }
           put("severity", severity)
           put("code", code)
-          put("diagnostics", cause.message.orEmpty())
+          put(
+            "diagnostics",
+            cause.message.orEmpty() +
+              attemptsLeft?.let { "; $it of $MAX_WRONG_ATTEMPTS passcode attempts left" }.orEmpty(),
+          )
           reason?.let {
             putJsonObject("details") {
               putJsonArray("coding") {

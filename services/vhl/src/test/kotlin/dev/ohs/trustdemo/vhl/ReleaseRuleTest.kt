@@ -61,6 +61,8 @@ private const val IG_REFUSAL_SYSTEM =
   "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason"
 private const val ACCESS_PROFILE =
   "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoOnesaVhlAccess"
+private const val ATTEMPTS_LEFT =
+  "http://ohs.dev/fhir/trust-demo/StructureDefinition/passcode-attempts-left"
 
 class ReleaseRuleTest {
   private var now = Instant.parse("2026-11-14T09:00:00Z")
@@ -402,6 +404,42 @@ class ReleaseRuleTest {
     )
     assertEquals(1, passcodes.wrongAttempts(wrong.consentId))
     assertEquals(0, passcodes.wrongAttempts(unknown.consentId))
+  }
+
+  @Test
+  fun aWrongPasscodeSaysHowManyAttemptsAreLeft() = withService {
+    val seeded = seed()
+
+    val issues =
+      (1..4).map {
+        Json.parseToJsonElement(post(manifestRequest(seeded, "0483")).bodyAsText())
+          .jsonObject
+          .getValue("issue")
+          .jsonArray
+          .single()
+          .jsonObject
+      }
+
+    assertEquals(
+      listOf(2, 1, 0, null),
+      issues.map { issue ->
+        issue["extension"]
+          ?.jsonArray
+          ?.objects()
+          ?.single { it.text("url") == ATTEMPTS_LEFT }
+          ?.text("valueUnsignedInt")
+          ?.toInt()
+      },
+    )
+    assertEquals(
+      listOf(
+        "release denied; 2 of 3 passcode attempts left",
+        "release denied; 1 of 3 passcode attempts left",
+        "release denied; 0 of 3 passcode attempts left",
+        "release denied",
+      ),
+      issues.map { it.text("diagnostics") },
+    )
   }
 
   @Test

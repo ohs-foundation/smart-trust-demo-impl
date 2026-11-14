@@ -52,8 +52,8 @@ sealed interface ReleaseRequest {
 sealed interface ReleaseOutcome {
   data object Denied : ReleaseOutcome
 
-  /** Denied for a [reason] the requester may be told. */
-  class Refused(val reason: Refusal) : ReleaseOutcome
+  /** Denied for a [reason] the requester may be told, with the passcode attempts left. */
+  class Refused(val reason: Refusal, val attemptsLeft: Int? = null) : ReleaseOutcome
 
   /** The ITI-YY5 searchset Bundle of the released documents. */
   class Manifest(val bundle: JsonObject) : ReleaseOutcome

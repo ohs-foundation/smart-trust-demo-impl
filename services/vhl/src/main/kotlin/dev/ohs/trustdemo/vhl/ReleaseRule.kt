@@ -66,10 +66,10 @@ class ReleaseRule(
     val patientId =
       consent.reference("patient")?.removePrefix("Patient/") ?: return ReleaseOutcome.Denied
     val bundleId = bundleOf(consent)
-    val refusal = refusal(consentId, consent, request.passcode)
-    if (refusal != null) {
-      audit(Interaction.MANIFEST, request.requester, patientId, consentId, refusal = refusal)
-      return ReleaseOutcome.Refused(refusal)
+    val refused = refusal(consentId, consent, request.passcode)
+    if (refused != null) {
+      audit(Interaction.MANIFEST, request.requester, patientId, consentId, refusal = refused.reason)
+      return refused
     }
     val documents =
       list["entry"]
@@ -138,17 +138,28 @@ class ReleaseRule(
     )
   }
 
-  private suspend fun refusal(consentId: String, consent: JsonObject, passcode: String?): Refusal? =
+  private suspend fun refusal(
+    consentId: String,
+    consent: JsonObject,
+    passcode: String?,
+  ): ReleaseOutcome.Refused? =
     when {
-      passcodes.wrongAttempts(consentId) >= MAX_WRONG_ATTEMPTS -> Refusal.ATTEMPTS_EXHAUSTED
-      consent.text("status") == "inactive" -> Refusal.WITHDRAWN
-      endOf(consent).isBefore(clock.instant()) -> Refusal.EXPIRED
+      passcodes.wrongAttempts(consentId) >= MAX_WRONG_ATTEMPTS ->
+        ReleaseOutcome.Refused(Refusal.ATTEMPTS_EXHAUSTED)
+      consent.text("status") == "inactive" -> ReleaseOutcome.Refused(Refusal.WITHDRAWN)
+      endOf(consent).isBefore(clock.instant()) -> ReleaseOutcome.Refused(Refusal.EXPIRED)
       else ->
         when (passcodes.check(consentId, passcode.orEmpty())) {
           PasscodeCheck.MATCH -> null
-          PasscodeCheck.EXHAUSTED -> Refusal.ATTEMPTS_EXHAUSTED
-          PasscodeCheck.WRONG,
-          PasscodeCheck.UNKNOWN -> Refusal.WRONG_PASSCODE
+          PasscodeCheck.EXHAUSTED -> ReleaseOutcome.Refused(Refusal.ATTEMPTS_EXHAUSTED)
+          PasscodeCheck.WRONG ->
+            ReleaseOutcome.Refused(
+              Refusal.WRONG_PASSCODE,
+              MAX_WRONG_ATTEMPTS - passcodes.wrongAttempts(consentId),
+            )
+          // Answered as a first wrong attempt, so an unknown passcode looks like a wrong one.
+          PasscodeCheck.UNKNOWN ->
+            ReleaseOutcome.Refused(Refusal.WRONG_PASSCODE, MAX_WRONG_ATTEMPTS - 1)
         }
     }
 

@@ -45,6 +45,8 @@ decided it:
 | `wrong-passcode` | same | the passcode does not match |
 | `attempts-exhausted` | `http://ohs.dev/fhir/trust-demo/CodeSystem/vhl-refusal-reason` | three wrong passcodes; the link is locked |
 
+A `wrong-passcode` refusal also gives the attempts left, in `issue.diagnostics` and in the issue extension `http://ohs.dev/fhir/trust-demo/StructureDefinition/passcode-attempts-left` (`valueUnsignedInt`).
+
 A 403 without a reason means there is nothing to release (an unknown link, or a document fetched
 without a fresh release). Documents are served only to the same certificate, within 10 minutes of
 the manifest's release, while the consent is still active. Every decided request is audited on

@@ -105,6 +105,7 @@ private suspend fun ApplicationCall.decide(deps: VhlDeps, request: ReleaseReques
           "forbidden",
           Exception("release denied"),
           reason = outcome.reason,
+          attemptsLeft = outcome.attemptsLeft,
         )
       is ReleaseOutcome.Manifest -> respondText(outcome.bundle.toString(), FHIR_JSON)
       is ReleaseOutcome.Document ->
