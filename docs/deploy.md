@@ -55,7 +55,13 @@ tofu output
 | `ssh` | a ready `gcloud compute ssh ... --tunnel-through-iap` command |
 | `dns_records` | the three records of step 2 |
 
-`startup.sh` installs Docker, nginx, certbot and a Java runtime on first boot. SSH is open only through IAP; ports 80 and 443 are public.
+`machine_type` defaults to `e2-highmem-4` (4 vCPU, 32 GB): the stack needs memory more than CPU, and `e2-standard-4` (16 GB) fits only without the data pipes.
+
+`startup.sh` installs Docker, nginx, certbot, a Java runtime and `jq` on first boot, which takes a few minutes. SSH is open only through IAP; ports 80 and 443 are public. Check the server is ready with the `ssh` output:
+
+```
+<ssh output> -- 'docker --version && java -version && jq --version'
+```
 
 Set `github_repository: owner/repo` in `config.yaml` to let that repository's CI push images (no keys; Workload Identity Federation limited to it).
 
@@ -68,6 +74,8 @@ Point the `dns_records` output at `server_ip`:
 *.kesaro.demo.example.org   A  <server_ip>
 *.gdhcn.demo.example.org    A  <server_ip>
 ```
+
+Check they resolve before step 4's certificates: `dig +short keycloak.onesa.demo.example.org` prints `<server_ip>`.
 
 ### 3. Images (laptop)
 
@@ -86,6 +94,8 @@ Edit `infra/.env`:
 | `CERTBOT_EMAIL` | the address Let's Encrypt registers |
 | `GATEWAY_PLUGIN_DIR` | the backend fork checkout on this machine |
 
+`./dev.sh init` leaves an existing `.env` alone: add any key `.env.example` has that it lacks (`REGISTRY` and `IMAGE_TAG` arrived later).
+
 The web portal bakes `WEB_HOST` and `KEYCLOAK_HOST` into its image, so push with the `.env` the server will use. Then:
 
 ```
@@ -103,6 +113,12 @@ gcloud auth configure-docker <region>-docker.pkg.dev
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | `github_workload_identity_provider` output |
 | `GCP_CI_SERVICE_ACCOUNT` | `github_ci_service_account` output |
 | `REGISTRY` | `registry` output |
+
+```
+gh variable set LIVE_BASE_DOMAIN -R owner/repo -b demo.example.org
+```
+
+(and the same for the other three). A public repository's Actions logs are public, so the base domain can appear in them.
 
 CI never builds `fhir-gateway`: its plugin comes from a private fork. Push it from the laptop with `GATEWAY_PLUGIN_DIR` set: `./dev.sh push <sha> fhir-gateway`, using the SHA CI tagged so the server pulls one `IMAGE_TAG` for all four.
 
