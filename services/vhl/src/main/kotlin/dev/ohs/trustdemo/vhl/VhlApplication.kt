@@ -102,6 +102,8 @@ fun Application.vhlModule(deps: VhlDeps) {
           call.respondOutcome(HttpStatusCode.Forbidden, "forbidden", e)
         } catch (e: NoSuchConsent) {
           call.respondOutcome(HttpStatusCode.NotFound, "not-found", e)
+        } catch (e: WithdrawConflict) {
+          call.respondOutcome(HttpStatusCode.Conflict, "conflict", e)
         } catch (e: BackendRefused) {
           call.respondFailure(HttpStatusCode.BadGateway, e)
         } catch (e: CancellationException) {

@@ -80,10 +80,12 @@ class FhirBackend(
     decode(response.status, response.bodyAsText(), "POST transaction")
   }
 
-  suspend fun update(path: String, resource: JsonObject) {
+  /** Replaces a resource; [ifMatch] makes the write fail with 412 when the resource changed. */
+  suspend fun update(path: String, resource: JsonObject, ifMatch: String? = null) {
     val response =
       client.put("$baseUrl/$path") {
         header(HttpHeaders.Accept, fhirContentType.toString())
+        ifMatch?.let { header(HttpHeaders.IfMatch, it) }
         setBody(TextContent(resource.toString(), fhirContentType))
       }
     decode(response.status, response.bodyAsText(), "PUT")

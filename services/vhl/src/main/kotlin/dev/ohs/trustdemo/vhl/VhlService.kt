@@ -29,10 +29,12 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+import org.slf4j.LoggerFactory
 import who.smart.trust.HcertResult
 import who.smart.trust.core.Hcert
 import who.smart.trust.vhl.VhlPayload
 
+private val log = LoggerFactory.getLogger(VhlService::class.java)
 private const val PASSCODE_FLAG = "P"
 private const val LINK_LABEL = "Immunization summary"
 
@@ -101,7 +103,17 @@ class VhlService(private val deps: VhlDeps) {
     val performers =
       consent["performer"]?.jsonArray?.mapNotNull { it.jsonObject.text("reference") }.orEmpty()
     if ("Patient/$caller" !in performers) throw NotYourConsent("the consent is not yours")
-    deps.hapi.update("Consent/$consentId", inactive(consent))
+    if (consent.text("status") != "inactive") {
+      val version = (consent["meta"] as? JsonObject)?.text("versionId")
+      try {
+        deps.hapi.update("Consent/$consentId", inactive(consent), version?.let { "W/\"$it\"" })
+      } catch (e: BackendRefused) {
+        if (e.status == HttpStatusCode.PreconditionFailed.value) {
+          throw WithdrawConflict("the consent changed; try again")
+        }
+        throw e
+      }
+    }
     deps.passcodes.remove(consentId)
   }
 
@@ -113,7 +125,9 @@ class VhlService(private val deps: VhlDeps) {
     } catch (e: Exception) {
       consents.forEach { consent ->
         runCatching { deps.hapi.update("Consent/${consent.id()}", inactive(consent)) }
+          .onFailure { log.error("{} inactivating Consent/{}", it::class.simpleName, consent.id()) }
         runCatching { deps.passcodes.remove(consent.id()) }
+          .onFailure { log.error("{} removing passcode of {}", it::class.simpleName, consent.id()) }
       }
       throw BackendRefused(false, "the passcodes could not be stored")
     }

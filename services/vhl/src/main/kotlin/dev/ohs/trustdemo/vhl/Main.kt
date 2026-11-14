@@ -49,7 +49,7 @@ fun main() {
           File(required("LINK_CERT_FILE")).readText(),
           LINK_ISSUER_COUNTRY,
         ),
-      passcodes = H2PasscodeStore("jdbc:h2:file:${required("VHL_DB_PATH")}"),
+      passcodes = H2PasscodeStore("jdbc:h2:file:${required("VHL_DB_PATH")};DB_CLOSE_DELAY=-1"),
     )
   embeddedServer(ServerCio, port = PORT) { vhlModule(deps) }.start(wait = true)
 }

@@ -38,6 +38,8 @@ class NotYourConsent(message: String) : Exception(message)
 
 class NoSuchConsent(message: String) : Exception(message)
 
+class WithdrawConflict(message: String) : Exception(message)
+
 private const val MIN_PASSCODE = 4
 private const val MAX_PASSCODE = 12
 private const val PURPOSE = "TREAT"

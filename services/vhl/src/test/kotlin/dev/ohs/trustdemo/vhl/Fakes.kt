@@ -245,6 +245,10 @@ class FakeHapi {
 
   val puts = mutableListOf<String>()
 
+  val ifMatches = mutableListOf<String?>()
+
+  var conflictOnPut = false
+
   val engine = MockEngine { request ->
     val path = request.url.encodedPath.removePrefix("/fhir").removePrefix("/")
     failWith?.let {
@@ -255,7 +259,10 @@ class FakeHapi {
         check(path.isEmpty()) { "unexpected POST ${request.url}" }
         val bundle = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
         transactions += bundle
-        bundle.resources().forEach { stored["${it.type()}/${it.text("id")}"] = it }
+        bundle.resources().forEach {
+          stored["${it.type()}/${it.text("id")}"] =
+            JsonObject(it + ("meta" to buildJsonObject { put("versionId", "1") }))
+        }
         respondFhir(
           buildJsonObject {
             put("resourceType", "Bundle")
@@ -264,7 +271,9 @@ class FakeHapi {
         )
       }
       HttpMethod.Put -> {
+        if (conflictOnPut) return@MockEngine respond("", HttpStatusCode.PreconditionFailed)
         puts += path
+        ifMatches += request.headers[HttpHeaders.IfMatch]
         val resource = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
         stored[path] = resource
         respondFhir(resource)

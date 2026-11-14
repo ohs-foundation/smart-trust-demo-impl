@@ -22,6 +22,8 @@ import java.sql.DriverManager
 import java.sql.Timestamp
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator
 import org.bouncycastle.crypto.params.Argon2Parameters
@@ -49,6 +51,10 @@ private const val ITERATIONS = 2
 private const val PARALLELISM = 1
 private const val HASH_BYTES = 32
 private const val SALT_BYTES = 16
+private const val CONCURRENT_HASHES = 2
+
+/** Each hash needs 19 MiB, so callers beyond these permits wait rather than allocate. */
+private val hashing = Semaphore(CONCURRENT_HASHES)
 
 /** Argon2id hashes (OWASP parameters, kept with each hash) in an embedded H2 database. */
 class H2PasscodeStore(private val jdbcUrl: String) : PasscodeStore {
@@ -98,27 +104,24 @@ class H2PasscodeStore(private val jdbcUrl: String) : PasscodeStore {
   }
 
   override suspend fun check(consentId: String, passcode: String): PasscodeCheck {
-    val stored =
-      sql { connection ->
-        connection
-          .prepareStatement(
-            "SELECT hash, salt, memory_kib, iterations, parallelism FROM passcode WHERE consent_id = ?"
-          )
-          .use {
-            it.setString(1, consentId)
-            it.executeQuery().use { row ->
-              if (row.next())
-                Stored(
-                  row.getBytes(1),
-                  row.getBytes(2),
-                  row.getInt(3),
-                  row.getInt(4),
-                  row.getInt(5),
-                )
-              else null
-            }
+    val stored = sql { connection ->
+      connection
+        .prepareStatement(
+          "SELECT hash, salt, memory_kib, iterations, parallelism FROM passcode WHERE consent_id = ?"
+        )
+        .use {
+          it.setString(1, consentId)
+          it.executeQuery().use { row ->
+            if (row.next())
+              Stored(row.getBytes(1), row.getBytes(2), row.getInt(3), row.getInt(4), row.getInt(5))
+            else null
           }
-      } ?: return PasscodeCheck.UNKNOWN
+        }
+    }
+    if (stored == null) {
+      hash(passcode, ByteArray(SALT_BYTES), MEMORY_KIB, ITERATIONS, PARALLELISM)
+      return PasscodeCheck.UNKNOWN
+    }
     val candidate =
       hash(passcode, stored.salt, stored.memoryKib, stored.iterations, stored.parallelism)
     if (MessageDigest.isEqual(candidate, stored.hash)) return PasscodeCheck.MATCH
@@ -164,25 +167,29 @@ class H2PasscodeStore(private val jdbcUrl: String) : PasscodeStore {
   private suspend fun <T> sql(block: (Connection) -> T): T =
     withContext(Dispatchers.IO) { connect().use(block) }
 
-  private fun hash(
+  private suspend fun hash(
     passcode: String,
     salt: ByteArray,
     memoryKib: Int,
     iterations: Int,
     parallelism: Int,
-  ) =
-    ByteArray(HASH_BYTES).also {
-      Argon2BytesGenerator()
-        .apply {
-          init(
-            Argon2Parameters.Builder(Argon2Parameters.ARGON2_id)
-              .withSalt(salt)
-              .withMemoryAsKB(memoryKib)
-              .withIterations(iterations)
-              .withParallelism(parallelism)
-              .build()
-          )
+  ): ByteArray =
+    hashing.withPermit {
+      withContext(Dispatchers.Default) {
+        ByteArray(HASH_BYTES).also {
+          Argon2BytesGenerator()
+            .apply {
+              init(
+                Argon2Parameters.Builder(Argon2Parameters.ARGON2_id)
+                  .withSalt(salt)
+                  .withMemoryAsKB(memoryKib)
+                  .withIterations(iterations)
+                  .withParallelism(parallelism)
+                  .build()
+              )
+            }
+            .generateBytes(passcode.toByteArray(Charsets.UTF_8), it)
         }
-        .generateBytes(passcode.toByteArray(Charsets.UTF_8), it)
+      }
     }
 }

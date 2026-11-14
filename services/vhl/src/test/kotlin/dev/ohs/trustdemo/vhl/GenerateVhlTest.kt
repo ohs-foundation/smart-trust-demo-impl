@@ -40,8 +40,12 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -556,5 +560,56 @@ class GenerateVhlTest {
     assertEquals(2, consents.size)
     assertEquals(listOf("inactive", "inactive"), consents.map { it.text("status") })
     assertFalse("482913" in response.bodyAsText())
+  }
+
+  @Test
+  fun concurrentWrongGuessesAreAllCounted() = withService {
+    val consent = share("1111", "bounmy").single().consentId()
+
+    val answers = coroutineScope {
+      (1..6).map { async { passcodes.check(consent, "9999") } }.awaitAll()
+    }
+
+    assertEquals(List(6) { PasscodeCheck.WRONG }, answers)
+    assertEquals(6, passcodes.wrongAttempts(consent))
+    assertEquals(PasscodeCheck.MATCH, passcodes.check(consent, "1111"))
+    assertEquals(6, passcodes.wrongAttempts(consent))
+  }
+
+  @Test
+  fun withdrawPreservesTheConsentsOtherFields() = withService {
+    val consent = share("1111", "bounmy").single().consentId()
+    val before = hapi.stored.getValue("Consent/$consent")
+
+    assertEquals(HttpStatusCode.OK, withdraw(bounmyToken(), consent).status)
+
+    val after = hapi.stored.getValue("Consent/$consent")
+    assertEquals("inactive", after.text("status"))
+    assertEquals(JsonObject(before - "status"), JsonObject(after - "status"))
+    assertEquals(listOf<String?>("W/\"1\""), hapi.ifMatches)
+  }
+
+  @Test
+  fun aConcurrentChangeMakesWithdrawConflict() = withService {
+    val consent = share("1111", "bounmy").single().consentId()
+    hapi.conflictOnPut = true
+
+    assertEquals(HttpStatusCode.Conflict, withdraw(bounmyToken(), consent).status)
+
+    assertEquals("active", status(consent))
+    assertEquals(emptyList(), hapi.puts)
+    assertEquals(PasscodeCheck.MATCH, passcodes.check(consent, "1111"))
+  }
+
+  @Test
+  fun withdrawingAnInactiveConsentWritesNothingAndDropsThePasscode() = withService {
+    val consent = share("1111", "bounmy").single().consentId()
+    hapi.stored["Consent/$consent"] =
+      JsonObject(hapi.stored.getValue("Consent/$consent") + ("status" to JsonPrimitive("inactive")))
+
+    assertEquals(HttpStatusCode.OK, withdraw(bounmyToken(), consent).status)
+
+    assertEquals(emptyList(), hapi.puts)
+    assertEquals(PasscodeCheck.UNKNOWN, passcodes.check(consent, "1111"))
   }
 }
