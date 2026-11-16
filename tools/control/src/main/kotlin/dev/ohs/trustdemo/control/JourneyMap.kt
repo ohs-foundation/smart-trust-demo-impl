@@ -71,7 +71,7 @@ fun journeyMap(
     }
   fun line(step: Step) =
     "${step.code.padEnd(codeWidth)}  ${step.title.padEnd(titleWidth)}  ${mark(step)} " +
-      "${state.metCount(step)}/${expectations.getValue(step).size}"
+      "${state.metCount(step)}/${state.expectations.getValue(step).size}"
 
   fun width(text: String) =
     Text(text, whitespace = Whitespace.PRE).measure(terminal, MEASURE_WIDTH).max

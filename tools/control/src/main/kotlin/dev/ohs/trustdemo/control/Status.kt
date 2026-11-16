@@ -34,7 +34,7 @@ fun status(state: StoryState): String = buildString {
   appendLine(currentStep(state))
   appendLine()
   Step.entries.forEach { step ->
-    val total = expectations.getValue(step).size
+    val total = state.expectations.getValue(step).size
     appendLine(
       "  ${step.code.padEnd(5)} ${statusLine(state, step).padEnd(30)} " +
         "${state.metCount(step)} of $total  ${step.title}"
@@ -46,12 +46,17 @@ fun status(state: StoryState): String = buildString {
     )
   }
   appendLine()
-  appendLine(dateShift(state))
-  appendLine()
+  if (state.newborn.isSomsak) {
+    appendLine(dateShift(state))
+    appendLine()
+  }
   appendLine("Logins (passwords in stack/.env)")
   appendLine("  Keycloak: ${KEYCLOAK_LOGINS.joinToString(", ")}")
   appendLine("  Medplum:  $MEDPLUM_LOGIN")
 }
+
+private fun Newborn.named(text: String) =
+  if (isSomsak) text else text.replace("Somsak's", "the newborn's").replace("Somsak", "the newborn")
 
 /** The current step with who, app, device, screens, the next action and the test QR it needs. */
 fun currentStep(state: StoryState): String = buildString {
@@ -63,8 +68,10 @@ fun currentStep(state: StoryState): String = buildString {
     appendLine("  app:     ${current.app.description}")
     appendLine("  device:  ${current.device}")
     appendLine("  screens: ${current.screens}")
-    appendLine("  next:    ${current.next}")
-    append("  test QR: ${current.qr?.let { "$it (trust-demo qr <card>)" } ?: "none"}")
+    appendLine("  next:    ${state.newborn.named(current.next)}")
+    append(
+      "  test QR: ${current.qr?.takeIf { state.newborn.isSomsak }?.let { "$it (trust-demo qr <card>)" } ?: "none"}"
+    )
   }
 }
 

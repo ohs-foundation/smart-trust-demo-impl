@@ -87,7 +87,7 @@ class Watch(
 
   private fun line(state: StoryState): String {
     val step = StepEngine.currentStep(state) ?: return "All steps are done."
-    val total = expectations.getValue(step).size
+    val total = state.expectations.getValue(step).size
     return "${step.code} ${step.title}: ${statusLine(state, step)}, " +
       "${state.metCount(step)} of $total written"
   }

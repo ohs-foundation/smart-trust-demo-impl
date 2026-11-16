@@ -95,6 +95,15 @@ abstract class StackCommand(name: String) : CliktCommand(name = name) {
       .default(Path("stack/.env"))
 }
 
+abstract class NewbornCommand(name: String) : StackCommand(name) {
+  private val newborn by
+    option("--newborn", help = "The newborn's hospital number; default: Somsak, the IG's child")
+      .default(Newborn.SOMSAK.hospitalNumber)
+
+  protected fun engine(onesa: FhirServer, kesaro: MedplumAdmin) =
+    StepEngine(onesa, kesaro, hospitalNumber = newborn)
+}
+
 class ResetCommand : StackCommand("reset") {
 
   override fun help(context: Context) =
@@ -119,14 +128,14 @@ class ResetCommand : StackCommand("reset") {
   }
 }
 
-class StatusCommand : StackCommand("status") {
+class StatusCommand : NewbornCommand("status") {
   private val current by option("--current", help = "Print only the current step").flag()
 
   override fun help(context: Context) = "Show the current story step, worked out from the records."
 
   override fun run() = runBlocking {
     val stack = Stack(StackEnv.load(stackEnv), stackEnv)
-    val state = StepEngine(stack.onesa, stack.kesaro).state()
+    val state = engine(stack.onesa, stack.kesaro).state()
     if (current) echo(currentStep(state))
     else {
       echo(journeyMap(state, currentContext.terminal))
@@ -136,33 +145,29 @@ class StatusCommand : StackCommand("status") {
   }
 }
 
-class JourneysCommand : StackCommand("journeys") {
+class JourneysCommand : NewbornCommand("journeys") {
   override fun help(context: Context) =
     "Draw the journeys by app, with their standing from the records."
 
   override fun run() = runBlocking {
     val stack = Stack(StackEnv.load(stackEnv), stackEnv)
-    echo(journeyMap(StepEngine(stack.onesa, stack.kesaro).state(), currentContext.terminal))
+    echo(journeyMap(engine(stack.onesa, stack.kesaro).state(), currentContext.terminal))
   }
 }
 
-class WatchCommand : StackCommand("watch") {
+class WatchCommand : NewbornCommand("watch") {
   override fun help(context: Context) = "Follow the story live from HAPI's webhook and a poll."
 
   override fun run() {
     val stack = Stack(StackEnv.load(stackEnv), stackEnv)
     echo("Watching on port ${stack.watchPort}; Ctrl-C stops.")
     val terminal = currentContext.terminal
-    Watch(
-        stack.watchPort,
-        StepEngine(stack.onesa, stack.kesaro),
-        render = { journeyMap(it, terminal) },
-      )
+    Watch(stack.watchPort, engine(stack.onesa, stack.kesaro), render = { journeyMap(it, terminal) })
       .serve()
   }
 }
 
-class InspectCommand : StackCommand("inspect") {
+class InspectCommand : NewbornCommand("inspect") {
   private val target by argument(help = "A step: J1, J2, J3a, J3b, Year, J4.0 or J4.1").optional()
   private val json by option("--json", help = "Print the records in full").flag()
 
@@ -171,7 +176,7 @@ class InspectCommand : StackCommand("inspect") {
   override fun run() = runBlocking {
     val step = target?.let { stepNamed(it) ?: throw UsageError("no step named $it") }
     val stack = Stack(StackEnv.load(stackEnv), stackEnv)
-    echo(inspect(StepEngine(stack.onesa, stack.kesaro).state(), step, json))
+    echo(inspect(engine(stack.onesa, stack.kesaro).state(), step, json))
   }
 }
 

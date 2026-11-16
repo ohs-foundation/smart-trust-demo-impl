@@ -32,7 +32,7 @@ fun stepNamed(target: String): Step? =
  */
 fun inspect(state: StoryState, step: Step? = null, asJson: Boolean = false): String {
   val shown = step ?: StepEngine.currentStep(state) ?: Step.entries.last()
-  val steps = expectations.getValue(shown)
+  val steps = state.expectations.getValue(shown)
   if (asJson) {
     val records =
       steps.associate { expectation ->

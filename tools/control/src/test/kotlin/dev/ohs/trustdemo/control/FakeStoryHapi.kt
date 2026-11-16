@@ -87,6 +87,8 @@ class FakeStoryHapi(records: List<JsonObject> = emptyList()) {
         this["meta"]?.jsonObject?.get("profile")?.jsonArray.orEmpty().any {
           it is JsonPrimitive && it.content == value
         }
+      "identifier" -> identifiers().any { it in value.split(',') }
+      "patient" -> references("patient").any { it in value.split(',') }
       "family" -> names().any { it.text("family") == value }
       "given" ->
         names().any { name ->
@@ -94,6 +96,9 @@ class FakeStoryHapi(records: List<JsonObject> = emptyList()) {
         }
       else -> text(name) == value
     }
+
+  private fun JsonObject.references(field: String) =
+    listOfNotNull(this[field]?.jsonObject?.text("reference")?.removePrefix("Patient/"))
 
   private fun JsonObject.names() = this["name"]?.jsonArray.orEmpty().map { it.jsonObject }
 

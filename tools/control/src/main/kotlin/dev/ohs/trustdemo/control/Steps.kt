@@ -17,6 +17,7 @@ package dev.ohs.trustdemo.control
 
 import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.trustkit.CardSigner
+import java.security.MessageDigest
 import java.time.Clock
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -153,11 +154,10 @@ internal val IG_BIRTH: LocalDate = LocalDate.parse("2025-10-28")
 internal val IG_J3: LocalDate = LocalDate.parse("2025-11-25")
 private val IG_J40 = LocalDate.parse("2026-10-26")
 internal val MOVE_DAYS = ChronoUnit.DAYS.between(IG_J3, IG_J40)
-private const val SOMSAK_ON_ONESA = "Somsak's record on Onesa"
-private const val SOMSAK_ON_KESARO = "Somsak's patient record"
-
-internal const val HOSPITAL_NUMBER =
-  "http://smart.who.int/trust-demo/sid/xxr-kesaro-hn|CRH-HN-68-104377"
+internal const val HOSPITAL_NUMBER_SYSTEM = "http://smart.who.int/trust-demo/sid/xxr-kesaro-hn"
+private const val SOMSAK_HOSPITAL_NUMBER = "CRH-HN-68-104377"
+internal const val HOSPITAL_NUMBER = "$HOSPITAL_NUMBER_SYSTEM|$SOMSAK_HOSPITAL_NUMBER"
+private const val NOT_REGISTERED = "not-registered-on-onesa"
 private const val DESIGN = "http://smart.who.int/trust-demo/StructureDefinition"
 private const val REGISTRATION =
   "http://ohs.dev/fhir/trust-demo/Questionnaire/TrustDemoHouseholdRegistration"
@@ -169,9 +169,43 @@ private const val BCG_PRODUCT = "vp-bcg-freeze-dried"
 private val ONESAN_DOSES =
   listOf("XXK-EPI-PENTA-1", "XXK-EPI-OPV-1", "XXK-EPI-PCV-1", "XXK-EPI-MR-1")
 
-private val somsakOnOnesa = mapOf("patient.given" to "Somsak")
+/**
+ * The child whose story is followed. [onesaIds] are the child's Patient ids on Onesa, found through
+ * the cards' fingerprints once the CHW registers them; null follows the IG's Somsak by name.
+ */
+data class Newborn(val hospitalNumber: String, val onesaIds: List<String>? = null) {
+  val isSomsak: Boolean = onesaIds == null
 
-internal val anchorQuery = Query("DocumentReference", mapOf("identifier" to HOSPITAL_NUMBER))
+  val who: String = if (isSomsak) "Somsak" else "The newborn"
+
+  val identifier: String = "$HOSPITAL_NUMBER_SYSTEM|$hospitalNumber"
+
+  val anchor: Query = Query("DocumentReference", mapOf("identifier" to identifier))
+
+  internal val onesaOwn: Map<String, String> =
+    onesaIds?.let { mapOf("patient" to it.ids()) } ?: mapOf("patient.given" to "Somsak")
+
+  internal val onesaPatient: Map<String, String> =
+    onesaIds?.let { mapOf("_id" to it.ids()) } ?: mapOf("family" to "Sengmany", "given" to "Somsak")
+
+  /** What narrows a search of records that are not filed under a patient, to this child's. */
+  internal fun narrowed(param: String, forEach: (String) -> String = { it }): Map<String, String> =
+    onesaIds?.let { ids -> mapOf(param to ids.ids(forEach)) }.orEmpty()
+
+  private fun List<String>.ids(forEach: (String) -> String = { it }) =
+    ifEmpty { listOf(NOT_REGISTERED) }.joinToString(",", transform = forEach)
+
+  companion object {
+    val SOMSAK = Newborn(SOMSAK_HOSPITAL_NUMBER)
+  }
+}
+
+internal fun fingerprint(hc1: String): String =
+  MessageDigest.getInstance("SHA-256").digest(hc1.trim().toByteArray()).joinToString("") {
+    "%02x".format(it)
+  }
+
+internal const val FINGERPRINT_SYSTEM = "http://ohs.dev/trust-demo/identifier/hcert-sha256"
 
 private val json = Json
 
@@ -231,21 +265,28 @@ private fun someWithStatus(vararg expected: String): (List<Resource>, Dates) -> 
 
 private fun anyFound(): (List<Resource>, Dates) -> Boolean = { found, _ -> found.isNotEmpty() }
 
-/** What each step needs written, in story order. */
-val expectations: Map<Step, List<Expectation>> =
-  mapOf(
+/** What each step needs written for the IG's Somsak, in story order. */
+val expectations: Map<Step, List<Expectation>> = expectationsFor(Newborn.SOMSAK)
+
+/** What each step needs written for [newborn], in story order. */
+fun expectationsFor(newborn: Newborn): Map<Step, List<Expectation>> {
+  val onesaOwn = newborn.onesaOwn
+  val sOnOnesa = "${newborn.who}'s record on Onesa"
+  val sOnKesaro = "${newborn.who}'s patient record"
+  val hospitalNumber = newborn.identifier
+  return mapOf(
     Step.J1 to
       listOf(
         Expectation(
-          SOMSAK_ON_KESARO,
+          sOnKesaro,
           Server.MEDPLUM,
-          Query("Patient", mapOf("identifier" to HOSPITAL_NUMBER)),
+          Query("Patient", mapOf("identifier" to hospitalNumber)),
           anyFound(),
         ),
         Expectation(
           "Birth doses (Hep B, BCG)",
           Server.MEDPLUM,
-          Query("Immunization", mapOf("patient.identifier" to HOSPITAL_NUMBER)),
+          Query("Immunization", mapOf("patient.identifier" to hospitalNumber)),
           { found, _ ->
             found.fields().filter { it.text("status") == "completed" }.coverBirthDoses()
           },
@@ -257,27 +298,35 @@ val expectations: Map<Step, List<Expectation>> =
         Expectation(
           "Registration questionnaire response",
           Server.HAPI,
-          Query("QuestionnaireResponse", mapOf("questionnaire" to REGISTRATION)),
+          Query(
+            "QuestionnaireResponse",
+            mapOf("questionnaire" to REGISTRATION) + newborn.narrowed("subject") { "Patient/$it" },
+          ),
           someWithStatus("completed", "amended"),
           statusMiss("completed", "amended"),
         ),
         Expectation(
-          SOMSAK_ON_ONESA,
+          sOnOnesa,
           Server.HAPI,
-          Query("Patient", mapOf("family" to "Sengmany", "given" to "Somsak")),
+          Query("Patient", newborn.onesaPatient),
           { found, dates ->
-            found.fields().any { it.text("birthDate")?.let(LocalDate::parse) == dates.birthDate }
+            if (newborn.isSomsak)
+              found.fields().any { it.text("birthDate")?.let(LocalDate::parse) == dates.birthDate }
+            else found.isNotEmpty()
           },
           { found, dates ->
-            found.fields().firstOrNull()?.text("birthDate")?.let { born ->
-              "birth date $born, expected ${dates.birthDate}"
-            }
+            found
+              .fields()
+              .firstOrNull()
+              ?.text("birthDate")
+              ?.takeIf { newborn.isSomsak }
+              ?.let { "birth date $it, expected ${dates.birthDate}" }
           },
         ),
         Expectation(
           "Mother and father as related persons",
           Server.HAPI,
-          Query("RelatedPerson", somsakOnOnesa),
+          Query("RelatedPerson", onesaOwn),
           { found, _ ->
             val kinds = found.fields().flatMap { it.codeIn("relationship") }
             "MTH" in kinds && "FTH" in kinds
@@ -286,7 +335,7 @@ val expectations: Map<Step, List<Expectation>> =
         Expectation(
           "Reported doses",
           Server.HAPI,
-          Query("Immunization", somsakOnOnesa),
+          Query("Immunization", onesaOwn),
           { found, _ ->
             val doses = found.fields()
             doses.reported().coverBirthDoses() || doses.verified().coverBirthDoses()
@@ -295,7 +344,7 @@ val expectations: Map<Step, List<Expectation>> =
         Expectation(
           "Referral to the health centre",
           Server.HAPI,
-          Query("ServiceRequest", somsakOnOnesa + ("code" to REFERRAL_CODE)),
+          Query("ServiceRequest", onesaOwn + ("code" to REFERRAL_CODE)),
           someWithStatus("active", "completed"),
           statusMiss("active", "completed"),
         ),
@@ -305,7 +354,7 @@ val expectations: Map<Step, List<Expectation>> =
         Expectation(
           "Verified doses",
           Server.HAPI,
-          Query("Immunization", somsakOnOnesa),
+          Query("Immunization", onesaOwn),
           { found, _ -> found.fields().verified().coverBirthDoses() },
           { found, _ ->
             found
@@ -318,13 +367,17 @@ val expectations: Map<Step, List<Expectation>> =
         Expectation(
           "Verification provenance",
           Server.HAPI,
-          Query("Provenance", mapOf("_profile" to "$DESIGN/TrustDemoOnesaDvcVerification")),
+          Query(
+            "Provenance",
+            mapOf("_profile" to "$DESIGN/TrustDemoOnesaDvcVerification") +
+              newborn.narrowed("patient"),
+          ),
           anyFound(),
         ),
         Expectation(
           "Reported doses replaced",
           Server.HAPI,
-          Query("Immunization", somsakOnOnesa),
+          Query("Immunization", onesaOwn),
           { found, _ ->
             val doses = found.fields()
             doses.verified().isNotEmpty() && doses.reported().isEmpty()
@@ -363,13 +416,13 @@ val expectations: Map<Step, List<Expectation>> =
         Expectation(
           "Immunization recommendation",
           Server.HAPI,
-          Query("ImmunizationRecommendation", somsakOnOnesa),
+          Query("ImmunizationRecommendation", onesaOwn),
           anyFound(),
         ),
         Expectation(
           "Reminder task",
           Server.HAPI,
-          Query("Task", somsakOnOnesa),
+          Query("Task", onesaOwn),
           { found, _ ->
             found.fields().any {
               it["focus"]
@@ -382,7 +435,7 @@ val expectations: Map<Step, List<Expectation>> =
         Expectation(
           "Referral completed",
           Server.HAPI,
-          Query("ServiceRequest", somsakOnOnesa + ("code" to REFERRAL_CODE)),
+          Query("ServiceRequest", onesaOwn + ("code" to REFERRAL_CODE)),
           someWithStatus("completed"),
           statusMiss("completed"),
         ),
@@ -392,7 +445,7 @@ val expectations: Map<Step, List<Expectation>> =
         Expectation(
           "Four Onesan doses",
           Server.HAPI,
-          Query("Immunization", somsakOnOnesa),
+          Query("Immunization", onesaOwn),
           { found, _ ->
             val coded = found.fields().verified().flatMap { it.codeIn("vaccineCode") }
             ONESAN_DOSES.all { it in coded }
@@ -406,7 +459,7 @@ val expectations: Map<Step, List<Expectation>> =
           Server.HAPI,
           Query(
             "Consent",
-            somsakOnOnesa +
+            onesaOwn +
               ("_profile" to
                 "http://smart.who.int/trust-phw/StructureDefinition/PHWExplicitConsent"),
           ),
@@ -416,7 +469,7 @@ val expectations: Map<Step, List<Expectation>> =
         Expectation(
           "Manifest list",
           Server.HAPI,
-          Query("List", somsakOnOnesa + ("status" to "current")),
+          Query("List", onesaOwn + ("status" to "current")),
           anyFound(),
         ),
       ),
@@ -427,7 +480,8 @@ val expectations: Map<Step, List<Expectation>> =
           Server.HAPI,
           Query(
             "AuditEvent",
-            mapOf("_profile" to "$DESIGN/TrustDemoOnesaVhlAccess", "outcome" to "0"),
+            mapOf("_profile" to "$DESIGN/TrustDemoOnesaVhlAccess", "outcome" to "0") +
+              newborn.narrowed("patient"),
           ),
           anyFound(),
         ),
@@ -439,19 +493,22 @@ val expectations: Map<Step, List<Expectation>> =
         ),
       ),
   )
+}
 
 /** The records both servers held when asked, by expectation label. */
 data class StoryState(
   val today: LocalDate,
   val resetDay: LocalDate,
   val found: Map<String, List<Resource>>,
+  val newborn: Newborn = Newborn.SOMSAK,
 ) {
+  val expectations: Map<Step, List<Expectation>> = expectationsFor(newborn)
 
   /** Whether the J3 to J4.0 move is made on Onesa, read from Somsak's birth date there. */
-  val movedOnOnesa: Boolean = bornAfterMove(SOMSAK_ON_ONESA)
+  val movedOnOnesa: Boolean = newborn.isSomsak && bornAfterMove("Somsak's record on Onesa")
 
   /** Whether the move is made on Kesaro, read from Somsak's birth date there. */
-  val movedOnKesaro: Boolean = bornAfterMove(SOMSAK_ON_KESARO)
+  val movedOnKesaro: Boolean = newborn.isSomsak && bornAfterMove("Somsak's patient record")
 
   val dates = Dates(resetDay, movedOnOnesa)
 
@@ -486,23 +543,42 @@ class StepEngine(
   private val onesa: FhirServer,
   private val kesaro: MedplumAdmin,
   private val clock: Clock = Clock.systemDefaultZone(),
+  private val hospitalNumber: String = Newborn.SOMSAK.hospitalNumber,
 ) : StoryStates {
   /**
    * The reset day is the IG's J3 moved by the shift in Somsak's earliest issued card's vaccination
-   * date; before J1 issues cards it is today.
+   * date; before J1 issues cards it is today. Any other newborn is found on Onesa through the
+   * fingerprints of the cards issued for their hospital number.
    */
   override suspend fun state(): StoryState = coroutineScope {
     val today = LocalDate.now(clock)
-    val cards = async { kesaro.searchResources(anchorQuery.type, anchorQuery.params) }
+    val anchor = Newborn(hospitalNumber).anchor
+    val cards = kesaro.searchResources(anchor.type, anchor.params)
+    val newborn =
+      if (hospitalNumber == Newborn.SOMSAK.hospitalNumber) Newborn.SOMSAK
+      else Newborn(hospitalNumber, onesaIds(cards))
     val searches =
-      expectations.values
+      expectationsFor(newborn)
+        .values
         .flatten()
         .groupBy { it.server to it.query }
         .map { (where, group) ->
           async { group.map { it.label } to search(where.first, where.second) }
         }
     val found = searches.awaitAll().flatMap { (labels, records) -> labels.map { it to records } }
-    StoryState(today, resetDayFrom(cards.await()) ?: today, found.toMap())
+    val resetDay = if (newborn.isSomsak) resetDayFrom(cards) else null
+    StoryState(today, resetDay ?: today, found.toMap(), newborn)
+  }
+
+  private suspend fun onesaIds(cards: List<Resource>): List<String> {
+    val fingerprints = cards.mapNotNull { it.cardText() }.map(::fingerprint)
+    if (fingerprints.isEmpty()) return emptyList()
+    val identifier = fingerprints.joinToString(",") { "$FINGERPRINT_SYSTEM|$it" }
+    return onesa
+      .search("Immunization", mapOf("identifier" to identifier, "_count" to PAGE))
+      .mapNotNull { it.fields()["patient"]?.jsonObject?.text("reference") }
+      .map { it.removePrefix("Patient/") }
+      .distinct()
   }
 
   private suspend fun search(server: Server, query: Query): List<Resource> {
