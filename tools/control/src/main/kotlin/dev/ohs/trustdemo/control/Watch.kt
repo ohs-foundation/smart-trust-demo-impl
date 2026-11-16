@@ -74,16 +74,19 @@ class Watch(
     embeddedServer(CIO, port = port) { install(this) }.start(wait = true)
   }
 
-  private suspend fun refresh() = states.state().let { state -> report(line(state), render(state)) }
+  // The read is inside the lock too, so a slow poll cannot print an older step after a delivery.
+  private suspend fun refresh() =
+    lock.withLock { states.state().let { state -> show(line(state), render(state)) } }
 
-  private suspend fun report(line: String, map: String = "") =
-    lock.withLock {
-      val shown = listOf(line, map).filter { it.isNotEmpty() }.joinToString("\n")
-      if (shown != last) {
-        last = shown
-        print("${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)}  $shown")
-      }
+  private suspend fun report(line: String) = lock.withLock { show(line) }
+
+  private fun show(line: String, map: String = "") {
+    val shown = listOf(line, map).filter { it.isNotEmpty() }.joinToString("\n")
+    if (shown != last) {
+      last = shown
+      print("${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)}  $shown")
     }
+  }
 
   private fun line(state: StoryState): String {
     val step = StepEngine.currentStep(state) ?: return "All steps are done."
