@@ -25,13 +25,13 @@ import type { SummaryOutcome } from "../server/summary";
 import type { ListStatus } from "../server/trustLists";
 import type { LinkOutcome } from "../server/viewer";
 import { writeReceipt } from "./receipt";
+import { expiryAt, expiryUntil, fullTime } from "./expiry";
 import { keyOf } from "./link";
 import { Scanner } from "./Scanner";
 import { SummaryScreen, type Receipt } from "./SummaryScreen";
 import { openSummary, readSummary, type SummaryView } from "./summary";
 
-const WHEN = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "shortOffset" });
-const when = (epochSeconds: number) => WHEN.format(new Date(epochSeconds * 1000));
+const when = fullTime;
 
 const LIST_NAMES: Record<ListStatus["name"], string> = { local: "Local test list", dev: "GDHCN DEV" };
 const PASSCODE_TRIES = 3;
@@ -247,7 +247,7 @@ function ViewerFor({ organization }: { organization: string }) {
                       items={[
                         { label: "Issuer", value: found.issuer },
                         { label: "Link for", value: found.label ?? "Health summary" },
-                        { label: "Valid until", value: when(found.exp) },
+                        { label: "Valid until", value: expiryUntil(found.exp) },
                         { label: "Link to", value: hostOf(found.url), mono: true },
                       ]}
                     />
@@ -285,7 +285,7 @@ function NotVerified({ result }: { result: Unverified }) {
           { label: "Reason", value: result.reason, mono: true },
           ...(result.kid ? [{ label: "Key ID (kid)", value: result.kid, mono: true }] : []),
         ]
-      : [{ label: "Reason", value: "expired", mono: true }, { label: "Ended", value: when(result.exp) }];
+      : [{ label: "Reason", value: "expired", mono: true }, { label: "Ended", value: expiryAt(result.exp) }];
   return (
     <div role="alert" className="flex flex-col gap-3">
       <ResultPanel tone="fail" title="Link Not Verified" verdict="FAIL" facts={<Facts items={facts} />}>
@@ -301,7 +301,7 @@ function NotVerified({ result }: { result: Unverified }) {
 }
 
 function PaperNote({ result }: { result: Unverified }) {
-  const why = result.kind === "notVerified" ? `Not verified at ${result.step}: ${result.reason}${result.kid ? `, key ID ${result.kid}` : ""}.` : `The link expired ${when(result.exp)}.`;
+  const why = result.kind === "notVerified" ? `Not verified at ${result.step}: ${result.reason}${result.kid ? `, key ID ${result.kid}` : ""}.` : `The link expired ${expiryAt(result.exp)}.`;
   return (
     <Notice role="status" title="Treat the family's records as paper">
       {why} The link was not followed and nothing was saved here; note the reason with the paper record.
