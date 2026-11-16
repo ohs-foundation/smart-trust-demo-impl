@@ -2,6 +2,7 @@ import type { MedplumClient } from "@medplum/core";
 import type { Bundle, DocumentReference, Immunization, Location, Organization, Patient, Practitioner } from "@medplum/fhirtypes";
 import {
   HOSPITAL_NUMBER_SYSTEM,
+  hospitalNumberOf,
   PRODUCTS_VALUE_SET,
   dosesBundle,
   doseDateProblem,
@@ -12,6 +13,7 @@ import {
   type Newborn,
   type TimedPatient,
 } from "./records";
+import { issueCard } from "../server/issue";
 import { readCardTexts, type CardText } from "../server/cards";
 import type { Card } from "./cards";
 
@@ -115,18 +117,53 @@ function birthInstant(patient: TimedPatient): string {
   return time?.valueDateTime ?? `${patient.birthDate}T00:00`;
 }
 
+interface CardHooks {
+  issue: (doseId: string, token: string) => Promise<string>;
+  read: (texts: CardText[]) => Promise<Card[]>;
+}
+
+/** The newborn's stored cards; a completed dose without one is issued first, with the user's token. */
 export async function readCards(
-  medplum: Pick<MedplumClient, "searchResources">,
-  hospitalNumber: string,
+  medplum: Pick<MedplumClient, "searchResources" | "createResourceIfNoneExist">,
+  patient: Patient,
+  doses: Immunization[],
   token: string,
-  read: (texts: CardText[]) => Promise<Card[]> = (texts) => readCardTexts({ data: { token, hospitalNumber, texts } }),
+  hooks: CardHooks = {
+    issue: (doseId, userToken) => issueCard({ data: { token: userToken, immunizationId: doseId } }),
+    read: (texts) => readCardTexts({ data: { token, hospitalNumber: hospitalNumberOf(patient), texts } }),
+  },
 ): Promise<Card[]> {
+  const hospitalNumber = hospitalNumberOf(patient);
   if (!hospitalNumber.trim()) return [];
   const found = await medplum.searchResources("DocumentReference", {
     identifier: `${HOSPITAL_NUMBER_SYSTEM}|${hospitalNumber}`,
   });
-  const cards = await read(found.flatMap(textOf));
+  const texts = found.flatMap(textOf);
+  for (const dose of doses) {
+    if (dose.status !== "completed" || !dose.id || texts.some((text) => text.doseId === dose.id)) continue;
+    const hc1 = await hooks.issue(dose.id, token);
+    await medplum.createResourceIfNoneExist(cardRecord(patient, hospitalNumber, dose.id, hc1), `identifier=${cardIdentifier(dose.id)}`);
+    texts.push({ doseId: dose.id, hc1 });
+  }
+  const cards = await hooks.read(texts);
   return cards.sort((a, b) => a.doseId.localeCompare(b.doseId));
+}
+
+function cardIdentifier(doseId: string): string {
+  return `${IG_ID_SYSTEM}|${doseId}-card`;
+}
+
+function cardRecord(patient: Patient, hospitalNumber: string, doseId: string, hc1: string): DocumentReference {
+  return {
+    resourceType: "DocumentReference",
+    meta: { accounts: patient.meta?.accounts },
+    status: "current",
+    identifier: [
+      { system: HOSPITAL_NUMBER_SYSTEM, value: hospitalNumber },
+      { system: IG_ID_SYSTEM, value: `${doseId}-card` },
+    ],
+    content: [{ attachment: { contentType: "text/plain", title: `${doseId}.hc1`, data: btoa(hc1) } }],
+  };
 }
 
 function textOf(reference: DocumentReference): CardText[] {

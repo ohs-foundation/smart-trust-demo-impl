@@ -4,7 +4,9 @@ import { MedplumProvider } from "@medplum/react-hooks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Immunization, Patient } from "@medplum/fhirtypes";
 import { readCards } from "./api";
+import { HOSPITAL_NUMBER_SYSTEM } from "./records";
 import { PrintStation } from "./PrintStation";
 
 afterEach(cleanup);
@@ -13,8 +15,14 @@ describe("aBlankHospitalNumberNeverSearches", () => {
   it("returns no cards and does not search", async () => {
     const searchResources = vi.fn(async () => []);
     const read = vi.fn(async () => []);
-    for (const number of ["", "   "]) expect(await readCards({ searchResources } as unknown as Pick<MedplumClient, "searchResources">, number, "t", read)).toEqual([]);
+    const issue = vi.fn(async () => "HC1:X");
+    const medplum = { searchResources } as unknown as Pick<MedplumClient, "searchResources" | "createResourceIfNoneExist">;
+    for (const value of ["", "   "]) {
+      const patient = { resourceType: "Patient", identifier: [{ system: HOSPITAL_NUMBER_SYSTEM, value }] } as Patient;
+      expect(await readCards(medplum, patient, [{ resourceType: "Immunization", id: "d", status: "completed" } as Immunization], "t", { issue, read })).toEqual([]);
+    }
     expect(searchResources).not.toHaveBeenCalled();
+    expect(issue).not.toHaveBeenCalled();
   });
 
   it("tells the print station's user plainly", async () => {

@@ -27,6 +27,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.util.Base64
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -34,7 +35,10 @@ import kotlin.test.assertNull
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 
 class StepsTest {
   @Test
@@ -75,18 +79,52 @@ class StepsTest {
   }
 
   @Test
-  fun resetDayComesFromTheSignedCardNotItsUploadTime() = runTest {
+  fun resetDayComesFromTheIssuedCardNotItsUploadTime() = runTest {
     val resetDay = LocalDate.parse("2026-11-14")
     val medplum = FakeMedplum()
     val somsak = ig.filterIsInstance<Patient>().single { it.id == "TrustDemoTaifafekiSomsak" }
     val dose = ig.filterIsInstance<Immunization>().single { it.id == "TrustDemoJ1HepB" }
     val hc1 = CardSigner.sign(dose, somsak, StoryClock(IG_J3, resetDay))
     medplum.admin.seedBase(ig)
-    medplum.admin.uploadCard("urn:hn", "CRH-HN-68-104377", "TrustDemoJ1HepB", hc1)
-    val (key, card) = medplum.stored.entries.single { it.key.startsWith("DocumentReference/") }
-    val meta =
-      card.getValue("meta").jsonObject + ("lastUpdated" to JsonPrimitive("2026-11-17T09:00:00Z"))
-    medplum.stored[key] = JsonObject(card + ("meta" to JsonObject(meta)))
+    medplum.stored["DocumentReference/card"] = buildJsonObject {
+      put("resourceType", "DocumentReference")
+      put("id", "card")
+      put("status", "current")
+      val hospital = medplum.stored.values.first { it.igId() == "TrustDemoKesaroHospital" }
+      put(
+        "meta",
+        JsonObject(
+          hospital.getValue("meta").jsonObject +
+            ("lastUpdated" to JsonPrimitive("2026-11-17T09:00:00Z"))
+        ),
+      )
+      put(
+        "identifier",
+        buildJsonArray {
+          add(
+            buildJsonObject {
+              put("system", "http://smart.who.int/trust-demo/sid/xxr-kesaro-hn")
+              put("value", "CRH-HN-68-104377")
+            }
+          )
+        },
+      )
+      put(
+        "content",
+        buildJsonArray {
+          add(
+            buildJsonObject {
+              put(
+                "attachment",
+                buildJsonObject {
+                  put("data", Base64.getEncoder().encodeToString(hc1.toByteArray()))
+                },
+              )
+            }
+          )
+        },
+      )
+    }
     val engine =
       StepEngine(
         FhirServer("http://hapi.test/fhir", { null }, emptyHapi),

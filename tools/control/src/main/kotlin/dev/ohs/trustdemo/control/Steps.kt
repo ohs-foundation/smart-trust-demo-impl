@@ -171,8 +171,7 @@ private val ONESAN_DOSES =
 
 private val somsakOnOnesa = mapOf("patient.given" to "Somsak")
 
-internal val anchorQuery =
-  Query("DocumentReference", mapOf("identifier" to "$IG_ID_SYSTEM|TrustDemoJ1HepB-card"))
+internal val anchorQuery = Query("DocumentReference", mapOf("identifier" to HOSPITAL_NUMBER))
 
 private val json = Json
 
@@ -489,8 +488,8 @@ class StepEngine(
   private val clock: Clock = Clock.systemDefaultZone(),
 ) : StoryStates {
   /**
-   * The reset day is the IG's J3 moved by the shift in the signed Hep B card's vaccination date,
-   * which reset signs once; before the card exists it is today.
+   * The reset day is the IG's J3 moved by the shift in Somsak's earliest issued card's vaccination
+   * date; before J1 issues cards it is today.
    */
   override suspend fun state(): StoryState = coroutineScope {
     val today = LocalDate.now(clock)
@@ -516,9 +515,10 @@ class StepEngine(
 
   private fun resetDayFrom(cards: List<Resource>): LocalDate? =
     cards
-      .firstNotNullOfOrNull { card ->
+      .mapNotNull { card ->
         runCatching { CardSigner.vaccinationDate(card.cardText()!!) }.getOrNull()
       }
+      .minOrNull()
       ?.let { IG_J3.plusDays(ChronoUnit.DAYS.between(IG_BIRTH, it)) }
 
   companion object {

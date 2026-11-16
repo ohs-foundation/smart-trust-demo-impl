@@ -28,7 +28,7 @@ export function usePrintCards(patientId: string) {
     queryFn: async (): Promise<Printing> => {
       const { patient, doses } = await readChart(medplum, patientId);
       const hospitalNumber = hospitalNumberOf(patient);
-      const cards = await readCards(medplum, hospitalNumber, medplum.getAccessToken() ?? "");
+      const cards = await readCards(medplum, patient, doses, medplum.getAccessToken() ?? "");
       const given = (card: Card) => doses.findIndex((dose) => dose.vaccineCode?.coding?.some((it) => it.system === PRODUCT_SYSTEM && it.code === card.product));
       cards.sort((a, b) => given(a) - given(b));
       return { hospitalNumber, cards, warnings: compareDoses(cards, doses), doses };

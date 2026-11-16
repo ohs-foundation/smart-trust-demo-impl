@@ -106,12 +106,10 @@ class MedplumTenancyTest {
   }
 
   @Test
-  fun baseRecordsAndCardsAreWrittenIntoTheirOrganisationsCompartment() = runTest {
+  fun baseRecordsAreWrittenIntoTheirOrganisationsCompartment() = runTest {
     seeded()
-    medplum.admin.uploadCard("urn:hn", "CRH-HN-68-104377", "TrustDemoJ1HepB", "HC1:X")
     val hospital = "Organization/${medplum.organizationId("TrustDemoKesaroHospital")}"
     val clinic = "Organization/${medplum.organizationId("TrustDemoKesaroClinic")}"
-    assertEquals(listOf(hospital), medplum.records("DocumentReference").single().accounts())
     assertEquals(listOf(hospital), medplum.records("Location").single().accounts())
     assertEquals(
       setOf(hospital, clinic),

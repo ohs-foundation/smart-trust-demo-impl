@@ -24,6 +24,7 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.path
+import dev.ohs.trustdemo.trustkit.CardSigner
 import dev.ohs.trustdemo.trustkit.StandIn
 import dev.ohs.trustdemo.trustkit.TestKeys
 import java.security.Signature
@@ -49,7 +50,7 @@ private const val MANIFEST =
 
 private val WHO_CARDS = mapOf("who-hepb" to "hepb1", "who-bcg" to "bcg")
 private val SOMSAK_CARDS =
-  mapOf("somsak-hepb" to "TrustDemoJ1HepB", "somsak-bcg" to "TrustDemoJ1Bcg")
+  mapOf("somsak-hepb" to "vp-hepb-peds-monovalent", "somsak-bcg" to "vp-bcg-freeze-dried")
 internal val CARDS = SOMSAK_CARDS.keys + WHO_CARDS.keys + "unknown-key-link"
 
 class QrCommand : CliktCommand(name = "qr") {
@@ -74,7 +75,7 @@ class QrCommand : CliktCommand(name = "qr") {
       else -> unknownKeyLink()
     }
 
-  private fun somsak(doseId: String): String = runBlocking {
+  private fun somsak(product: String): String = runBlocking {
     val env = StackEnv.load(stackEnv)
     val kesaro =
       MedplumAdmin(
@@ -85,8 +86,9 @@ class QrCommand : CliktCommand(name = "qr") {
       )
     kesaro
       .searchResources("DocumentReference", mapOf("identifier" to HOSPITAL_NUMBER))
-      .firstOrNull { it.cardAttachment()?.text("title") == "$doseId.hc1" }
-      ?.cardText() ?: throw UsageError("no $doseId card on Medplum; run trust-demo reset")
+      .mapNotNull { it.cardText() }
+      .firstOrNull { runCatching { CardSigner.product(it) }.getOrNull() == product }
+      ?: throw UsageError("print the cards in J1 first")
   }
 
   private fun whoCard(name: String): String =

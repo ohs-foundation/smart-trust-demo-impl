@@ -56,6 +56,7 @@ Taifafeki · facility client                Onesa · Onesa app
 | `apps/onesa/` | Onesa player app (Kotlin Multiplatform): `shared/`, `android/`, `desktop/` |
 | `apps/taifafeki-client/` | Taifafeki Facility Client (React, with a small Node server) |
 | `services/vhl/` | VHL service: share, passcode, withdraw, ITI-YY5 and ITI-68 |
+| `services/issuer/` | Taifafeki card issuer (internal only): signs a card from a dose in Medplum with the mounted XXR card key, for the caller Medplum lets read it |
 | `libs/hcert/`, `libs/trustkit/` | health-certificate verification; test keys, trust lists and card signer |
 | `tools/control/` | `trust-demo`, the control CLI |
 | `tools/qa/` | `make qa` checks |
@@ -135,7 +136,7 @@ The debug build trusts `stack/tls/ca.crt`, so `make stack-up` comes first. Sign 
 
 | Command | Does |
 | --- | --- |
-| `reset` | both countries to the starting state; uploads Somsak's cards, registers the webhook |
+| `reset` | both countries to the starting state; registers the webhook |
 | `status` | the current step, worked out from the records (`--current` prints only it) |
 | `journeys` | each app's box with its journeys, live from the records; also heads `status` |
 | `inspect [J1\|J2\|J3a\|J3b\|Year\|J4.0\|J4.1]` | the records behind the current or named step (`--json` in full) |
@@ -153,7 +154,7 @@ Start with `make stack-up && trust-demo reset` (or on a server, [docs/deploy.md]
 
 | Step | Do | Test QR | CLI shows |
 | --- | --- | --- | --- |
-| J1 | Dr Anan, Facility Client: enter Somsak's discharge, print his two cards | | `status` moves to J2 once the cards exist |
+| J1 | Dr Anan, Facility Client: enter Somsak's discharge (birth and doses dated 28 days before the reset day), open Print: the issuer signs each dose's card on first print | | `status` moves to J2 once the doses exist; `qr somsak-hepb` and `somsak-bcg` work once the cards are printed (before that: "print the cards in J1 first") |
 | J2 | Vilay, Onesa app, phone offline: scan a card, register the household, refer Somsak | `trust-demo qr somsak-hepb`, `somsak-bcg` | `inspect J2`: household, Somsak, referral |
 | J3a | Chanthason, tablet: open the referral, scan the cards, verify | the same two cards | `inspect J3a`: verification Provenances |
 | J3b | Chanthason: match doses to Onesan products, schedule the next | | `inspect J3b`: ConceptMap entry, schedule |

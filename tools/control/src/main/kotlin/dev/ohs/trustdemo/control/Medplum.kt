@@ -39,7 +39,6 @@ import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
 import io.ktor.http.parameters
 import java.net.URI
-import java.util.Base64
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -315,48 +314,6 @@ class MedplumAdmin(
         ?.id(),
       application,
     )
-  }
-
-  /** Stores a signed card as text, found by the patient's [hospitalNumber] and the [doseId]. */
-  suspend fun uploadCard(
-    hospitalNumberSystem: String,
-    hospitalNumber: String,
-    doseId: String,
-    hc1: String,
-  ) {
-    val hospital = checkNotNull(findByIgId("Organization", HOSPITAL)) { "seedBase must run first" }
-    val card = buildJsonObject {
-      put("resourceType", "DocumentReference")
-      put("meta", meta("Organization/${hospital.id()}"))
-      put("status", "current")
-      put(
-        "identifier",
-        JsonArray(
-          listOf(
-            identifier(hospitalNumberSystem, hospitalNumber),
-            identifier(IG_ID_SYSTEM, "$doseId-card"),
-          )
-        ),
-      )
-      put(
-        "content",
-        JsonArray(
-          listOf(
-            buildJsonObject {
-              put(
-                "attachment",
-                buildJsonObject {
-                  put("contentType", "text/plain")
-                  put("title", "$doseId.hc1")
-                  put("data", Base64.getEncoder().encodeToString(hc1.toByteArray()))
-                },
-              )
-            }
-          )
-        ),
-      )
-    }
-    send(HttpMethod.Post, "$baseUrl/fhir/R4/DocumentReference", card.toString())
   }
 
   private suspend fun expunge(reference: String) {

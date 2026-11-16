@@ -18,13 +18,9 @@ package dev.ohs.trustdemo.control
 import com.github.ajalt.clikt.core.CliktError
 import dev.ohs.fhir.model.r4.Bundle
 import dev.ohs.fhir.model.r4.Enumeration
-import dev.ohs.fhir.model.r4.Immunization
-import dev.ohs.fhir.model.r4.Patient
 import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.fhir.model.r4.Uri
-import dev.ohs.trustdemo.trustkit.CardSigner
 import dev.ohs.trustdemo.trustkit.ClinicCertificates
-import dev.ohs.trustdemo.trustkit.StoryClock
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
@@ -33,14 +29,10 @@ import java.util.Base64
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 
-private const val SOMSAK = "TrustDemoTaifafekiSomsak"
-private val J1_DOSES = listOf("TrustDemoJ1HepB", "TrustDemoJ1Bcg")
-private val J3_IN_IG = LocalDate.parse("2025-11-25")
-
 /**
  * Puts both countries into the story's starting state, before journey J1: Onesa's HAPI server and
- * Taifafeki's Medplum project, with Somsak's signed cards uploaded, and in [secretsDir] the clinic
- * certificate and the facility client's id.
+ * Taifafeki's Medplum project, and in [secretsDir] the clinic certificate and the facility client's
+ * id.
  */
 class Reset(
   private val onesa: FhirServer,
@@ -61,7 +53,6 @@ class Reset(
       kesaro.wipeStory()
       kesaro.seedBase(ig)
       kesaro.ensureClinician(ananPassword)
-      uploadCards(ig, StoryClock(J3_IN_IG, today))
       writeClinicCertificate()
       writeClientId(kesaro.ensureClientApplication(clientOrigin))
     } catch (failure: CancellationException) {
@@ -97,20 +88,6 @@ class Reset(
           )
         ),
     )
-  }
-
-  private suspend fun uploadCards(ig: List<Resource>, clock: StoryClock) {
-    val somsak = ig.filterIsInstance<Patient>().single { it.id == SOMSAK }
-    val number = somsak.identifier.single()
-    J1_DOSES.forEach { id ->
-      val dose = ig.filterIsInstance<Immunization>().single { it.id == id }
-      kesaro.uploadCard(
-        number.system!!.value!!,
-        number.value!!.value!!,
-        id,
-        CardSigner.sign(dose, somsak, clock),
-      )
-    }
   }
 
   private fun writeClinicCertificate() {

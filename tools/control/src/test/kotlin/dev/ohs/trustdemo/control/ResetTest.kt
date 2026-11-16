@@ -32,6 +32,7 @@ import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 
@@ -84,7 +85,7 @@ class ResetTest {
     }
     assertEquals(2, hapi.expunges)
     assertEquals(Seed.onesaBase(ig).entry.size + 1, hapi.stored.size)
-    assertEquals(2, medplum.stored.values.count { it.hasIdentifier("CRH-HN-68-104377") })
+    assertTrue(medplum.stored.keys.none { it.startsWith("DocumentReference/") })
     assertEquals(1, medplum.invites)
     assertEquals(
       medplum.stored.keys.single { it.startsWith("ClientApplication/") }.substringAfter('/'),
