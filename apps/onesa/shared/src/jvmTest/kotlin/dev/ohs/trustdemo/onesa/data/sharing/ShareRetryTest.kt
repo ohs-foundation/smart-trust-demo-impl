@@ -21,6 +21,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlin.test.Test
@@ -42,7 +43,7 @@ class ShareRetryTest {
   fun aLostReplyIsRetriedWithTheSameKey() = runTest {
     val keys = mutableListOf<String?>()
     val engine = MockEngine { request ->
-      keys += request.headers["Idempotency-Key"]
+      if (request.method == HttpMethod.Post) keys += request.headers["Idempotency-Key"]
       if (keys.size == 1) throw IOException("the reply was lost")
       respond(
         replyFor(listOf("bounmy")),
@@ -58,6 +59,7 @@ class ShareRetryTest {
         httpClient = HttpClient(engine),
         baseUrl = "https://vhl.test:8443",
         links = links,
+        fhirBaseUrl = "https://gateway.test/fhir/",
         expiry = { 1_000L },
         now = { 0 },
       )
@@ -88,6 +90,7 @@ class ShareRetryTest {
           httpClient = HttpClient(MockEngine { respond("") }),
           baseUrl = "https://vhl.test:8443",
           links = links,
+          fhirBaseUrl = "https://gateway.test/fhir/",
           expiry = { null },
           now = { 100 },
         )

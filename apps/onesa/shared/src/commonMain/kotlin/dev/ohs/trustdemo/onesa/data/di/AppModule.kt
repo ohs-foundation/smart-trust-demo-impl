@@ -180,6 +180,7 @@ internal val serviceModule = module {
       httpClient = OidcAuthApi.defaultHttpClient(),
       baseUrl = GeneratedAuthConfig.VHL_BASE_URL,
       links = get(),
+      fhirBaseUrl = GeneratedAuthConfig.FHIR_BASE_URL,
     )
   }
   single {

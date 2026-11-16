@@ -23,7 +23,9 @@ import dev.ohs.trustdemo.onesa.util.FhirJson
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -49,6 +51,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 private const val REPLY_TIMEOUT_MILLIS = 60_000L
+private const val CONSENT_PAGE = 100
 
 /** A member of the household; [name] is null until the person's Patient has synced. */
 data class Person(val id: String, val name: String?)
@@ -72,7 +75,9 @@ sealed interface ShareOutcome {
  * The family wallet's share: asks the Onesa VHL service for one signed link per person and keeps
  * each in [links]. The passcode goes to the service and nowhere else. A share carries an
  * Idempotency-Key, so a lost reply is asked for again and never creates a second set of Consents.
- * [expiry] reads when a link stops working; [now] is the clock in epoch seconds.
+ * The share's Consents are read back from the gateway at [fhirBaseUrl] and kept as server copies,
+ * so Shared Links lists them at once and the sync never uploads them. [expiry] reads when a link
+ * stops working; [now] is the clock in epoch seconds.
  */
 class ShareService(
   private val repository: FhirRepository,
@@ -80,6 +85,7 @@ class ShareService(
   private val httpClient: HttpClient,
   private val baseUrl: String,
   private val links: LinkStore,
+  private val fhirBaseUrl: String,
   private val expiry: suspend (String) -> Long? = ::expiryOf,
   private val now: () -> Long = { Clock.System.now().epochSeconds },
 ) {
@@ -189,7 +195,35 @@ class ShareService(
         issued.forEach { unsaved[it.consentId] = it }
         false
       }
+    keepConsents(token, issued.map { it.consentId })
     return ShareOutcome.Issued(issued, saved)
+  }
+
+  /**
+   * Reads the family's Consents as the sync does and keeps the ones of [ids] as server copies; when
+   * that fails the next sync brings them.
+   */
+  private suspend fun keepConsents(token: String, ids: List<String>) {
+    try {
+      val reply =
+        httpClient.get("${fhirBaseUrl}Consent") {
+          bearerAuth(token)
+          parameter("_count", CONSENT_PAGE)
+        }
+      if (!reply.status.isSuccess()) return
+      val consents =
+        json
+          .parseToJsonElement(reply.bodyAsText())
+          .jsonObject["entry"]
+          ?.jsonArray
+          .orEmpty()
+          .mapNotNull { it.jsonObject["resource"] }
+          .map { json.decodeFromJsonElement(Resource.serializer(), it) }
+          .filter { it.id in ids }
+      if (consents.isNotEmpty()) repository.storeAsSynced(consents)
+    } catch (e: CancellationException) {
+      throw e
+    } catch (_: Exception) {}
   }
 
   private suspend fun post(token: String, body: String, key: String): HttpResponse {

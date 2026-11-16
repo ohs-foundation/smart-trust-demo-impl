@@ -73,6 +73,7 @@ class ShareRequestTest {
         httpClient = HttpClient(engine),
         baseUrl = "https://vhl.test:8443",
         links = InMemoryLinks(),
+        fhirBaseUrl = "https://gateway.test/fhir/",
         expiry = { null },
         now = { 0 },
       )

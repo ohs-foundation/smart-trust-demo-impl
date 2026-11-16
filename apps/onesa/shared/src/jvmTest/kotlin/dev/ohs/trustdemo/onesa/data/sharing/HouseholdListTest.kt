@@ -34,6 +34,7 @@ class HouseholdListTest {
       httpClient = HttpClient(MockEngine { respond("{}") }),
       baseUrl = "https://vhl.test:8443",
       links = InMemoryLinks(),
+      fhirBaseUrl = "https://gateway.test/fhir/",
     )
 
   private suspend fun load() {
