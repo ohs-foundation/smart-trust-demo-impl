@@ -20,6 +20,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,7 +40,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaTheme
 
@@ -59,7 +59,7 @@ fun RecordRow(
   selected: Boolean = false,
   onClick: (() -> Unit)? = null,
 ) {
-  val shape = RoundedCornerShape(9.dp)
+  val shape = RoundedCornerShape(11.dp)
   val fill = if (selected) MaterialTheme.colorScheme.primaryContainer else OnesaColors.Bg
   val edge =
     BorderStroke(
@@ -73,26 +73,24 @@ fun RecordRow(
     ) {
       icon?.let { RowIcon(it) }
       Column(Modifier.weight(1f)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          Text(
-            label,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium,
-            fontSize = 12.5.sp,
-            fontWeight = FontWeight.Bold,
-            color = OnesaColors.Ink,
-          )
-          status?.let { StatusChip(it, Modifier.widthIn(max = 140.dp), textAlign = TextAlign.End) }
+        BoxWithConstraints {
+          val chipWidth = minOf(160.dp, maxWidth * 0.5f)
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+              label,
+              modifier = Modifier.weight(1f),
+              style = MaterialTheme.typography.bodyMedium,
+              fontWeight = FontWeight.Bold,
+              color = OnesaColors.Ink,
+            )
+            status?.let {
+              StatusChip(it, Modifier.widthIn(max = chipWidth), textAlign = TextAlign.End)
+            }
+          }
         }
         code?.let { Text(it, style = OnesaTheme.mono.code, color = OnesaColors.Muted) }
         detail?.let {
-          Text(
-            it,
-            style = MaterialTheme.typography.bodySmall,
-            fontSize = 10.5.sp,
-            lineHeight = 15.sp,
-            color = OnesaColors.Slate500,
-          )
+          Text(it, style = MaterialTheme.typography.bodySmall, color = OnesaColors.Slate500)
         }
       }
     }
@@ -116,7 +114,7 @@ fun RecordRow(
 
 @Composable
 private fun RowIcon(icon: ImageVector) {
-  val shape = RoundedCornerShape(8.dp)
+  val shape = RoundedCornerShape(10.dp)
   Box(
     Modifier.size(30.dp).background(Color.White, shape).border(1.dp, OnesaColors.Line, shape),
     contentAlignment = Alignment.Center,

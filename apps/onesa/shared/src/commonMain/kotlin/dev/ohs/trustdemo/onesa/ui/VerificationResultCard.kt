@@ -81,7 +81,7 @@ fun VerificationResultCard(
         )
         verdict?.let {
           Surface(
-            shape = RoundedCornerShape(6.dp),
+            shape = RoundedCornerShape(8.dp),
             color = Color.White,
             contentColor = tone.ink,
             border = BorderStroke(1.dp, tone.edge),
@@ -97,7 +97,7 @@ fun VerificationResultCard(
       if (fields.isNotEmpty()) FieldGrid(fields, columns = 2)
       detail?.let {
         Surface(
-          shape = RoundedCornerShape(8.dp),
+          shape = RoundedCornerShape(10.dp),
           color = Color.White.copy(alpha = 0.7f),
           border = BorderStroke(1.dp, tone.edge),
         ) {
@@ -105,8 +105,8 @@ fun VerificationResultCard(
             it,
             Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
             style = MaterialTheme.typography.bodySmall,
-            fontSize = 11.5.sp,
-            lineHeight = 17.sp,
+            fontSize = 12.5.sp,
+            lineHeight = 18.sp,
             color = OnesaColors.Slate700,
           )
         }

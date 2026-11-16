@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,7 +59,7 @@ fun StatusChip(
   val ink = if (onDark) lerp(tone.edge, Color.White, 0.2f) else tone.ink
   Surface(
     modifier = modifier,
-    shape = CircleShape,
+    shape = RoundedCornerShape(12.dp),
     color = fill,
     contentColor = ink,
     border = BorderStroke(1.dp, edge),

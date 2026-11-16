@@ -88,7 +88,7 @@ fun CameraPanel(
       Reticle(frame)
       Row(
         Modifier.fillMaxWidth()
-          .background(OnesaColors.Ink.copy(alpha = 0.9f), RoundedCornerShape(6.dp))
+          .background(OnesaColors.Ink.copy(alpha = 0.9f), RoundedCornerShape(8.dp))
           .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -132,7 +132,7 @@ fun CameraPanel(
 
 @Composable
 private fun Reticle(frame: String?) {
-  val shape = RoundedCornerShape(10.dp)
+  val shape = RoundedCornerShape(12.dp)
   Box(
     Modifier.widthIn(max = 150.dp)
       .fillMaxWidth(0.7f)
@@ -147,7 +147,7 @@ private fun Reticle(frame: String?) {
         contentDescription = null,
         modifier =
           Modifier.fillMaxSize()
-            .background(Color.White.copy(alpha = 0.82f), RoundedCornerShape(4.dp))
+            .background(Color.White.copy(alpha = 0.82f), RoundedCornerShape(6.dp))
             .padding(4.dp),
       )
     }

@@ -30,6 +30,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,7 +61,8 @@ fun PasscodeCard(
 ) {
   SectionCard(modifier, title = title, icon = OnesaIcons.Lock, footnote = note) {
     Row(
-      Modifier.clickable(role = Role.Switch) { onShownChange(!shown) }
+      Modifier.minimumInteractiveComponentSize()
+        .clickable(role = Role.Switch) { onShownChange(!shown) }
         .padding(horizontal = 4.dp, vertical = 2.dp),
       horizontalArrangement = Arrangement.spacedBy(4.dp),
       verticalAlignment = Alignment.CenterVertically,
@@ -95,9 +97,9 @@ fun PasscodeCard(
 
 @Composable
 private fun Digit(digit: Char?, shown: Boolean) {
-  val shape = RoundedCornerShape(10.dp)
+  val shape = RoundedCornerShape(12.dp)
   Box(
-    Modifier.size(width = 44.dp, height = 52.dp)
+    Modifier.size(width = 48.dp, height = 56.dp)
       .background(OnesaColors.Slate100, shape)
       .border(1.dp, OnesaColors.Line, shape),
     contentAlignment = Alignment.Center,
@@ -108,7 +110,7 @@ private fun Digit(digit: Char?, shown: Boolean) {
       else ->
         Text(
           "•",
-          style = OnesaTheme.mono.digit.copy(fontSize = 26.sp),
+          style = OnesaTheme.mono.digit.copy(fontSize = 28.sp),
           color = OnesaColors.Slate500,
         )
     }

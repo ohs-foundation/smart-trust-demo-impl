@@ -59,7 +59,7 @@ fun PillTabs(
           Modifier.clip(CircleShape)
             .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent)
             .selectable(selected = on, role = Role.Tab, onClick = { onSelect(index) })
-            .padding(horizontal = 12.dp, vertical = 5.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         style = MaterialTheme.typography.labelMedium,
         color = if (on) Color.White else OnesaColors.Slate700,
       )

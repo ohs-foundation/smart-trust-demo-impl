@@ -56,7 +56,7 @@ private fun FieldItem(field: Field, modifier: Modifier) {
       modifier = Modifier.padding(top = 1.dp),
       style =
         if (field.mono) OnesaTheme.mono.value
-        else MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp, lineHeight = 17.sp),
+        else MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp),
       fontWeight = if (field.mono) FontWeight.Bold else FontWeight.SemiBold,
       color = OnesaColors.Slate800,
     )

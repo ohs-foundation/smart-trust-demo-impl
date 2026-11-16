@@ -37,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.data.sharing.ShareProblem
@@ -264,7 +263,6 @@ private fun SharingFor(names: List<String>) {
       if (names.isEmpty()) stringResource(Res.string.share_for_none)
       else stringResource(Res.string.share_for, names.joinToString(", ")),
       style = MaterialTheme.typography.bodyMedium,
-      fontSize = 12.5.sp,
       fontWeight = FontWeight.SemiBold,
       color = ink,
     )

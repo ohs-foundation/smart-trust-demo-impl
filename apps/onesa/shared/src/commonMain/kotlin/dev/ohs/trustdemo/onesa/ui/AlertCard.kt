@@ -57,19 +57,14 @@ fun AlertCard(title: String?, text: String?, tone: Tone, modifier: Modifier = Mo
       Icon(icon, null, modifier = Modifier.padding(top = 1.dp).size(20.dp))
       Column {
         title?.let {
-          Text(
-            it,
-            style = MaterialTheme.typography.bodyMedium,
-            fontSize = 12.5.sp,
-            fontWeight = FontWeight.Bold,
-          )
+          Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
         }
         text?.let {
           Text(
             it,
             style = MaterialTheme.typography.bodySmall,
-            fontSize = 11.5.sp,
-            lineHeight = 17.sp,
+            fontSize = 12.5.sp,
+            lineHeight = 18.sp,
           )
         }
       }

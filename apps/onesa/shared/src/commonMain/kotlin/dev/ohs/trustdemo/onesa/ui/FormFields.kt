@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
@@ -52,7 +53,7 @@ import androidx.compose.ui.unit.sp
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaTheme
 
-private val InputShape = RoundedCornerShape(10.dp)
+private val InputShape = RoundedCornerShape(12.dp)
 
 /** A form label in small uppercase monospace. */
 @Composable
@@ -62,8 +63,8 @@ fun FormLabel(text: String, modifier: Modifier = Modifier) {
 
 @Composable
 private fun inputStyle(mono: Boolean): TextStyle =
-  if (mono) OnesaTheme.mono.code.copy(fontSize = 12.sp, color = OnesaColors.Ink)
-  else MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp, color = OnesaColors.Ink)
+  if (mono) OnesaTheme.mono.code.copy(fontSize = 13.sp, color = OnesaColors.Ink)
+  else MaterialTheme.typography.bodyMedium.copy(color = OnesaColors.Ink)
 
 /**
  * A labelled text input on the build map's form style; [placeholder] shows while it is empty, and a
@@ -97,7 +98,7 @@ fun OnesaTextField(
       decorationBox = { inner ->
         Box(
           Modifier.fillMaxWidth()
-            .defaultMinSize(minHeight = 36.dp)
+            .defaultMinSize(minHeight = 48.dp)
             .background(Color.White, InputShape)
             .border(1.dp, OnesaColors.Slate300, InputShape)
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -133,7 +134,7 @@ fun OnesaSelectField(
     Box {
       Row(
         Modifier.fillMaxWidth()
-          .defaultMinSize(minHeight = 36.dp)
+          .defaultMinSize(minHeight = 48.dp)
           .background(Color.White, InputShape)
           .border(1.dp, OnesaColors.Slate300, InputShape)
           .clickable(role = Role.DropdownList) { if (onOpen != null) onOpen() else expanded = true }
@@ -175,13 +176,13 @@ fun OptionRow(
     if (check) Modifier.toggleable(selected, role = Role.Checkbox, onValueChange = { onClick() })
     else Modifier.selectable(selected, role = Role.RadioButton, onClick = onClick)
   Row(
-    modifier.fillMaxWidth().then(interaction).padding(vertical = 4.dp),
+    modifier.fillMaxWidth().heightIn(min = 48.dp).then(interaction).padding(vertical = 4.dp),
     horizontalArrangement = Arrangement.spacedBy(9.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     val brand = MaterialTheme.colorScheme.primary
     if (check) {
-      val shape = RoundedCornerShape(4.dp)
+      val shape = RoundedCornerShape(6.dp)
       Box(
         Modifier.size(18.dp)
           .background(if (selected) brand else Color.White, shape)
@@ -198,12 +199,7 @@ fun OptionRow(
           .background(if (selected) brand else Color.Transparent, CircleShape)
       )
     }
-    Text(
-      label,
-      style = MaterialTheme.typography.bodyMedium,
-      fontSize = 12.5.sp,
-      color = OnesaColors.Ink,
-    )
+    Text(label, style = MaterialTheme.typography.bodyMedium, color = OnesaColors.Ink)
     code?.let { Text(it, style = OnesaTheme.mono.code, color = OnesaColors.Slate500) }
   }
 }

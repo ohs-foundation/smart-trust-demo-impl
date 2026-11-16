@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -129,7 +130,7 @@ fun OnesaButton(action: Action, modifier: Modifier = Modifier) {
     border = if (action.primary) null else BorderStroke(1.dp, OnesaColors.Slate300),
   ) {
     Row(
-      Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+      Modifier.heightIn(min = 48.dp).padding(horizontal = 14.dp, vertical = 10.dp),
       horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
       verticalAlignment = Alignment.CenterVertically,
     ) {

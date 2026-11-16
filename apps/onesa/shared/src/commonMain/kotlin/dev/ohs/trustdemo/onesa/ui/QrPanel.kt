@@ -37,7 +37,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 
@@ -68,7 +67,6 @@ fun QrPanel(
           it.uppercase(),
           Modifier.fillMaxWidth(),
           style = MaterialTheme.typography.bodySmall,
-          fontSize = 10.5.sp,
           fontWeight = FontWeight.Bold,
           letterSpacing = 0.06.em,
           color = OnesaColors.Slate800,
@@ -78,12 +76,7 @@ fun QrPanel(
       }
       holder?.let {
         Column(Modifier.fillMaxWidth()) {
-          Text(
-            it,
-            style = MaterialTheme.typography.bodyMedium,
-            fontSize = 12.5.sp,
-            fontWeight = FontWeight.Bold,
-          )
+          Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
           holderNote?.let { note ->
             Text(note, style = MaterialTheme.typography.bodySmall, color = OnesaColors.Muted)
           }
@@ -93,7 +86,7 @@ fun QrPanel(
         Text(
           it,
           Modifier.align(Alignment.Start)
-            .background(Color(0xFFFFFBEB), RoundedCornerShape(6.dp))
+            .background(Color(0xFFFFFBEB), RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 2.dp),
           style = MaterialTheme.typography.labelMedium,
           color = OnesaColors.QrLabelInk,
@@ -101,7 +94,7 @@ fun QrPanel(
       }
       Surface(
         Modifier.widthIn(max = 168.dp).fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         color = Color.White,
         border = BorderStroke(1.dp, OnesaColors.Line),
       ) {
