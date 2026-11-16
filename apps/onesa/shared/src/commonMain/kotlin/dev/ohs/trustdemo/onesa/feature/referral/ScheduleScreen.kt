@@ -16,6 +16,7 @@
 package dev.ohs.trustdemo.onesa.feature.referral
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -94,18 +95,21 @@ import org.koin.core.parameter.parametersOf
 
 /**
  * S5: how each foreign dose reaches the national schedule, the schedule evaluated for the child,
- * and the booking of the visit it recommends.
+ * and the booking of the visit it recommends; [onBooked] once the visit is booked.
  */
 @Composable
-fun ScheduleScreen(referralId: String, onBack: () -> Unit) {
+fun ScheduleScreen(referralId: String, onBack: () -> Unit, onBooked: () -> Unit) {
   val viewModel = koinViewModel<ScheduleViewModel>(key = referralId) { parametersOf(referralId) }
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
   val upcoming by produceState(emptyList<DisplayOnlyRow>()) { value = DisplayOnlyRows.load() }
-  ScheduleContent(state, today, upcoming, onBack, viewModel::book)
+  ScheduleContent(state, today, upcoming, onBack, viewModel::book, onBooked)
 }
 
-/** S5 for [state]; the [upcoming] display-only rows join the schedule card, never the booking. */
+/**
+ * S5 for [state]; the [upcoming] display-only rows join the schedule card, never the booking.
+ * [onBooked] runs once the visit is booked.
+ */
 @Composable
 fun ScheduleContent(
   state: ScheduleUiState,
@@ -113,7 +117,9 @@ fun ScheduleContent(
   upcoming: List<DisplayOnlyRow>,
   onBack: () -> Unit,
   onBook: () -> Unit,
+  onBooked: () -> Unit = {},
 ) {
+  LaunchedEffect(state.booked) { if (state.booked != null) onBooked() }
   val schedule = state.schedule
   val due = schedule?.items.orEmpty().filter { it.standing is Standing.Due }
   OnesaScaffold(

@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -314,7 +315,11 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
         ) { back ->
           val referralId = back.arguments?.read { getStringOrNull("referralId") }.orEmpty()
           RouteGuard(role, Permission.Referrals, onSignOut) {
-            ScheduleScreen(referralId = referralId, onBack = { navController.popBackStack() })
+            ScheduleScreen(
+              referralId = referralId,
+              onBack = { navController.popBackStack() },
+              onBooked = navController::backToHome,
+            )
           }
         }
 
@@ -366,6 +371,11 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
       }
     }
   }
+}
+
+/** Returns to Home with it on top of the back stack, popping what was opened from it. */
+internal fun NavController.backToHome() {
+  popBackStack("home", inclusive = false)
 }
 
 /** The permission that opens a form; a form the app does not know opens for no one. */
