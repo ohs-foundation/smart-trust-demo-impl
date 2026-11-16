@@ -171,7 +171,7 @@ internal val serviceModule = module {
       caughtUp = get<LocalCopy>()::caughtUp,
     )
   }
-  factory { QuestionnaireService(get(), get(), get()) }
+  factory { QuestionnaireService(get(), get(), get()) { registrationSession(get()) } }
   single<LinkStore> { SecureLinkStore }
   single {
     ShareService(

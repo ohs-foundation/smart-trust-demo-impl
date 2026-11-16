@@ -33,6 +33,7 @@ import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationItems
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationReview
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationService
+import dev.ohs.trustdemo.onesa.data.registration.RegistrationSession
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSummary
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.data.repository.GroupRepository
@@ -106,6 +107,7 @@ class QuestionnaireService(
   private val repository: FhirRepository,
   private val registration: RegistrationService,
   private val groups: GroupRepository,
+  private val session: suspend () -> RegistrationSession?,
 ) {
 
   private val fhirJson = FhirJson.instance
@@ -213,8 +215,16 @@ class QuestionnaireService(
     questionnaire: QuestionnaireR4,
     response: QuestionnaireResponse,
   ): QuestionnaireSubmissionResult {
+    val organization =
+      Reference(
+        reference =
+          FhirString(
+            value =
+              "Organization/${(session() ?: error("Sign in again to register a household.")).organizationId}"
+          )
+      )
     val normalizedBundle =
-      normalizeBundle(TemplateExtractionEngine.extract(questionnaire, response))
+      normalizeBundle(TemplateExtractionEngine.extract(questionnaire, response), organization)
     val savedResourceCount = repository.upsert(normalizedBundle)
 
     return QuestionnaireSubmissionResult(
@@ -357,7 +367,7 @@ class QuestionnaireService(
 
   private fun String?.orGeneratedId(): String = takeUnless { it.isNullOrBlank() } ?: generateId()
 
-  private fun normalizeBundle(bundle: Bundle): Bundle {
+  private fun normalizeBundle(bundle: Bundle, organization: Reference): Bundle {
     val normalizedEntries =
       bundle.entry.map { entry ->
         entry.copy(
@@ -366,7 +376,7 @@ class QuestionnaireService(
               is Group -> normalizeExtractedGroup(resource, resource.id.orGeneratedId())
 
               is Observation -> resource.copy(id = resource.id.orGeneratedId())
-              is Patient -> normalizeExtractedPatient(resource)
+              is Patient -> normalizeExtractedPatient(resource, organization)
               else -> resource
             }
         )
@@ -389,8 +399,14 @@ class QuestionnaireService(
     )
   }
 
-  private fun normalizeExtractedPatient(patient: Patient): Patient =
-    patient.copy(id = patient.id.orGeneratedId())
+  private fun normalizeExtractedPatient(
+    patient: Patient,
+    organization: Reference? = null,
+  ): Patient =
+    patient.copy(
+      id = patient.id.orGeneratedId(),
+      managingOrganization = patient.managingOrganization ?: organization,
+    )
 
   private fun normalizeExtractedGroup(resource: Group, groupId: String): Group {
     val householdName = resource.name?.takeIf { !it.value.isNullOrBlank() }
