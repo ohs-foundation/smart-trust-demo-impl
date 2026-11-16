@@ -127,6 +127,8 @@ class TrustListCache(
  * Reads and cuts GDHCN DID trust list documents without loading them into a store. A verification
  * method's id carries `trustlist:<domain>:<participant>:<usage>`, `-` being the wildcard.
  */
+private const val CSCA_USAGE = "#CSCA"
+
 object DidDocuments {
   private val json = Json { ignoreUnknownKeys = true }
 
@@ -146,6 +148,17 @@ object DidDocuments {
     val kept = methods(document).filter { domainOf(it, document) == domain }
     return JsonObject(root + ("verificationMethod" to JsonArray(kept))).toString()
   }
+
+  /** The document without its certifying (CSCA) keys: they vouch for signers, never sign cards. */
+  fun withoutCertifyingKeys(document: String): String {
+    val root = json.parseToJsonElement(document).jsonObject
+    if ("verificationMethod" !in root) return document
+    val kept = methods(document).filterNot { it.keyUsage() == CSCA_USAGE }
+    return JsonObject(root + ("verificationMethod" to JsonArray(kept))).toString()
+  }
+
+  private fun JsonObject.keyUsage(): String? =
+    (this["keyusage"] as? JsonObject)?.get("code")?.jsonPrimitive?.content
 
   private fun methods(document: String): List<JsonObject> =
     json.parseToJsonElement(document).jsonObject["verificationMethod"]?.jsonArray.orEmpty().map {

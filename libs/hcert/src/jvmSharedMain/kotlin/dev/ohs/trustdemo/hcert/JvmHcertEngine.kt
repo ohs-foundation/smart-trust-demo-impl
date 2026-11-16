@@ -215,7 +215,8 @@ object JvmHcertEngine : HcertEngine {
 }
 
 internal class JvmTrustStore(internal val store: TrustStore) : HcertTrustStore {
-  override fun addDidDocument(json: String): Int = store.addDidDocument(json).orThrow()
+  override fun addDidDocument(json: String): Int =
+    store.addDidDocument(DidDocuments.withoutCertifyingKeys(json)).orThrow()
 
   override fun addVerifiedDidDocument(json: String, signer: String, domain: String?): Int {
     (Hcert.trust.verifyDidProof(json, signer) as? HcertResult.Err)?.let {
