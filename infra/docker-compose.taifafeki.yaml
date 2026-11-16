@@ -117,6 +117,8 @@ services:
         hcert: ../build/hcert-js
     image: ${REGISTRY:-trust-demo}/taifafeki-client:${IMAGE_TAG:-local}
     container_name: taifafeki-client
+    # The clinic key is the login user's mode-600 file; read it as that user, not as node.
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     restart: unless-stopped
     environment:
       PORT: 3000

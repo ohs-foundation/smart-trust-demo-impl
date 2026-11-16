@@ -57,7 +57,7 @@ case "${1:-}" in
             sudo install -d -o \"\$USER\" -m 755 ${app_links:-/var/lib/trust-demo/app-links}
             gcloud auth configure-docker $registry_host --quiet"
         copy "$repo/infra/.env" "$name:$checkout/infra/.env"
-        remote "cd $checkout/infra && chmod 600 .env && sed -i 's|^GATEWAY_PLUGIN_DIR=.*|GATEWAY_PLUGIN_DIR=/tmp|' .env"
+        remote "cd $checkout/infra && chmod 600 .env && sed -i 's|^GATEWAY_PLUGIN_DIR=.*|GATEWAY_PLUGIN_DIR=/tmp|; /^HOST_UID=/d; /^HOST_GID=/d' .env && printf 'HOST_UID=%s\nHOST_GID=%s\n' \$(id -u) \$(id -g) >> .env"
         ;;
     nginx) remote "cd $checkout/infra && ./dev.sh nginx" ;;
     up)

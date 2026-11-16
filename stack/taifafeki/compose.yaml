@@ -105,6 +105,7 @@ services:
       additional_contexts:
         hcert: ../../build/hcert-js
     image: trust-demo-taifafeki-client:local
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     restart: unless-stopped
     environment:
       PORT: 3000
