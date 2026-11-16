@@ -19,10 +19,16 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.onesa.data.sharing.FamilyMember
 import dev.ohs.trustdemo.onesa.data.sharing.IssuedLink
@@ -70,6 +77,7 @@ import dev.ohs.trustdemo.onesa.ui.BackHandler
 import dev.ohs.trustdemo.onesa.ui.Field
 import dev.ohs.trustdemo.onesa.ui.FieldGrid
 import dev.ohs.trustdemo.onesa.ui.NoteLine
+import dev.ohs.trustdemo.onesa.ui.OnesaButton
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
 import dev.ohs.trustdemo.onesa.ui.OnesaTopBar
@@ -77,10 +85,10 @@ import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
 import dev.ohs.trustdemo.onesa.ui.QrPanel
 import dev.ohs.trustdemo.onesa.ui.SectionCard
 import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.rememberScannableQrPainter
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import dev.ohs.trustdemo.onesa.util.displayDate
-import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
@@ -225,7 +233,10 @@ internal fun IssuedLinksContent(
   }
 }
 
-/** One traveller's QR filling the screen, for the clinic to scan, with the way to the next. */
+/**
+ * One traveller's QR for the clinic to scan: square and whole at the largest size the screen
+ * allows, never cropped, with the way to the others when there are several.
+ */
 @Composable
 internal fun FullScreenQr(
   links: List<IssuedLink>,
@@ -235,15 +246,13 @@ internal fun FullScreenQr(
 ) {
   val link = links[index]
   Column(
-    Modifier.fillMaxSize().background(Color.White).padding(16.dp),
+    Modifier.fillMaxSize()
+      .background(Color.White)
+      .windowInsetsPadding(WindowInsets.safeDrawing)
+      .padding(16.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
-    Text(
-      stringResource(Res.string.issued_qr_of, index + 1, links.size),
-      style = MaterialTheme.typography.labelLarge,
-      color = OnesaColors.Muted,
-    )
     Text(
       link.name,
       style = MaterialTheme.typography.titleLarge,
@@ -255,32 +264,42 @@ internal fun FullScreenQr(
       style = MaterialTheme.typography.bodyMedium,
       color = OnesaColors.Muted,
     )
-    Image(
-      painter = rememberQrCodePainter(link.link),
-      contentDescription = link.name,
-      modifier =
-        Modifier.weight(1f)
-          .aspectRatio(1f, matchHeightConstraintsFirst = true)
-          .background(Color.White)
-          .padding(8.dp),
-    )
-    PrimaryActionBar(
-      listOf(
-        Action(
-          stringResource(Res.string.issued_previous),
-          { onIndex(index - 1) },
-          false,
-          enabled = index > 0,
-        ),
-        Action(
-          stringResource(Res.string.issued_next),
-          { onIndex(index + 1) },
-          false,
-          enabled = index < links.lastIndex,
-        ),
-        Action(stringResource(Res.string.issued_close), onClose),
+    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+      Image(
+        painter = rememberScannableQrPainter(link.link),
+        contentDescription = link.name,
+        modifier = Modifier.size(min(maxWidth, maxHeight)).background(Color.White),
       )
-    )
+    }
+    if (links.size > 1) {
+      Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        OnesaButton(
+          Action(
+            stringResource(Res.string.issued_previous),
+            { onIndex(index - 1) },
+            primary = false,
+            enabled = index > 0,
+          )
+        )
+        Text(
+          stringResource(Res.string.issued_qr_of, index + 1, links.size),
+          style = MaterialTheme.typography.labelLarge,
+          color = OnesaColors.Muted,
+        )
+        OnesaButton(
+          Action(
+            stringResource(Res.string.issued_next),
+            { onIndex(index + 1) },
+            primary = false,
+            enabled = index < links.lastIndex,
+          )
+        )
+      }
+    }
+    OnesaButton(Action(stringResource(Res.string.issued_close), onClose), Modifier.fillMaxWidth())
   }
 }
 

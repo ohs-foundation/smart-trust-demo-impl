@@ -210,6 +210,9 @@ class FamilyScreensRenderTest {
       IssuedLinksContent(links, family, 0, false, shareDay, {}, {}, {})
     }
     wallet("0-06-s7-full-screen", 720) { FullScreenQr(links, 0, {}, {}) }
+    render("0-06-s7-full-screen-one", 411.dp to 846.dp, OnesaColors.BrandFamily) {
+      FullScreenQr(links.take(1), 0, {}, {})
+    }
   }
 
   @Test

@@ -33,11 +33,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
+import io.github.alexzhirkevich.qrose.options.QrCodeMatrix
+import io.github.alexzhirkevich.qrose.options.QrCodeShape
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 
 /**
@@ -99,9 +102,9 @@ fun QrPanel(
         border = BorderStroke(1.dp, OnesaColors.Line),
       ) {
         Image(
-          rememberQrCodePainter(payload),
+          rememberScannableQrPainter(payload),
           contentDescription = contentDescription,
-          modifier = Modifier.padding(6.dp).aspectRatio(1f),
+          modifier = Modifier.aspectRatio(1f),
         )
       }
       badge?.let { StatusChip(it, textAlign = TextAlign.Center) }
@@ -114,5 +117,29 @@ fun QrPanel(
         )
       }
     }
+  }
+}
+
+/** A QR code to be scanned: square modules drawn as vectors, inside the standard quiet zone. */
+@Composable
+fun rememberScannableQrPainter(data: String): Painter =
+  rememberQrCodePainter(data) { shapes { pattern = QuietZone } }
+
+private const val QUIET_ZONE_MODULES = 4
+
+/** Light modules around the code, as many a side as ISO/IEC 18004 asks a reader to have. */
+private object QuietZone : QrCodeShape {
+  override val shapeSizeIncrease: Float = 1f
+
+  override fun QrCodeMatrix.transform(): QrCodeMatrix {
+    val code = this
+    return QrCodeMatrix(code.size + 2 * QUIET_ZONE_MODULES, QrCodeMatrix.PixelType.Background)
+      .apply {
+        for (row in 0 until code.size) {
+          for (column in 0 until code.size) {
+            set(row + QUIET_ZONE_MODULES, column + QUIET_ZONE_MODULES, code[row, column])
+          }
+        }
+      }
   }
 }

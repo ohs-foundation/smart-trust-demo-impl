@@ -163,6 +163,7 @@ kotlin {
       implementation(compose.desktop.currentOs)
       implementation(libs.koin.test)
       implementation(libs.hcert.core)
+      implementation(libs.zxing.core)
       implementation(projects.libs.trustkit)
       implementation(projects.tools.control)
       implementation(projects.services.vhl)
