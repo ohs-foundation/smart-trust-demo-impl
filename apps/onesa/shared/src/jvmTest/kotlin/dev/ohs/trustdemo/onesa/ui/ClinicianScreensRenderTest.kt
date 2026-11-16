@@ -17,12 +17,16 @@ package dev.ohs.trustdemo.onesa.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import dev.ohs.fhir.model.r4.ConceptMap
 import dev.ohs.fhir.model.r4.Enumeration
 import dev.ohs.fhir.model.r4.Immunization
@@ -65,6 +69,8 @@ import dev.ohs.trustdemo.onesa.feature.home.HomeShell
 import dev.ohs.trustdemo.onesa.feature.home.ShellHeader
 import dev.ohs.trustdemo.onesa.feature.patient.list.PatientListContent
 import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientProfileContent
+import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientScheduleTab
+import dev.ohs.trustdemo.onesa.feature.patient.profile.PatientScheduleViewModel
 import dev.ohs.trustdemo.onesa.feature.patient.profile.ProfileTab
 import dev.ohs.trustdemo.onesa.feature.patient.profile.RecordDoseContent
 import dev.ohs.trustdemo.onesa.feature.patient.profile.RecordDoseForm
@@ -103,6 +109,10 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
+import org.koin.core.module.dsl.viewModel
+import org.koin.dsl.module
 
 /** The clinician's screens, drawn from the IG's records as each step of J3 leaves them. */
 @OptIn(ExperimentalTestApi::class)
@@ -417,21 +427,79 @@ class ClinicianScreensRenderTest {
           Registry { ScheduleContent(state, visitDay, upcoming, onBack = {}, onBook = {}) }
         }
       }
-      listOf(
-          "10 Weeks" to "Penta-2, OPV-2, PCV-2",
-          "14 Weeks" to "Penta-3, OPV-3, PCV-3, IPV-1",
-          "9 Months" to "Measles-rubella 1, JE",
-        )
-        .forEach { (age, doses) ->
-          onNodeWithText(age).assertExists()
-          onNodeWithText(doses).assertExists()
+      assertScheduleCard()
+    }
+  }
+
+  @Test
+  fun patientScheduleTab() {
+    val repository = afterVisit()
+    val profile = runBlocking { PatientRepository(repository).getPatientProfile(somsak) }
+    startKoin {
+      modules(
+        module {
+          single { ScheduleService(repository, { plans() }) { visitDay } }
+          viewModel { (patientId: String) -> PatientScheduleViewModel(patientId, get()) }
         }
-      assertEquals(
-        3,
-        onAllNodesWithText("Upcoming").fetchSemanticsNodes().size,
-        "10, 14 weeks and 9 months",
       )
     }
+    try {
+      runComposeUiTest {
+        setContent {
+          OnesaTheme(OnesaColors.BrandClinic) { Registry { PatientScheduleTab(somsak) } }
+        }
+        waitUntil(timeoutMillis = 5_000L) {
+          onAllNodesWithText("Not evaluated").fetchSemanticsNodes().size == 3
+        }
+        assertScheduleCard()
+      }
+      val store =
+        object : ViewModelStoreOwner {
+          override val viewModelStore = ViewModelStore()
+        }
+      render("1-14-schedule-tab", 360.dp to 1500.dp, OnesaColors.BrandClinic, settle = 30) {
+        CompositionLocalProvider(LocalViewModelStoreOwner provides store) {
+          Registry {
+            PatientProfileContent(
+              state = profile,
+              today = visitDay,
+              tab = ProfileTab.Schedule,
+              onTab = {},
+              topBar = { ClinicTopBar() },
+              actions = emptyList(),
+              schedule = { PatientScheduleTab(somsak) },
+            )
+          }
+        }
+      }
+    } finally {
+      stopKoin()
+    }
+  }
+
+  /** The schedule card: the IG's six doses a row each, then S5's three rows shown unevaluated. */
+  private fun ComposeUiTest.assertScheduleCard() {
+    listOf(
+        "Hepatitis B birth dose",
+        "BCG",
+        "Pentavalent (DTP-HepB-Hib), dose 1",
+        "bOPV, dose 1",
+        "PCV, dose 1",
+        "Measles-rubella, dose 1",
+      )
+      .forEach { dose ->
+        assertTrue(onAllNodesWithText(dose).fetchSemanticsNodes().isNotEmpty(), dose)
+      }
+    listOf(
+        "10 Weeks" to "Penta-2, OPV-2, PCV-2",
+        "14 Weeks" to "Penta-3, OPV-3, PCV-3, IPV-1",
+        "9 Months" to "JE",
+      )
+      .forEach { (age, doses) ->
+        assertTrue(onAllNodesWithText(age).fetchSemanticsNodes().isNotEmpty(), age)
+        onNodeWithText(doses).assertExists()
+      }
+    assertEquals(3, onAllNodesWithText("Not evaluated").fetchSemanticsNodes().size)
   }
 
   private fun afterVisit(): InMemorySampleFhirRepository =

@@ -20,9 +20,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import dev.ohs.trustdemo.onesa.data.schedule.DisplayOnlyRow
+import dev.ohs.trustdemo.onesa.data.schedule.DisplayOnlyRows
 import dev.ohs.trustdemo.onesa.data.schedule.Schedule
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
 import dev.ohs.trustdemo.onesa.data.verification.ReferralInbox
@@ -89,9 +92,10 @@ fun PatientScheduleTab(patientId: String) {
     koinViewModel<PatientScheduleViewModel>(key = "schedule:$patientId") { parametersOf(patientId) }
   val schedule by viewModel.schedule.collectAsStateWithLifecycle()
   val failed by viewModel.failed.collectAsStateWithLifecycle()
+  val upcoming by produceState(emptyList<DisplayOnlyRow>()) { value = DisplayOnlyRows.load() }
   when {
     failed -> AlertCard(null, stringResource(Res.string.schedule_could_not_load), Tone.Danger)
-    else -> schedule?.let { ScheduleCard(it) } ?: CircularProgressIndicator()
+    else -> schedule?.let { ScheduleCard(it, upcoming) } ?: CircularProgressIndicator()
   }
 }
 

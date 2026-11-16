@@ -39,7 +39,7 @@ data class DisplayOnlyRow(
     birthDate.plus(value, if (unit == "mo") DateTimeUnit.MONTH else DateTimeUnit.WEEK)
 }
 
-/** The rows bundled with the app, read for S5 only. */
+/** The rows bundled with the app, read for S5 and the patient profile's Schedule tab. */
 object DisplayOnlyRows {
   @Serializable private class Rows(val rows: List<DisplayOnlyRow>)
 

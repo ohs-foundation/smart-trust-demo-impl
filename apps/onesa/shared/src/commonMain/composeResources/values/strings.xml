@@ -414,6 +414,8 @@
     <string name="schedule_verified">Verified</string>
     <string name="schedule_due_day">Due %1$s</string>
     <string name="schedule_upcoming">Upcoming</string>
+    <string name="schedule_not_evaluated">Not evaluated</string>
+    <string name="schedule_display_only">Shown as the IG's S5 draws them; not evaluated or scheduled.</string>
     <string name="not_counted_title">Not counted by the schedule</string>
     <string name="booking_title">Book Next Routine EPI Appointment</string>
     <string name="booking_recommended">Recommended date</string>
