@@ -96,7 +96,7 @@ private class Stack(env: StackEnv, envFile: Path) {
 }
 
 // Seeding a freshly started server takes longer than CIO's 15-second default request timeout.
-internal fun serverEngine() = CIO.create { requestTimeout = 300_000 }
+internal fun serverEngine() = CIO.create { requestTimeout = 900_000 }
 
 abstract class StackCommand(name: String) : CliktCommand(name = name) {
   protected val stackEnv by
