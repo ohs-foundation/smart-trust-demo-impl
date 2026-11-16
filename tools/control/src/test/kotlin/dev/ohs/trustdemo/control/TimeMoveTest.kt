@@ -156,6 +156,51 @@ class TimeMoveTest {
   }
 
   @Test
+  fun yearDosesCompleteTheVisitTheyFulfil() = runTest {
+    val booked =
+      Json.parseToJsonElement(
+          """{"resourceType":"ImmunizationRecommendation","id":"Booked","date":"2026-12-16",
+          "patient":{"reference":"Patient/Somsak"},"recommendation":[""" +
+            listOf("PENTA-1", "OPV-1", "PCV-1").joinToString(",") {
+              """{"vaccineCode":[{"coding":[{"code":"XXK-EPI-$it"}]}],
+              "forecastStatus":{"coding":[{"code":"due"}]}}"""
+            } +
+            "]}"
+        )
+        .jsonObject
+    val reminder =
+      Json.parseToJsonElement(
+          """{"resourceType":"Task","id":"BookedReminder","status":"requested","intent":"plan",
+          "focus":{"reference":"ImmunizationRecommendation/Booked"}}"""
+        )
+        .jsonObject
+    val (hapi, _, move) =
+      world(fixtureState("steps/before-YEAR-day-before.json"), listOf(booked, reminder))
+
+    val plan = move.plan(withYearDoses = true)
+    assertEquals(listOf("ImmunizationRecommendation/Booked", "Task/BookedReminder"), plan.fulfilled)
+    move.apply(plan)
+
+    val visit = hapi.stored.getValue("ImmunizationRecommendation/Booked")
+    assertEquals("2026-01-15", visit.text("date"))
+    assertEquals(
+      List(3) { "complete" },
+      visit.getValue("recommendation").jsonArray.map {
+        it.jsonObject
+          .getValue("forecastStatus")
+          .jsonObject
+          .getValue("coding")
+          .jsonArray
+          .single()
+          .jsonObject
+          .text("code")
+      },
+    )
+    assertEquals("completed", hapi.stored.getValue("Task/BookedReminder").text("status"))
+    assertEquals("requested", hapi.stored.getValue("Task/Reminder").text("status"))
+  }
+
+  @Test
   fun expireConsentsEndsActiveConsentsOneMinuteBeforeNow() = runTest {
     val (hapi, _, move) = world(fixtureState("steps/before-J41.json"))
     val before = hapi.stored.toMap()

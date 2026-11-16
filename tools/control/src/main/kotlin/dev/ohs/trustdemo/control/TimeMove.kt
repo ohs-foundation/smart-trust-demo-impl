@@ -26,12 +26,14 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 
 private const val PAGE = "1000"
 
@@ -41,6 +43,8 @@ private const val EXPLICIT_CONSENT =
   "http://smart.who.int/trust-phw/StructureDefinition/PHWExplicitConsent"
 private val YEAR_DOSES =
   listOf("TrustDemoOnesaPenta1", "TrustDemoOnesaBopv1", "TrustDemoOnesaPcv1", "TrustDemoOnesaMr1")
+private const val FORECAST_STATUS =
+  "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status"
 
 /** The move was asked for while the story is not in a state to take it. */
 class MoveRefused(message: String) : IllegalStateException(message)
@@ -54,11 +58,15 @@ data class DateChange(
   val server: Server,
 )
 
-/** Everything the move would write: the date changes and the year's new doses. */
+/**
+ * Everything the move would write: the date changes, the year's new doses, and the booked visit
+ * records they fulfil ([fulfilled]), which the move completes.
+ */
 data class MovePlan(
   val shiftDays: Long,
   val changes: List<DateChange>,
   val yearDoses: List<Immunization>,
+  val fulfilled: List<String> = emptyList(),
 ) {
   fun describe(): String = buildString {
     appendLine("Move J3 to J4.0: every story date by $shiftDays days, on HAPI and on Medplum")
@@ -72,6 +80,10 @@ data class MovePlan(
       yearDoses
         .map { it.fields() }
         .forEach { appendLine("  ${it.code()}  ${it.text("occurrenceDateTime")}  ${it.patient()}") }
+    }
+    if (fulfilled.isNotEmpty()) {
+      appendLine("Booked visit the year doses fulfil, completed on HAPI")
+      fulfilled.forEach { appendLine("  $it") }
     }
   }
 
@@ -126,17 +138,26 @@ class TimeMove(
     val doses =
       if (withYearDoses && Server.HAPI in servers) yearDoses(state.shiftDays() - MOVE_DAYS)
       else emptyList()
-    return MovePlan(-MOVE_DAYS, changes, doses)
+    return MovePlan(-MOVE_DAYS, changes, doses, fulfilledVisit(doses))
   }
 
   /**
-   * Writes one transaction per server, Medplum then HAPI with the year doses in HAPI's, so a server
-   * is either moved whole or untouched and a rerun finishes only the server still to move.
+   * Writes one transaction per server, Medplum then HAPI with the year doses and the visit they
+   * fulfil in HAPI's, so a server is either moved whole or untouched and a rerun finishes only the
+   * server still to move.
    */
   suspend fun apply(plan: MovePlan) {
     val byServer = plan.changes.groupBy { it.server }
     byServer[Server.MEDPLUM]?.let { kesaro.replaceAll(moved(Server.MEDPLUM, it, plan.shiftDays)) }
-    val updated = byServer[Server.HAPI]?.let { moved(Server.HAPI, it, plan.shiftDays) }.orEmpty()
+    val shifted = byServer[Server.HAPI]?.let { moved(Server.HAPI, it, plan.shiftDays) }.orEmpty()
+    val given = plan.yearDoses.flatMap { it.codes() }.toSet()
+    val completed =
+      plan.fulfilled.map { reference ->
+        val record =
+          shifted.firstOrNull { it.reference() == reference } ?: fetch(Server.HAPI, reference)
+        completed(record, given)
+      }
+    val updated = shifted.filterNot { it.reference() in plan.fulfilled } + completed
     if (updated.isNotEmpty() || plan.yearDoses.isNotEmpty()) {
       onesa.transaction(
         transaction(
@@ -223,6 +244,91 @@ class TimeMove(
         ) as Immunization
       }
   }
+
+  /**
+   * Somsak's booked visit that [doses] fulfil, as a recommendation is a forecast: each
+   * recommendation with a dose among them, and its requested reminder once every dose it books is
+   * given.
+   */
+  private suspend fun fulfilledVisit(doses: List<Immunization>): List<String> {
+    val patient =
+      doses.firstOrNull()?.fields()?.get("patient")?.jsonObject?.text("reference")
+        ?: return emptyList()
+    val given = doses.flatMap { it.codes() }.toSet()
+    val reminders =
+      onesa.searchAll("Task", mapOf("status" to "requested", "_count" to PAGE)).map { it.fields() }
+    return onesa
+      .searchAll(
+        "ImmunizationRecommendation",
+        mapOf("patient" to patient.removePrefix("Patient/"), "_count" to PAGE),
+      )
+      .map { it.fields() }
+      .filter { recommendation ->
+        recommendation.entries().any { !it.complete() && it.code() in given }
+      }
+      .flatMap { recommendation ->
+        val reference = recommendation.reference()
+        val done = recommendation.entries().all { it.complete() || it.code() in given }
+        listOf(reference) +
+          reminders
+            .filter { done && it["focus"]?.jsonObject?.text("reference") == reference }
+            .map { it.reference() }
+      }
+  }
+
+  private fun completed(record: JsonObject, given: Set<String>): JsonObject =
+    when (record.text("resourceType")) {
+      "Task" -> JsonObject(record + ("status" to JsonPrimitive("completed")))
+      else ->
+        JsonObject(
+          record +
+            ("recommendation" to
+              JsonArray(
+                record.entries().map { entry ->
+                  if (entry.code() in given) JsonObject(entry + ("forecastStatus" to complete))
+                  else entry
+                }
+              ))
+        )
+    }
+
+  private val complete = buildJsonObject {
+    putJsonArray("coding") {
+      add(
+        buildJsonObject {
+          put("system", FORECAST_STATUS)
+          put("code", "complete")
+          put("display", "Complete")
+        }
+      )
+    }
+  }
+
+  private fun Immunization.codes(): List<String> =
+    fields()["vaccineCode"]?.jsonObject?.get("coding")?.jsonArray.orEmpty().mapNotNull {
+      it.jsonObject.text("code")
+    }
+
+  private fun JsonObject.reference() = "${text("resourceType")}/${text("id")}"
+
+  private fun JsonObject.entries(): List<JsonObject> =
+    this["recommendation"]?.jsonArray.orEmpty().map { it.jsonObject }
+
+  private fun JsonObject.code(): String? =
+    this["vaccineCode"]
+      ?.jsonArray
+      ?.firstOrNull()
+      ?.jsonObject
+      ?.get("coding")
+      ?.jsonArray
+      ?.firstOrNull()
+      ?.jsonObject
+      ?.text("code")
+
+  private fun JsonObject.complete(): Boolean =
+    this["forecastStatus"]?.jsonObject?.get("coding")?.jsonArray.orEmpty().any {
+      it.jsonObject.text("code") == "complete"
+    }
 
   private fun transaction(updated: List<Resource>, doses: List<Immunization>) =
     Bundle(
