@@ -57,16 +57,23 @@ token=$(curl -s --max-time 10 \
   -d username=vilay -d "password=${TRUSTDEMO_USER_PASSWORD}" \
   "$keycloak/realms/onesa/protocol/openid-connect/token" | jq -r '.access_token // empty')
 check "Keycloak issues vilay a token" yes "$([ -n "$token" ] && echo yes || echo no)"
-patients=$(status -H "Authorization: Bearer $token" "$gateway/fhir/Patient")
+since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+rid=check-$(date +%s)
+patients=$(status -H "Authorization: Bearer $token" -H "X-Request-ID: $rid" "$gateway/fhir/Patient")
 check "gateway serves vilay's Patient search" 200 "$patients"
 [ "$patients" = 403 ] && echo "      vilay has no Practitioner yet: run 'trust-demo reset' before this check"
-since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 check "gateway serves vilay a Patient read" 200 \
   "$(status -H "Authorization: Bearer $token" "$gateway/fhir/Patient/TrustDemoBounmyPatient")"
 check "gateway audits that read" yes \
   "$(curl -s --max-time 10 --get --data-urlencode "entity=Patient/TrustDemoBounmyPatient" -d action=R \
     --data-urlencode "date=ge$since" "http://127.0.0.1:${hapi_port}/fhir/AuditEvent" |
     jq -e '.entry | length > 0' >/dev/null && echo yes || echo no)"
+
+check "the gateway writes one audit per search" 1 \
+  "$(curl -s --max-time 10 --get -d action=E -d _count=100 \
+    --data-urlencode "subtype=http://hl7.org/fhir/restful-interaction|search-type" \
+    --data-urlencode "date=ge$since" "http://127.0.0.1:${hapi_port}/fhir/AuditEvent" |
+    jq --arg rid "$rid" '[.entry[]?.resource|select(any(.entity[]?; .what.identifier.value==$rid))]|length')"
 
 check "VHL service health over TLS" 200 "$(status "${ca[@]}" "$vhl/vhl/health")"
 [ "$live" -eq 1 ] || check "VHL has no plain-HTTP route" 404 "$(status "http://vhl.onesa.${base}/vhl/health")"

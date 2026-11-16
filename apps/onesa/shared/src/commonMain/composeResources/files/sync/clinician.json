@@ -11,7 +11,7 @@
     { "type": "Provenance", "params": { "_count": "100" } },
     { "type": "ConceptMap", "params": { "_count": "100" } },
     { "type": "CodeSystem", "params": { "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule", "_count": "100" } },
-    { "type": "AuditEvent", "params": { "action": "C,U,D,E", "_count": "100" } },
+    { "type": "AuditEvent", "params": { "action": "C,U,D,E", "subtype:not": "http://hl7.org/fhir/restful-interaction|search-type,http://hl7.org/fhir/restful-interaction|search-system", "_count": "100" } },
     { "type": "Organization", "params": { "_count": "100" } },
     { "type": "Location", "params": { "_count": "100" } },
     { "type": "Practitioner", "params": { "_count": "100" } }

@@ -5,6 +5,6 @@
     { "type": "Immunization", "params": { "_count": "100" } },
     { "type": "ImmunizationRecommendation", "params": { "_count": "100" } },
     { "type": "Consent", "params": { "_count": "100" } },
-    { "type": "AuditEvent", "params": { "action": "C,U,D,E", "_count": "100" } }
+    { "type": "AuditEvent", "params": { "action": "C,U,D,E", "subtype:not": "http://hl7.org/fhir/restful-interaction|search-type,http://hl7.org/fhir/restful-interaction|search-system", "_count": "100" } }
   ]
 }

@@ -30,10 +30,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 
 /**
- * Every AuditEvent but the gateway's read audits (action R): its write audits, the apps' scan
- * audits and the VHL service's accesses, so a read never wakes `watch`.
+ * Every AuditEvent but the gateway's read and search audits: its write audits, the apps' scan
+ * audits and the VHL service's accesses, so a read or a search never wakes `watch`.
  */
-internal const val WATCH_CRITERIA = "AuditEvent?action=C,U,D,E"
+internal const val WATCH_CRITERIA =
+  "AuditEvent?action=C,U,D,E&subtype:not=" +
+    "http://hl7.org/fhir/restful-interaction|search-type," +
+    "http://hl7.org/fhir/restful-interaction|search-system"
 
 /**
  * Puts both countries into the story's starting state, before journey J1: Onesa's HAPI server and

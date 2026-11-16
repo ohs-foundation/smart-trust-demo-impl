@@ -28,19 +28,21 @@ import kotlinx.serialization.json.jsonPrimitive
 class AuditActionsTest {
 
   @Test
-  fun watchAndTheSyncsLeaveOutOnlyTheGatewaysReadAudits() {
+  fun watchAndTheSyncsLeaveOutOnlyTheGatewaysReadAndSearchAudits() {
     val audited = COMPOSE_FILES.map { auditedActions(File(REPO, it)) }.distinct()
     assertEquals(1, audited.size, "the compose files audit different actions: $audited")
     val actions = audited.single()
     assertTrue("R" in actions, "the gateway no longer audits reads: $actions")
     assertTrue(
-      "E" !in actions,
-      "BALP query audits carry E, as the apps' scan audits and the VHL service's accesses do, " +
-        "so no action filter can leave them out",
+      "E" in actions,
+      "the gateway's one Query audit per search carries E, as the apps' scan audits and the " +
+        "VHL service's accesses do, so only the subtype tells it apart: $actions",
     )
-    val followed = actions - "R" + "E"
+    val followed = actions - "R"
 
-    assertEquals(followed, WATCH_CRITERIA.substringAfter("AuditEvent?action=").split(',').toSet())
+    val (criteriaActions, criteriaSubtypes) = WATCH_CRITERIA.substringAfter("AuditEvent?").parse()
+    assertEquals(followed, criteriaActions)
+    assertEquals(SEARCH_SUBTYPES, criteriaSubtypes)
 
     val syncs =
       File(REPO, SYNC_DIR)
@@ -53,12 +55,27 @@ class AuditActionsTest {
             .jsonArray
             .map { it.jsonObject }
             .filter { it.getValue("type").jsonPrimitive.content == "AuditEvent" }
-            .map { file.name to it["params"]?.jsonObject?.get("action")?.jsonPrimitive?.content }
+            .map { file.name to it["params"]?.jsonObject }
         }
     assertTrue(syncs.isNotEmpty(), "no role syncs AuditEvents under $SYNC_DIR")
-    syncs.forEach { (role, action) ->
-      assertEquals(followed, action?.split(',')?.toSet(), "$role's AuditEvent action filter")
+    syncs.forEach { (role, params) ->
+      assertEquals(
+        followed,
+        params?.get("action")?.jsonPrimitive?.content?.split(',')?.toSet(),
+        "$role's AuditEvent action filter",
+      )
+      assertEquals(
+        SEARCH_SUBTYPES,
+        params?.get("subtype:not")?.jsonPrimitive?.content?.split(',')?.toSet(),
+        "$role's AuditEvent subtype:not filter",
+      )
     }
+  }
+
+  private fun String.parse(): Pair<Set<String>, Set<String>> {
+    val params = split('&').associate { it.substringBefore('=') to it.substringAfter('=') }
+    return params.getValue("action").split(',').toSet() to
+      params.getValue("subtype:not").split(',').toSet()
   }
 
   private fun auditedActions(compose: File): Set<String> {
@@ -69,6 +86,11 @@ class AuditActionsTest {
 
   private companion object {
     val REPO = File("../..")
+    val SEARCH_SUBTYPES =
+      setOf(
+        "http://hl7.org/fhir/restful-interaction|search-type",
+        "http://hl7.org/fhir/restful-interaction|search-system",
+      )
     val COMPOSE_FILES = listOf("stack/onesa/compose.yaml", "infra/docker-compose.yaml")
     const val SYNC_DIR = "apps/onesa/shared/src/commonMain/composeResources/files/sync"
     val AUDIT_CONFIG = Regex("""AUDIT_EVENT_ACTIONS_CONFIG[:=]\s*([A-Z]+)""")
