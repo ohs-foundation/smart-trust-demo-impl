@@ -37,8 +37,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The part of Keycloak's admin API the CLI uses, as the gateway's service account (a client of the
- * demo realm that holds manage-users), so no master-realm credential is kept.
+ * The part of Keycloak's admin API the CLI uses, as its own service account (a client of the demo
+ * realm that holds manage-users and view-users), so no master-realm credential is kept.
  */
 class KeycloakAdmin(
   private val baseUrl: String,

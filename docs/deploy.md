@@ -272,7 +272,7 @@ infra/gcp/server.sh up --taifafeki
 infra/gcp/server.sh status
 ```
 
-Without a tag, CI tags images with the short commit SHA; `./dev.sh push <tag>` on the laptop still builds all four. A changed CLI is shipped again as in step 5. A realm change needs a fresh Keycloak database (`./dev.sh reset` wipes all volumes, then `up` and `trust-demo reset`).
+Without a tag, CI tags images with the short commit SHA; `./dev.sh push <tag>` on the laptop still builds all four. A changed CLI is shipped again as in step 5. A realm change needs a fresh Keycloak database (`./dev.sh reset` wipes all volumes, then `up` and `trust-demo reset`). An existing deployment gets the CLI's own Keycloak identity (`service-account-trust-demo-cli`) only that way, so `family add` fails with 401/403 until then.
 
 ## Tear down
 

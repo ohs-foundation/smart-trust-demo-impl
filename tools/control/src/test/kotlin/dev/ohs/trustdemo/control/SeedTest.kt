@@ -89,6 +89,32 @@ class SeedTest {
     }
   }
 
+  @Test
+  fun theCliServiceAccountHoldsOnlyWhatFamilyAddNeeds() {
+    val realm = Json.parseToJsonElement(File(REALM).readText()).jsonObject
+    val client =
+      realm
+        .getValue("clients")
+        .jsonArray
+        .map { it.jsonObject }
+        .single { it.getValue("clientId").jsonPrimitive.content == "trust-demo-cli" }
+    assertEquals("true", client.getValue("serviceAccountsEnabled").jsonPrimitive.content)
+    val account =
+      realm
+        .getValue("users")
+        .jsonArray
+        .map { it.jsonObject }
+        .single {
+          it.getValue("username").jsonPrimitive.content == "service-account-trust-demo-cli"
+        }
+    val roles =
+      account.getValue("clientRoles").jsonObject.getValue("realm-management").jsonArray.map {
+        it.jsonPrimitive.content
+      }
+    assertEquals(setOf("manage-users", "view-users"), roles.toSet())
+    assertEquals(2, roles.size)
+  }
+
   private fun fhirUser(user: JsonObject) =
     user["attributes"]?.jsonObject?.get("fhirUser")?.jsonArray?.single()?.jsonPrimitive?.content
 

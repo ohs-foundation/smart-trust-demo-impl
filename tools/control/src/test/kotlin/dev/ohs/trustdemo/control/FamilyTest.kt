@@ -68,7 +68,7 @@ private class FakeKeycloak(existing: List<JsonObject> = emptyList()) {
     }
   }
 
-  val admin = KeycloakAdmin("http://keycloak.test", "onesa", "gateway", "secret", engine)
+  val admin = KeycloakAdmin("http://keycloak.test", "onesa", "trust-demo-cli", "secret", engine)
 
   private fun JsonObject.fhirUser() =
     this["attributes"]?.jsonObject?.get("fhirUser")?.jsonArray?.single()?.jsonPrimitive?.content
@@ -139,6 +139,7 @@ class FamilyTest {
     assertEquals("Nina Kimani", "${user.text("firstName")} ${user.text("lastName")}")
     assertEquals("true", user.text("enabled"))
     assertContains(keycloak.forms.single(), "grant_type=client_credentials")
+    assertContains(keycloak.forms.single(), "client_id=trust-demo-cli")
   }
 
   @Test

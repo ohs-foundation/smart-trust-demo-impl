@@ -81,8 +81,8 @@ private class Stack(env: StackEnv, envFile: Path) {
     KeycloakAdmin(
       urls.keycloakAdmin,
       env.optional("KEYCLOAK_REALM") ?: "onesa",
-      env.optional("GATEWAY_CLIENT_ID") ?: "onesa-fhir-gateway",
-      env.require("FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET"),
+      env.optional("CLI_CLIENT_ID") ?: "trust-demo-cli",
+      env.require("TRUSTDEMO_CLI_CLIENT_SECRET"),
       serverEngine(),
     )
   }

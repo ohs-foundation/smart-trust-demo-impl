@@ -2565,6 +2565,28 @@
       "groups": []
     },
     {
+      "id": "c4d5e6f7-0a1b-4c2d-9e3f-4a5b6c7d8e9f",
+      "username": "service-account-trust-demo-cli",
+      "emailVerified": false,
+      "createdTimestamp": 1700582591404,
+      "enabled": true,
+      "totp": false,
+      "serviceAccountClientId": "trust-demo-cli",
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-onesa"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users"
+        ]
+      },
+      "notBefore": 0,
+      "groups": []
+    },
+    {
       "id": "f319bf6e-2b4c-4bda-8e0d-78a7b7a314c9",
       "username": "vilay",
       "enabled": true,
@@ -3246,7 +3268,7 @@
     {
       "clientId": "trust-demo-cli",
       "name": "trust-demo CLI and stack check",
-      "description": "Confidential service-account client for the FHIR gateway IAM provider (client_credentials). Holds manage-realm/view-realm as well as manage-users/view-users: Keycloak gates realm-role create and delete on manage-realm.",
+      "description": "Confidential client of the trust-demo CLI and stack check. Its service account holds manage-users and view-users, for family add.",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
@@ -3278,7 +3300,7 @@
         "offline_access",
         "microprofile-jwt"
       ],
-      "serviceAccountsEnabled": false,
+      "serviceAccountsEnabled": true,
       "redirectUris": [],
       "webOrigins": [],
       "protocolMappers": [
