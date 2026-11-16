@@ -126,13 +126,13 @@ class FamilyScreensRenderTest {
     )
 
   @Composable
-  private fun FamilyTopBar(subtitle: String?, onBack: Boolean = true) =
+  private fun FamilyTopBar(subtitle: String?) =
     OnesaTopBar(
       header.title,
-      header.icon,
+      OnesaIcons.Back,
       subtitle = subtitle,
       status = header.status,
-      onIconClick = if (onBack) ({}) else null,
+      onIconClick = {},
     )
 
   private fun wallet(name: String, height: Int, content: @Composable () -> Unit) =

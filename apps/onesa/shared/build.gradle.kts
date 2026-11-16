@@ -125,6 +125,7 @@ kotlin {
       implementation(libs.kotlinx.serialization.json)
       implementation(libs.kotlinx.datetime)
       implementation(libs.navigation.compose)
+      implementation(libs.navigationevent.compose)
       implementation(project.dependencies.platform(libs.koin.bom))
       implementation(libs.koin.core)
       implementation(libs.koin.compose)

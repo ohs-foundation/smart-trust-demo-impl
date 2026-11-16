@@ -18,20 +18,16 @@ package dev.ohs.trustdemo.onesa.feature.home
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.dp
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.home_account
+import dev.ohs.trustdemo.onesa.generated.resources.home_back
+import dev.ohs.trustdemo.onesa.ui.AccountButton
 import dev.ohs.trustdemo.onesa.ui.Action
+import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
 import dev.ohs.trustdemo.onesa.ui.OnesaTopBar
 import dev.ohs.trustdemo.onesa.ui.PillTabs
@@ -50,9 +46,10 @@ data class ShellHeader(
 )
 
 /**
- * The signed-in app's frame: the role's header, whose icon tile opens the account [menu], pill
- * [tabs] when the role has more than one place to go, the tab's [content] with any [side] blocks
- * beside it on a tablet, and its [actions] with their [caption].
+ * The signed-in app's frame: the role's header, whose account button opens the [menu] and whose
+ * icon tile turns into a back arrow when [onBack] is set, pill [tabs] when the role has more than
+ * one place to go, the tab's [content] with any [side] blocks beside it on a tablet, and its
+ * [actions] with their [caption].
  */
 @Composable
 fun HomeShell(
@@ -66,30 +63,22 @@ fun HomeShell(
   snackbarHost: @Composable () -> Unit = {},
   side: (@Composable ColumnScope.() -> Unit)? = null,
   caption: String? = null,
+  onBack: (() -> Unit)? = null,
   content: @Composable () -> Unit,
 ) {
-  var menuOpen by remember { mutableStateOf(false) }
   OnesaScaffold(
     modifier = modifier,
     topBar = {
-      Box {
-        OnesaTopBar(
-          title = header.title,
-          icon = header.icon,
-          subtitle = header.subtitle,
-          chips = header.chips,
-          status = header.status,
-          onIconClick = { menuOpen = true },
-          iconLabel = stringResource(Res.string.home_account),
-        )
-        DropdownMenu(
-          expanded = menuOpen,
-          onDismissRequest = { menuOpen = false },
-          offset = DpOffset(14.dp, 0.dp),
-        ) {
-          menu { menuOpen = false }
-        }
-      }
+      OnesaTopBar(
+        title = header.title,
+        icon = if (onBack != null) OnesaIcons.Back else header.icon,
+        subtitle = header.subtitle,
+        chips = header.chips,
+        status = header.status,
+        onIconClick = onBack,
+        iconLabel = stringResource(Res.string.home_back),
+        trailing = { AccountButton(stringResource(Res.string.home_account), menu) },
+      )
     },
     actions = actions?.let { { PrimaryActionBar(it, caption = caption) } },
     side = side,

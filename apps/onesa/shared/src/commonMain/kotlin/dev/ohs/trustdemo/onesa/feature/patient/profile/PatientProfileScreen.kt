@@ -79,6 +79,7 @@ import dev.ohs.trustdemo.onesa.generated.state.PatientMedicationState
 import dev.ohs.trustdemo.onesa.generated.state.PatientTelecomState
 import dev.ohs.trustdemo.onesa.generated.viewtype.ViewTypeCS
 import dev.ohs.trustdemo.onesa.ui.Action
+import dev.ohs.trustdemo.onesa.ui.BackHandler
 import dev.ohs.trustdemo.onesa.ui.ChildAvatar
 import dev.ohs.trustdemo.onesa.ui.Field
 import dev.ohs.trustdemo.onesa.ui.FieldGrid
@@ -146,6 +147,7 @@ fun PatientProfileScreen(
     return
   }
   form?.let { open ->
+    BackHandler(onBack = viewModel::closeForm)
     RecordDoseContent(
       form = open,
       state = s,

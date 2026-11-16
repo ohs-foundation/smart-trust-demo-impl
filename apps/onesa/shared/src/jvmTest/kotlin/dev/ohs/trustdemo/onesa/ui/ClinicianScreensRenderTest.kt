@@ -217,9 +217,10 @@ class ClinicianScreensRenderTest {
   private fun ClinicTopBar() =
     OnesaTopBar(
       clinicHeader.title,
-      clinicHeader.icon,
+      OnesaIcons.Back,
       subtitle = clinicHeader.subtitle,
       chips = clinicHeader.chips,
+      onIconClick = {},
     )
 
   @Composable

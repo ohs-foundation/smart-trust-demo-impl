@@ -115,6 +115,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_verified_count
 import dev.ohs.trustdemo.onesa.generated.resources.verify_verified_title
 import dev.ohs.trustdemo.onesa.ui.Action
 import dev.ohs.trustdemo.onesa.ui.AlertCard
+import dev.ohs.trustdemo.onesa.ui.BackHandler
 import dev.ohs.trustdemo.onesa.ui.ChildAvatar
 import dev.ohs.trustdemo.onesa.ui.Field
 import dev.ohs.trustdemo.onesa.ui.FieldGrid
@@ -206,6 +207,7 @@ fun VerifyCardsScreen(
       },
       back = { matching = false },
     )
+  BackHandler(enabled = matching, onBack = actions.back)
   if (matching) {
     DoseMatchContent(state, today, choice, { choice = it }, actions)
   } else {

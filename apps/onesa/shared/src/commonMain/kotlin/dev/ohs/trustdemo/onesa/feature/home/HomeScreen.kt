@@ -97,6 +97,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.wallet_caption
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_share
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_shared_links
 import dev.ohs.trustdemo.onesa.ui.Action
+import dev.ohs.trustdemo.onesa.ui.BackHandler
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaTopBar
 import dev.ohs.trustdemo.onesa.ui.Status
@@ -166,6 +167,14 @@ fun HomeScreen(
       .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
   val onSyncNow = { homeViewModel.syncNow() }
   val onCancelSync = { homeViewModel.cancelSync() }
+  val detailOpen =
+    isExpandedWidth &&
+      destination == HomeDestination.Households &&
+      (selectedGroupId != null || selectedPatientId != null)
+  val closeDetail = {
+    if (selectedPatientId != null) selectedPatientId = null else selectedGroupId = null
+  }
+  BackHandler(enabled = detailOpen, onBack = closeDetail)
 
   HomeShell(
     header = shellHeader(role, userName, uiState.lastSyncedAt),
@@ -177,6 +186,7 @@ fun HomeScreen(
       },
     selected = destinations.indexOf(destination),
     onSelect = { selected = it },
+    onBack = if (detailOpen) closeDetail else null,
     menu = { close ->
       DropdownMenuItem(
         text = { Text(stringResource(Res.string.home_signed_in_as, userName)) },
@@ -302,7 +312,7 @@ fun HomeScreen(
 }
 
 /**
- * The role's header for a screen opened from Home; its tile is the way back, and [subtitle] says
+ * The role's header for a screen opened from Home; its tile is the back arrow, and [subtitle] says
  * what the screen is for in place of who and where.
  */
 @Composable
@@ -316,7 +326,7 @@ fun RoleTopBar(role: AppRole, onBack: () -> Unit, subtitle: String? = null) {
   val header = shellHeader(role, userName, rememberLastSync())
   OnesaTopBar(
     title = header.title,
-    icon = header.icon,
+    icon = OnesaIcons.Back,
     subtitle = subtitle ?: header.subtitle,
     chips = header.chips,
     status = header.status,

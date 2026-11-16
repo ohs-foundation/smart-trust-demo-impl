@@ -49,6 +49,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.scan_unverified_title
 import dev.ohs.trustdemo.onesa.generated.resources.scan_works_offline
 import dev.ohs.trustdemo.onesa.ui.Action
 import dev.ohs.trustdemo.onesa.ui.AlertCard
+import dev.ohs.trustdemo.onesa.ui.BackHandler
 import dev.ohs.trustdemo.onesa.ui.NoteLine
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
@@ -73,6 +74,9 @@ fun ScanCardScreen(onBack: () -> Unit, onContinue: () -> Unit) {
   var pasted by rememberSaveable { mutableStateOf("") }
   var reading by rememberSaveable { mutableStateOf(false) }
   LaunchedEffect(state.cards.size) { reading = false }
+  val readingAnother = reading && state.cards.isNotEmpty()
+  val back = if (readingAnother) ({ reading = false }) else onBack
+  BackHandler(enabled = readingAnother, onBack = back)
   ScanCardContent(
     state = state,
     reading = reading || state.cards.isEmpty(),
@@ -85,7 +89,7 @@ fun ScanCardScreen(onBack: () -> Unit, onContinue: () -> Unit) {
     onScan = viewModel::onScan,
     onReadAnother = { reading = true },
     onContinue = onContinue,
-    onBack = onBack,
+    onBack = back,
   )
 }
 
@@ -110,7 +114,7 @@ fun ScanCardContent(
         title =
           if (cards.isEmpty()) stringResource(Res.string.scan_title)
           else stringResource(Res.string.scan_title_read, cards.size),
-        icon = OnesaIcons.Scan,
+        icon = OnesaIcons.Back,
         status = Status(stringResource(Res.string.scan_offline_decode), Tone.Warning),
         onIconClick = onBack,
         iconLabel = stringResource(Res.string.scan_back),

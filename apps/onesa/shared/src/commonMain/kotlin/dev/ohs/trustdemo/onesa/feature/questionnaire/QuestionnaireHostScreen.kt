@@ -45,6 +45,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.questionnaire_title
 import dev.ohs.trustdemo.onesa.generated.resources.registration_continue
 import dev.ohs.trustdemo.onesa.generated.resources.registration_form_subtitle
 import dev.ohs.trustdemo.onesa.ui.AlertCard
+import dev.ohs.trustdemo.onesa.ui.BackHandler
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
 import dev.ohs.trustdemo.onesa.ui.OnesaTopBar
@@ -93,6 +94,7 @@ fun QuestionnaireHostScreen(
 
   when (val state = uiState) {
     is QuestionnaireHostUiState.Reviewing -> {
+      BackHandler(onBack = viewModel::edit)
       RegistrationReviewContent(
         review = state.review,
         topBar = { roleBar(viewModel::edit) },
@@ -179,7 +181,7 @@ fun QuestionnaireHostScreen(
 private fun FormTopBar(title: String?, questionnaireId: String, onBack: () -> Unit) {
   OnesaTopBar(
     title = title ?: stringResource(Res.string.questionnaire_title),
-    icon = OnesaIcons.File,
+    icon = OnesaIcons.Back,
     subtitle = stringResource(Res.string.registration_form_subtitle, questionnaireId),
     status = rememberSyncChip(),
     onIconClick = onBack,

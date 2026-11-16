@@ -36,6 +36,7 @@ ktlint = "1.5.0"
 ktor = "3.2.3"
 material3 = "1.10.0-alpha05"
 navigation-compose = "2.9.2"
+navigationevent = "1.0.1"
 ohsFhirDataCapture = "2.0.0-alpha04"
 ohsFhirEngine   = "2.0.0-alpha04"
 ohsFhirModelR4  = "1.0.0-rc03"
@@ -106,6 +107,7 @@ ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
 ktor-server-testHost = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigation-compose" }
+navigationevent-compose = { module = "org.jetbrains.androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
 ohs-fhir-engine = { module = "dev.ohs.fhir:fhir-engine", version.ref = "ohsFhirEngine" }
 ohs-fhir-model-r4 = { module = "dev.ohs.fhir:fhir-model-r4", version.ref = "ohsFhirModelR4" }
 ohs-fhir-workflow = { module = "dev.ohs.fhir:fhir-workflow", version.ref = "ohsFhirWorkflow" }

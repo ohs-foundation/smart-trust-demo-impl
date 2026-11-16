@@ -66,6 +66,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.issued_validity_value
 import dev.ohs.trustdemo.onesa.generated.resources.share_back
 import dev.ohs.trustdemo.onesa.ui.Action
 import dev.ohs.trustdemo.onesa.ui.AlertCard
+import dev.ohs.trustdemo.onesa.ui.BackHandler
 import dev.ohs.trustdemo.onesa.ui.Field
 import dev.ohs.trustdemo.onesa.ui.FieldGrid
 import dev.ohs.trustdemo.onesa.ui.NoteLine
@@ -112,6 +113,7 @@ fun IssuedLinksScreen(consentIds: List<String>, onBack: () -> Unit) {
     return
   }
   val shown = index.coerceIn(0, (issued.size - 1).coerceAtLeast(0))
+  BackHandler(enabled = fullScreen) { fullScreen = false }
   if (fullScreen && issued.isNotEmpty()) {
     FullScreenQr(issued, shown, { index = it }, onClose = { fullScreen = false })
   } else {
@@ -145,7 +147,7 @@ internal fun IssuedLinksContent(
     topBar = {
       OnesaTopBar(
         title = link?.let { stringResource(Res.string.issued_title, it.name) } ?: "",
-        icon = OnesaIcons.Qr,
+        icon = OnesaIcons.Back,
         subtitle =
           listOfNotNull(
               stringResource(Res.string.issued_traveller, index + 1, links.size),

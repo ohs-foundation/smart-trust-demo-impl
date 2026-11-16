@@ -56,7 +56,6 @@ import dev.ohs.trustdemo.onesa.generated.resources.record_visit
 import dev.ohs.trustdemo.onesa.generated.resources.sync_first
 import dev.ohs.trustdemo.onesa.ui.Action
 import dev.ohs.trustdemo.onesa.ui.AlertCard
-import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
 import dev.ohs.trustdemo.onesa.ui.OnesaSelectField
 import dev.ohs.trustdemo.onesa.ui.OnesaTextField
@@ -102,7 +101,6 @@ fun RecordDoseContent(
         fallbackName = stringResource(Res.string.patient_profile_default_name),
         today = today,
         onBack = onBack,
-        icon = OnesaIcons.Syringe,
         subtitle =
           listOfNotNull(household, stringResource(Res.string.record_visit, displayDate(today)))
             .joinToString(" • "),

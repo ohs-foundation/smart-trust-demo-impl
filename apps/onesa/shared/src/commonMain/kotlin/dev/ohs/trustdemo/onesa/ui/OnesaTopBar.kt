@@ -21,7 +21,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -33,12 +35,19 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,8 +63,9 @@ import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 /**
  * The screen header every Onesa mockup opens with: a brand-tinted icon tile, the place or task as
  * [title], who and where as [subtitle], [chips] under them and one [status] at the end. A tappable
- * tile ([onIconClick]) opens what [iconLabel] names, such as the account menu; a tappable status
- * ([onStatusClick]) moves on, such as to the next traveller.
+ * tile ([onIconClick]) does what [iconLabel] names, such as going back with [OnesaIcons.Back]; a
+ * tappable status ([onStatusClick]) moves on, such as to the next traveller. [trailing], such as
+ * the [AccountButton], ends the row. On a phone the [status] joins the chips under the subtitle.
  */
 @Composable
 fun OnesaTopBar(
@@ -68,8 +78,9 @@ fun OnesaTopBar(
   onIconClick: (() -> Unit)? = null,
   iconLabel: String? = null,
   onStatusClick: (() -> Unit)? = null,
+  trailing: (@Composable () -> Unit)? = null,
 ) {
-  Column(
+  BoxWithConstraints(
     modifier
       .fillMaxWidth()
       .background(Color.White)
@@ -77,50 +88,86 @@ fun OnesaTopBar(
         WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
       )
   ) {
-    Row(
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-      horizontalArrangement = Arrangement.spacedBy(10.dp),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      IconTile(icon, onIconClick, iconLabel)
-      Column(Modifier.weight(1f)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = OnesaColors.Ink)
-        subtitle?.let {
-          Text(it, style = MaterialTheme.typography.bodySmall, color = OnesaColors.Muted)
-        }
-        if (chips.isNotEmpty()) {
-          FlowRow(
-            modifier = Modifier.padding(top = 3.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-          ) {
-            chips.forEach { StatusChip(it) }
+    val statusBelow = maxWidth < 600.dp
+    val statusChip: @Composable (Status, Modifier) -> Unit = { chip, sized ->
+      StatusChip(
+        chip,
+        sized.then(
+          if (onStatusClick != null)
+            Modifier.minimumInteractiveComponentSize()
+              .clip(CircleShape)
+              .clickable(role = Role.Button, onClick = onStatusClick)
+          else Modifier
+        ),
+      )
+    }
+    Column(Modifier.fillMaxWidth()) {
+      Row(
+        modifier =
+          Modifier.fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .padding(start = 8.dp, end = if (trailing != null) 8.dp else 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        IconTile(icon, onIconClick, iconLabel)
+        Column(Modifier.weight(1f)) {
+          Text(title, style = MaterialTheme.typography.titleMedium, color = OnesaColors.Ink)
+          subtitle?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = OnesaColors.Muted)
+          }
+          val below = status?.takeIf { statusBelow }
+          if (chips.isNotEmpty() || below != null) {
+            FlowRow(
+              modifier = Modifier.padding(top = 3.dp),
+              horizontalArrangement = Arrangement.spacedBy(6.dp),
+              verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+              chips.forEach { StatusChip(it) }
+              below?.let { statusChip(it, Modifier) }
+            }
           }
         }
+        if (!statusBelow) status?.let { statusChip(it, Modifier.widthIn(max = 160.dp)) }
+        trailing?.invoke()
       }
-      status?.let {
-        StatusChip(
-          it,
-          Modifier.widthIn(max = 160.dp)
-            .then(
-              if (onStatusClick != null)
-                Modifier.clickable(role = Role.Button, onClick = onStatusClick)
-              else Modifier
-            ),
-        )
-      }
+      HorizontalDivider(color = OnesaColors.Line)
     }
-    HorizontalDivider(color = OnesaColors.Line)
+  }
+}
+
+/**
+ * The signed-in account's button for the end of a root screen's header, named [label]; it opens
+ * [menu], such as who is signed in and Sign Out.
+ */
+@Composable
+fun AccountButton(label: String, menu: @Composable ColumnScope.(close: () -> Unit) -> Unit) {
+  var open by remember { mutableStateOf(false) }
+  Box {
+    Box(
+      Modifier.minimumInteractiveComponentSize()
+        .size(36.dp)
+        .clip(CircleShape)
+        .background(Color.White)
+        .border(1.dp, OnesaColors.Slate300, CircleShape)
+        .clickable(role = Role.Button) { open = true }
+        .semantics { contentDescription = label },
+      contentAlignment = Alignment.Center,
+    ) {
+      Icon(OnesaIcons.User, null, tint = OnesaColors.Slate700, modifier = Modifier.size(18.dp))
+    }
+    DropdownMenu(expanded = open, onDismissRequest = { open = false }) { menu { open = false } }
   }
 }
 
 @Composable
 private fun IconTile(icon: ImageVector, onClick: (() -> Unit)?, label: String?) {
   val brand = MaterialTheme.colorScheme.primary
-  val shape = RoundedCornerShape(9.dp)
+  val shape = RoundedCornerShape(11.dp)
   Box(
     modifier =
-      Modifier.size(34.dp)
+      Modifier.minimumInteractiveComponentSize()
+        .size(36.dp)
         .clip(shape)
         .background(brand.copy(alpha = 0.12f).compositeOver(Color.White))
         .border(BorderStroke(1.dp, brand.copy(alpha = 0.3f).compositeOver(Color.White)), shape)
@@ -133,6 +180,6 @@ private fun IconTile(icon: ImageVector, onClick: (() -> Unit)?, label: String?) 
         ),
     contentAlignment = Alignment.Center,
   ) {
-    Icon(icon, contentDescription = null, tint = brand, modifier = Modifier.size(16.dp))
+    Icon(icon, contentDescription = null, tint = brand, modifier = Modifier.size(18.dp))
   }
 }

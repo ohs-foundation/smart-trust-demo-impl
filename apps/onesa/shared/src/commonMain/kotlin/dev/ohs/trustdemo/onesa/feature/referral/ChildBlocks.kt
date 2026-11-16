@@ -57,7 +57,6 @@ fun ChildTopBar(
   fallbackName: String,
   today: LocalDate,
   onBack: () -> Unit,
-  icon: ImageVector = OnesaIcons.User,
   doses: List<ForeignDose> = emptyList(),
   subtitle: String? = null,
   chips: List<Status> = emptyList(),
@@ -67,7 +66,7 @@ fun ChildTopBar(
     title =
       displayAge(child?.birthDate, today)?.let { stringResource(Res.string.child_title, name, it) }
         ?: name,
-    icon = icon,
+    icon = OnesaIcons.Back,
     subtitle =
       subtitle ?: child?.householdId?.let { stringResource(Res.string.child_household_id, it) },
     chips = listOfNotNull(verifiedChip(doses)) + chips,

@@ -119,9 +119,10 @@ class ChwScreensRenderTest {
   private fun ChwTopBar() =
     OnesaTopBar(
       chwHeader.title,
-      chwHeader.icon,
+      OnesaIcons.Back,
       subtitle = chwHeader.subtitle,
       status = chwHeader.status,
+      onIconClick = {},
     )
 
   @Test
@@ -213,9 +214,10 @@ class ChwScreensRenderTest {
           topBar = {
             OnesaTopBar(
               "Add a newborn to the household",
-              OnesaIcons.File,
+              OnesaIcons.Back,
               subtitle = "SDC form • TrustDemoHouseholdRegistration",
               status = Status("Offline (28d)", Tone.Warning),
+              onIconClick = {},
             )
           },
           scroll = false,

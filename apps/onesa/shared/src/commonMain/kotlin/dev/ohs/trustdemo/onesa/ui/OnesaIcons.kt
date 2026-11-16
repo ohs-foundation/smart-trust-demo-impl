@@ -129,6 +129,7 @@ object OnesaIcons {
   }
   val Send: ImageVector by lazy { lineIcon("send", "M22 2L11 13M22 2l-7 20-4-9-9-4z") }
   val Check: ImageVector by lazy { lineIcon("check", "M20 6L9 17l-5-5") }
+  val Back: ImageVector by lazy { lineIcon("arrow-left", "M19 12H5M12 19l-7-7 7-7") }
   val Mark: ImageVector by lazy {
     ImageVector.Builder("mark", 24.dp, 24.dp, 48f, 48f)
       .apply {
