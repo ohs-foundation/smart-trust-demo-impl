@@ -68,7 +68,7 @@ function onesa(answer: (seen: Seen) => Response | undefined = () => undefined) {
 function setup(answer?: (seen: Seen) => Response | undefined, link: { url?: string; flag?: string; host?: string } = {}) {
   const fake = onesa(answer);
   const handles = new LinkHandles(() => NOW);
-  const handle = handles.keep({ url: link.url ?? LINK_URL, key: KEY, flag: link.flag ?? "LP", exp: NOW + 86400 }, OWNER);
+  const handle = handles.keep({ url: link.url ?? LINK_URL, flag: link.flag ?? "LP", exp: NOW + 86400 }, OWNER);
   const viewer: Pick<Viewer, "handles" | "session" | "now" | "clinic"> = {
     handles,
     now: () => NOW,
@@ -142,10 +142,12 @@ describe("aLiveHostWithoutAPort", () => {
 });
 
 describe("aSharedSummaryIsFetched", () => {
-  it("sends a signed manifest request, then a signed GET for each document, and returns the key", async () => {
+  it("sends a signed manifest request, then a signed GET for each document, and returns only the encrypted documents", async () => {
     const { call, seen } = setup();
     const result = await call();
-    expect(result).toEqual({ kind: "released", documents: [{ contentType: "application/fhir+json", jwe: "eyJhbGciOiJkaXIifQ..iv.ct.tag" }], key: KEY });
+    expect(result).toEqual({ kind: "released", documents: [{ contentType: "application/fhir+json", jwe: "eyJhbGciOiJkaXIifQ..iv.ct.tag" }] });
+    expect(JSON.stringify(result)).not.toContain(KEY);
+    expect(JSON.stringify(result)).not.toContain("key");
 
     const [post, get] = seen;
     expect(post).toMatchObject({ method: "POST", url: `https://${HOST}/vhl/List/_search`, redirect: "error" });

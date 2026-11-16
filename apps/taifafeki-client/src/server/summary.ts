@@ -25,7 +25,7 @@ export interface Clinic {
 
 export type SummaryOutcome =
   | { kind: "refused"; message: string; status?: number; reason?: string; attemptsLeft?: number }
-  | { kind: "released"; documents: { contentType: string; jwe: string }[]; key: string };
+  | { kind: "released"; documents: { contentType: string; jwe: string }[] };
 
 const refused = (message: string): SummaryOutcome => ({ kind: "refused", message });
 
@@ -129,7 +129,8 @@ export async function fetchSummary(
     if (needsPasscode && !input.passcode) return refused("Enter the passcode.");
     onesaUrl(link.url, clinic.hosts);
     const vhl = WitVhl.getInstance();
-    const request = vhl.buildManifestRequest({ url: link.url, key: link.key, flag: link.flag, exp: link.exp, v: 1 }, RECIPIENT, needsPasscode ? input.passcode : null, null);
+    // The request does not depend on the link's key, which is not held; the builder only wants some valid one.
+    const request = vhl.buildManifestRequest({ url: link.url, key: vhl.newKey(), flag: link.flag, exp: link.exp, v: 1 }, RECIPIENT, needsPasscode ? input.passcode : null, null);
     const manifest = await send({ method: "POST", url: onesaUrl(request.url, clinic.hosts), contentType: request.contentType, body: Buffer.from(request.body) });
     const listed = vhl.parseManifest(manifest);
     if (listed.length === 0 || listed.length > MAX_DOCUMENTS || listed.some((document) => !document.url)) return refused("Onesa returned no documents it could release.");
@@ -139,7 +140,7 @@ export async function fetchSummary(
       const jwe = await send({ method: "GET", url: onesaUrl(document.url ?? "", clinic.hosts) });
       documents.push({ contentType: document.contentType ?? "", jwe });
     }
-    return { kind: "released", documents, key: link.key };
+    return { kind: "released", documents };
   } catch (error) {
     if (error instanceof Refusal) return { ...refused(error.message), ...error.answer };
     return refused("Onesa could not be reached.");

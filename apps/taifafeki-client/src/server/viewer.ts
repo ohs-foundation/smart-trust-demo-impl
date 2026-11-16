@@ -11,7 +11,7 @@ export type LinkOutcome =
   | { kind: "expired"; exp: number }
   | { kind: "fetch"; url: string; label?: string; exp: number; issuer: string; needsPasscode: boolean; handle: string };
 
-// The link's key never leaves the server: the browser holds only this handle, which names the link for the caller who scanned it.
+// The link's key is never held: the browser holds only this handle, which names the link for the caller who scanned it.
 export class LinkHandles {
   private readonly held = new Map<string, { link: Link; owner: string; until: number }>();
 

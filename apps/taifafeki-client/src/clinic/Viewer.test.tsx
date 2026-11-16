@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchSummary, scanVhl, trustListStatuses } from "../server/links";
 import { ig } from "../testing/ig";
+import { issueLink } from "../testing/link";
 import { searchAnansWorkplaces } from "../testing/workplaces";
 import { Viewer } from "./Viewer";
 
@@ -17,6 +18,7 @@ vi.mock("../server/links", () => ({ scanVhl: vi.fn(), fetchSummary: vi.fn(), tru
 const IPS = ig("Bundle-TrustDemoJ4Ips.json");
 const vhl = WitVhl.getInstance();
 const KEY = vhl.newKey();
+const LINK = issueLink({ key: KEY });
 const JWE = vhl.encrypt(Buffer.from(JSON.stringify(IPS)), "application/fhir+json", KEY);
 const MARKERS = ["SENGMANY", "XXR-4821", "Hepatitis", KEY, JWE.split(".")[3] ?? ""];
 const indexedDbOpen = vi.fn();
@@ -46,8 +48,8 @@ function mount(createResource = vi.fn(async (resource: unknown) => resource), or
   return { queries, createResource };
 }
 
-async function openSummary() {
-  fireEvent.change(await screen.findByLabelText(/paste the link text/i), { target: { value: "vhlink:/abc" } });
+async function openSummary(text = LINK) {
+  fireEvent.change(await screen.findByLabelText(/paste the link text/i), { target: { value: text } });
   fireEvent.click(screen.getByRole("button", { name: "Check link" }));
   fireEvent.change(await screen.findByLabelText("Passcode"), { target: { value: "0482" } });
   fireEvent.click(screen.getByRole("button", { name: "Open Records" }));
@@ -56,7 +58,7 @@ async function openSummary() {
 beforeEach(() => {
   vi.mocked(trustListStatuses).mockResolvedValue([]);
   vi.mocked(scanVhl).mockResolvedValue({ kind: "fetch", url: "https://vhl.example/x", label: "Health summary", exp: 4_102_444_800, issuer: "XXK", needsPasscode: true, handle: "h1" });
-  vi.mocked(fetchSummary).mockResolvedValue({ kind: "released", documents: [{ contentType: "application/jose", jwe: JWE }], key: KEY });
+  vi.mocked(fetchSummary).mockResolvedValue({ kind: "released", documents: [{ contentType: "application/jose", jwe: JWE }] });
   vi.spyOn(Storage.prototype, "setItem");
   vi.stubGlobal("indexedDB", { open: indexedDbOpen });
 });
@@ -97,6 +99,27 @@ describe("nothingOfTheSummaryReachesStorage", () => {
   });
 });
 
+describe("theKeyStaysInTheBrowser", () => {
+  it("decrypts with the key from the scanned link while the server returns none", async () => {
+    mount();
+    await openSummary();
+    expect(await screen.findByText(/Somsak SENGMANY/)).toBeTruthy();
+    const asked = vi.mocked(fetchSummary).mock.calls.flatMap(([request]) => [request]);
+    expect(JSON.stringify(asked)).not.toContain(KEY);
+    expect(JSON.stringify(await vi.mocked(fetchSummary).mock.results[0]?.value)).not.toContain("key");
+  });
+
+  it("forgets the key on Close Summary, so the next link must bring its own", async () => {
+    mount();
+    await openSummary();
+    await screen.findByText(/Somsak SENGMANY/);
+    fireEvent.click(screen.getByRole("button", { name: "Close Summary" }));
+    await openSummary("vhlink:/abc");
+    expect((await screen.findByRole("alert")).textContent).toBe("The summary could not be opened");
+    expect(screen.queryByText(/Somsak SENGMANY/)).toBeNull();
+  });
+});
+
 describe("aReceiptLandsInTheClinicOnly", () => {
   it("writes the receipt into the clinic's compartment", async () => {
     const { createResource } = mount();
@@ -127,9 +150,9 @@ describe("theSummaryScreen", () => {
   });
 
   it("shows a plain notice and no receipt when the summary does not open", async () => {
-    vi.mocked(fetchSummary).mockResolvedValue({ kind: "released", documents: [{ contentType: "application/jose", jwe: JWE }], key: vhl.newKey() });
+    vi.mocked(fetchSummary).mockResolvedValue({ kind: "released", documents: [{ contentType: "application/jose", jwe: JWE }] });
     const { createResource } = mount();
-    await openSummary();
+    await openSummary(issueLink({ key: vhl.newKey() }));
     expect((await screen.findByRole("alert")).textContent).toBe("The summary could not be opened");
     expect(document.body.innerHTML).not.toContain(KEY);
     expect(createResource).not.toHaveBeenCalled();

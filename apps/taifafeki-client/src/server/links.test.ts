@@ -1,8 +1,9 @@
-import { createHash, createPrivateKey, sign, X509Certificate } from "node:crypto";
+import { createHash, X509Certificate } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { WitIssuer, WitRegistry, WitTrust } from "smart-trust-kotlin-hcert-core";
+import { WitTrust } from "smart-trust-kotlin-hcert-core";
 import { describe, expect, it, vi } from "vitest";
+import { issueLink, KEY, NOW } from "../testing/link";
 import { NoSession, requireSession } from "./session";
 import { DEV_SIGNER, LOCAL_SIGNER, TrustLists } from "./trustLists";
 import { LinkHandles, scanLink, type Viewer } from "./viewer";
@@ -10,34 +11,10 @@ import { LinkHandles, scanLink, type Viewer } from "./viewer";
 const TESTKIT = join(import.meta.dirname, "..", "..", "..", "..", "testkit");
 const read = (...path: string[]) => readFileSync(join(TESTKIT, ...path), "utf8");
 
-const NOW = Date.parse("2026-11-14T00:00:00Z") / 1000;
 const LOCAL_URL = "http://gdhcn/local-test-list.json";
 const DEV_URL = "http://gdhcn/dev/v2/trustlist/did.json";
-const KEY = "86F8LY5LlWAa1-OS_FgrTnYNqFHJP2ey5RSKLJBN9jk";
 
-interface Link {
-  signedBy?: string;
-  exp?: number;
-  flag?: string;
-  hcertExp?: number;
-}
-
-function link({ signedBy = "XXK_LINK", exp = NOW + 86400 * 30, flag = "LP", hcertExp = NOW + 86400 }: Link = {}): string {
-  const registry = new WitRegistry();
-  const pending = WitIssuer.getInstance().prepare(
-    {
-      payloads: [{ tag: "vhl", val: { url: "https://vhl.onesa.example:8443/vhl/List/_search?_id=abc", key: KEY, exp: BigInt(exp), flag, label: "Somsak's health summary", v: 1 } }],
-      iss: "XX",
-      validity: { iat: BigInt(NOW - 2 * 86400), exp: BigInt(hcertExp) },
-      dscDer: new X509Certificate(read(`${signedBy}.crt.pem`)).raw,
-      alg: "es256",
-      allowDevelopmentSubclaims: false,
-    },
-    registry,
-  );
-  const signature = sign("sha256", Buffer.from(pending.toBeSigned()), { key: createPrivateKey(read(`${signedBy}.key.pem`)), dsaEncoding: "ieee-p1363" });
-  return WitIssuer.getInstance().finish(pending, new Uint8Array(signature)).hc1;
-}
+const link = issueLink;
 
 async function viewer(fetchText?: (url: string) => Promise<string>): Promise<Viewer> {
   const trust = new TrustLists(
@@ -100,7 +77,10 @@ describe("aVerifiedLinkIsFetched", () => {
     });
     expect(JSON.stringify(outcome)).not.toContain(KEY);
     if (outcome.kind !== "fetch") throw new Error("not fetched");
-    expect(v.handles.get(outcome.handle, "Practitioner/anan")?.key).toBe(KEY);
+    const held = v.handles.get(outcome.handle, "Practitioner/anan");
+    expect(held).toEqual({ url: "https://vhl.onesa.example:8443/vhl/List/_search?_id=abc", flag: "LP", label: "Somsak's health summary", exp: NOW + 86400 });
+    expect(JSON.stringify(held)).not.toContain(KEY);
+    expect(JSON.stringify(outcome)).not.toContain("key");
     expect(v.handles.get(outcome.handle, "Practitioner/someone-else")).toBeUndefined();
   });
 
@@ -111,7 +91,7 @@ describe("aVerifiedLinkIsFetched", () => {
   it("forgets a handle after ten minutes", async () => {
     let now = NOW;
     const handles = new LinkHandles(() => now);
-    const handle = handles.keep({ url: "u", key: KEY, exp: NOW + 86400 }, "Practitioner/anan");
+    const handle = handles.keep({ url: "u", exp: NOW + 86400 }, "Practitioner/anan");
     now += 601;
     expect(handles.get(handle, "Practitioner/anan")).toBeUndefined();
   });
@@ -119,7 +99,7 @@ describe("aVerifiedLinkIsFetched", () => {
   it("forgets a handle when the link expires, if that comes first", () => {
     let now = NOW;
     const handles = new LinkHandles(() => now);
-    const handle = handles.keep({ url: "u", key: KEY, exp: NOW + 60 }, "Practitioner/anan");
+    const handle = handles.keep({ url: "u", exp: NOW + 60 }, "Practitioner/anan");
     expect(handles.get(handle, "Practitioner/anan")).toBeDefined();
     now += 60;
     expect(handles.get(handle, "Practitioner/anan")).toBeUndefined();
@@ -127,8 +107,8 @@ describe("aVerifiedLinkIsFetched", () => {
 
   it("keeps twenty handles per profile and drops the oldest", () => {
     const handles = new LinkHandles(() => NOW);
-    const held = Array.from({ length: 21 }, () => handles.keep({ url: "u", key: KEY, exp: NOW + 86400 }, "Practitioner/anan"));
-    const other = handles.keep({ url: "u", key: KEY, exp: NOW + 86400 }, "Practitioner/other");
+    const held = Array.from({ length: 21 }, () => handles.keep({ url: "u", exp: NOW + 86400 }, "Practitioner/anan"));
+    const other = handles.keep({ url: "u", exp: NOW + 86400 }, "Practitioner/other");
     expect(handles.get(held[0]!, "Practitioner/anan")).toBeUndefined();
     expect(handles.get(held[1]!, "Practitioner/anan")).toBeDefined();
     expect(handles.get(held[20]!, "Practitioner/anan")).toBeDefined();

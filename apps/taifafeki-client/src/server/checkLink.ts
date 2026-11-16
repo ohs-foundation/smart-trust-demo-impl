@@ -6,7 +6,6 @@ const OPTIONS = { limits: LIMITS, clockSkewSeconds: 300 };
 
 export interface Link {
   url: string;
-  key: string;
   flag?: string;
   label?: string;
   exp: number;
@@ -19,6 +18,7 @@ export type Checked =
 
 const notVerified = (step: string, reason: string): Checked => ({ kind: "notVerified", step, reason });
 
+// The link's key signed into the certificate is read by the verifier and dropped here; the browser reads its own copy.
 // DT.06: failed is paper, verified but expired is paper, verified and current is fetched.
 export function checkLink(hc1: string, links: LinkStore | undefined, now: number): Checked {
   if (!links) return notVerified("trust-lookup", "the link trust list has not been loaded");
@@ -42,7 +42,7 @@ export function checkLink(hc1: string, links: LinkStore | undefined, now: number
   const vhl = entry.payload.val;
   const exp = Math.min(Number(result.val.exp), vhl.exp === undefined ? Infinity : Number(vhl.exp));
   if (lapsed) return { kind: "expired", exp };
-  return { kind: "fetch", link: { url: vhl.url, key: vhl.key, flag: vhl.flag, label: vhl.label, exp }, issuer: result.val.dsc.participant ?? result.val.iss };
+  return { kind: "fetch", link: { url: vhl.url, flag: vhl.flag, label: vhl.label, exp }, issuer: result.val.dsc.participant ?? result.val.iss };
 }
 
 function kidOf(hc1: string, registry: WitRegistry): { kid?: string } {

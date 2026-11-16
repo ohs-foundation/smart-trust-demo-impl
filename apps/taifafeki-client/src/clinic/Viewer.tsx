@@ -3,7 +3,7 @@ import type { HumanName } from "@medplum/fhirtypes";
 import { useMedplum } from "@medplum/react-hooks";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Camera, CameraOff, HousePlus, ShieldX } from "lucide-react";
-import { useCallback, useId, useState, type ReactNode } from "react";
+import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Action, ActionBar } from "@/components/ActionBar";
 import { AppHeader } from "@/components/AppHeader";
 import { Facts } from "@/components/Facts";
@@ -25,6 +25,7 @@ import type { SummaryOutcome } from "../server/summary";
 import type { ListStatus } from "../server/trustLists";
 import type { LinkOutcome } from "../server/viewer";
 import { writeReceipt } from "./receipt";
+import { keyOf } from "./link";
 import { Scanner } from "./Scanner";
 import { SummaryScreen, type Receipt } from "./SummaryScreen";
 import { openSummary, readSummary, type SummaryView } from "./summary";
@@ -67,6 +68,8 @@ function ViewerFor({ organization }: { organization: string }) {
   const [notice, setNotice] = useState<Refusal>();
   const [paper, setPaper] = useState<Unverified>();
   const [opened, setOpened] = useState<Opened>();
+  const [key, setKey] = useState<string>();
+  const scans = useRef(0);
   const token = () => medplum.getAccessToken() ?? "";
   const lists = useQuery({ queryKey: ["trust-lists"], queryFn: () => trustListStatuses({ data: { token: token() } }), refetchInterval: 60_000 });
   const scan = useMutation({
@@ -82,7 +85,13 @@ function ViewerFor({ organization }: { organization: string }) {
   const failed = scan.data && scan.data.kind !== "fetch" ? scan.data : undefined;
   const scanned = useCallback(
     (text: string) => {
+      const scan = ++scans.current;
       setCamera(false);
+      setKey(undefined);
+      keyOf(text).then(
+        (read) => scan === scans.current && setKey(read),
+        () => undefined,
+      );
       mutate(text);
     },
     [mutate],
@@ -94,7 +103,7 @@ function ViewerFor({ organization }: { organization: string }) {
     try {
       const outcome = await fetchSummary({ data: { token: token(), handle, passcode } });
       if (outcome.kind === "refused") return setNotice(outcome);
-      const bundle = await openSummary(outcome.documents, outcome.key).catch(() => undefined);
+      const bundle = await (key ? openSummary(outcome.documents, key) : Promise.reject(new Error("no key"))).catch(() => undefined);
       if (!bundle) return setNotice({ message: "The summary could not be opened" });
       const view = readSummary(bundle);
       setOpened({ view, receipt: { state: "pending" }, passcode: needsPasscode });
@@ -113,6 +122,8 @@ function ViewerFor({ organization }: { organization: string }) {
   };
 
   const restart = () => {
+    scans.current++;
+    setKey(undefined);
     setOpened(undefined);
     setPasted("");
     setPasscode("");
