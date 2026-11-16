@@ -109,6 +109,12 @@ android {
     }
   }
   buildTypes {
+    // CI signs debug builds with the demo key too, so a new APK installs over the last one.
+    getByName("debug") {
+      if (hasReleaseSigning) {
+        signingConfig = signingConfigs.getByName("release")
+      }
+    }
     getByName("release") {
       isMinifyEnabled = false
       if (hasReleaseSigning) {
