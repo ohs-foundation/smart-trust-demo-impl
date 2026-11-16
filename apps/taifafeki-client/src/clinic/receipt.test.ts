@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ig, present, requiredPaths } from "../testing/ig";
 import { buildReceipt, writeReceipt } from "./receipt";
 
-const PROFILE = "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoTaifafekiVhlReceipt";
+const PROFILE: string = ig("StructureDefinition-TrustDemoTaifafekiVhlReceipt.json").url;
 const NOW = new Date("2026-11-14T09:30:00Z");
 const bundle: Bundle = { ...ig("Bundle-TrustDemoJ4Ips.json"), identifier: { system: "urn:ietf:rfc:3986", value: "urn:uuid:8d3f1c52-6a4e-4b0f-9c1d-2e7a5b9f0c31" } };
 const parts = { bundle, organizationId: "clinic-org", practitionerId: "anan-id", deviceId: "viewer-id", now: NOW };
@@ -13,6 +13,7 @@ describe("theReceiptHasTheProfilesRequiredElements", () => {
 
   it("carries every element the profile requires", () => {
     for (const path of requiredPaths("StructureDefinition-TrustDemoTaifafekiVhlReceipt.json")) expect(present(receipt, path.split(".")), path).toBe(true);
+    expect(PROFILE).toMatch(/\/TrustDemoTaifafekiVhlReceipt$/);
     expect(receipt.meta?.profile).toEqual([PROFILE]);
     expect(receipt.target?.length).toBeGreaterThanOrEqual(1);
     expect(receipt.recorded).toBe("2026-11-14T09:30:00.000Z");
