@@ -16,10 +16,15 @@ output "dns_records" {
 
 output "github_workload_identity_provider" {
   value       = one(google_iam_workload_identity_pool_provider.github[*].name)
-  description = "GCP_WORKLOAD_IDENTITY_PROVIDER; null until github_repository is set"
+  description = "GCP_WORKLOAD_IDENTITY_PROVIDER secret; null until github_repository is set"
 }
 
 output "github_ci_service_account" {
   value       = one(google_service_account.ci[*].email)
-  description = "GCP_CI_SERVICE_ACCOUNT; null until github_repository is set"
+  description = "GCP_CI_SERVICE_ACCOUNT secret; null until github_repository is set"
+}
+
+output "apk_repository" {
+  value       = google_artifact_registry_repository.apk.repository_id
+  description = "Generic repository holding the debug APK; CI uploads it, the owner downloads it with gcloud artifacts generic download"
 }

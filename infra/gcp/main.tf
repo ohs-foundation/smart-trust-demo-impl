@@ -28,6 +28,15 @@ resource "google_artifact_registry_repository" "images" {
   depends_on    = [google_project_service.apis]
 }
 
+resource "google_artifact_registry_repository" "apk" {
+  project       = google_project.demo.project_id
+  location      = local.region
+  repository_id = "${local.repository}-apk"
+  format        = "GENERIC"
+  description   = "The debug APK, which embeds the live URLs, so it stays out of public CI artifacts"
+  depends_on    = [google_project_service.apis]
+}
+
 resource "google_compute_network" "demo" {
   project                 = google_project.demo.project_id
   name                    = "trust-demo"
@@ -171,6 +180,15 @@ resource "google_artifact_registry_repository_iam_member" "ci_push" {
   project    = google_project.demo.project_id
   location   = google_artifact_registry_repository.images.location
   repository = google_artifact_registry_repository.images.repository_id
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${google_service_account.ci[0].email}"
+}
+
+resource "google_artifact_registry_repository_iam_member" "ci_apk_upload" {
+  count      = local.github_repo == "" ? 0 : 1
+  project    = google_project.demo.project_id
+  location   = google_artifact_registry_repository.apk.location
+  repository = google_artifact_registry_repository.apk.repository_id
   role       = "roles/artifactregistry.writer"
   member     = "serviceAccount:${google_service_account.ci[0].email}"
 }

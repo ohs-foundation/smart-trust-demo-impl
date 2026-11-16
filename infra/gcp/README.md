@@ -23,14 +23,16 @@ The VM's service account can only pull from the demo's registry. The project kee
 | Laptop | `gcloud auth configure-docker <region>-docker.pkg.dev`, `REGISTRY=<registry output>` in `.env`, then `./dev.sh push` |
 | Server | the same `REGISTRY` and `IMAGE_TAG=<pushed tag or latest>` in `.env`, then `./dev.sh up` pulls instead of building |
 
-With `github_repository` set, a workload identity pool trusts GitHub's OIDC token only when `assertion.repository == "owner/repo"`, and the `trust-demo-ci` account it impersonates can write to this registry and nothing else. Set these repository variables (Settings, Secrets and variables, Actions, Variables):
+With `github_repository` set, a workload identity pool trusts GitHub's OIDC token only when `assertion.repository == "owner/repo"`, and the `trust-demo-ci` account it impersonates can write to this registry and to the generic `<repository>-apk` repository, and nothing else. Set these repository **secrets**, never variables: a public repository's logs print variables in clear (Settings, Secrets and variables, Actions, Secrets):
 
-| Variable | From |
+| Secret | From |
 |---|---|
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | output `github_workload_identity_provider` |
 | `GCP_CI_SERVICE_ACCOUNT` | output `github_ci_service_account` |
 | `REGISTRY` | output `registry` |
-| `LIVE_BASE_DOMAIN` (secret) | `base_domain` from `config.yaml` |
+| `LIVE_BASE_DOMAIN` | `base_domain` from `config.yaml` |
+
+CI uploads the debug APK, which embeds the live URLs, to the `<repository>-apk` generic repository instead of an Actions artifact. Download it with `gcloud artifacts generic download --project=<project> --location=<region> --repository=<repository>-apk --package=onesa --version=<tag> --destination=.`.
 
 The server then runs `../dev.sh` as `../README.md` describes.
 

@@ -50,8 +50,8 @@ tofu output
 | --- | --- |
 | `server_ip` | the DNS target |
 | `registry` | `REGISTRY` in `infra/.env` |
-| `github_workload_identity_provider` | `GCP_WORKLOAD_IDENTITY_PROVIDER` repository variable (CI, below) |
-| `github_ci_service_account` | `GCP_CI_SERVICE_ACCOUNT` repository variable (CI, below) |
+| `github_workload_identity_provider` | `GCP_WORKLOAD_IDENTITY_PROVIDER` repository secret (CI, below) |
+| `github_ci_service_account` | `GCP_CI_SERVICE_ACCOUNT` repository secret (CI, below) |
 | `ssh` | a ready `gcloud compute ssh ... --tunnel-through-iap` command |
 | `dns_records` | the three records of step 2 |
 
@@ -107,21 +107,21 @@ gcloud auth configure-docker <region>-docker.pkg.dev
 
 The `issuer` image is Taifafeki's card signer: it needs no hostname, certificate or published port, because only the facility client calls it, over `taifafeki_net`; it mounts the TEST ONLY `testkit/XXR_CARD` key read-only.
 
-**CI builds the rest.** `.github/workflows/artifacts.yml` runs on pushes to `seed-from-template` and `main` (and by hand) and pushes `vhl`, `issuer`, `taifafeki-client` and `web-portal` as the short commit SHA and `latest`. Set these repository variables; a job whose variables are missing is skipped with a notice:
+**CI builds the rest.** `.github/workflows/artifacts.yml` runs on pushes to `seed-from-template` and `main` (and by hand) and pushes `vhl`, `issuer`, `taifafeki-client` and `web-portal` as the short commit SHA and `latest`. Set these repository secrets, never variables (a public repository's logs print variables in clear); a job whose secrets are missing is skipped with a notice:
 
-| Variable | Value |
+| Secret | Value |
 |---|---|
-| `LIVE_BASE_DOMAIN` (a **secret**, so the logs mask it) | the base domain, e.g. `demo.example.org` |
+| `LIVE_BASE_DOMAIN` | the base domain, e.g. `demo.example.org` |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | `github_workload_identity_provider` output |
 | `GCP_CI_SERVICE_ACCOUNT` | `github_ci_service_account` output |
 | `REGISTRY` | `registry` output |
 
 ```
 gh secret set LIVE_BASE_DOMAIN -R owner/repo -b demo.example.org
-gh variable set REGISTRY -R owner/repo -b <registry output>     # and the two GCP_* variables
+gh secret set REGISTRY -R owner/repo -b <registry output>     # and the two GCP_* secrets
 ```
 
-The workflow runs on pushes to `seed-from-template` and `main`, by hand (`gh workflow run artifacts.yml`), and on version tags: `git tag -s v0.1.0 && git push origin v0.1.0` builds the APK `onesa-v0.1.0` and the images tagged `v0.1.0` and `latest`; a branch push tags them with the short commit SHA. The APK carries the live URLs, so anyone who can download the run's artifacts can read them.
+The workflow runs on pushes to `seed-from-template` and `main`, by hand (`gh workflow run artifacts.yml`), and on version tags: `git tag -s v0.1.0 && git push origin v0.1.0` builds the APK `onesa-v0.1.0` and the images tagged `v0.1.0` and `latest`; a branch push tags them with the short commit SHA. The APK carries the live URLs, so it is not an Actions artifact: CI uploads it to the `<repository>-apk` generic Artifact Registry repository, and `gcloud artifacts generic download --project=<project> --location=<region> --repository=<repository>-apk --package=onesa --version=<tag> --destination=.` fetches it.
 
 CI never builds `fhir-gateway`: its plugin comes from a private fork. Push it from the laptop with `GATEWAY_PLUGIN_DIR` set: `./dev.sh push <sha> fhir-gateway`, using the SHA CI tagged so the server pulls one `IMAGE_TAG` for all four.
 
@@ -229,7 +229,7 @@ tools/control/build/install/control/bin/trust-demo reset --stack-env infra/.env
 
 ### 6. APK
 
-CI builds a debug APK for test phones when `LIVE_BASE_DOMAIN` is set: open the Actions run, then Artifacts, `onesa-<short-sha>` (kept 14 days). To build a release APK yourself, on the laptop:
+CI builds a debug APK for test phones when `LIVE_BASE_DOMAIN` is set and, with the GCP secrets set, uploads it to the private `<repository>-apk` generic repository as package `onesa`, version the short SHA or tag. To build a release APK yourself, on the laptop:
 
 Release signing uses `keystore.properties` (`keystore.properties.template`).
 
