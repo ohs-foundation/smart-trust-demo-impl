@@ -444,7 +444,7 @@
     <string name="profile_removed_one">%1$d reported doses deleted; Provenance %2$s records their removal</string>
     <string name="profile_removed_many">%1$d reported doses deleted; %2$d Provenance records record their removal</string>
     <string name="profile_next_doses">Next doses</string>
-    <string name="profile_no_next_doses">No doses recommended yet.</string>
+    <string name="profile_no_next_doses">No next doses.</string>
     <string name="profile_due_day">Due %1$s</string>
     <string name="profile_booked_visit">Booked visit</string>
     <string name="profile_window">Window</string>

@@ -123,6 +123,44 @@ class DoseRecordingTest {
   }
 
   @Test
+  fun recordingTheBookedDosesCompletesTheVisit() = runTest {
+    withSyncedReferenceData()
+    repository.upsert(
+      decode(FhirJson.instance.parseToJsonElement(bookedVisitRecommendation).jsonObject)
+    )
+    repository.upsert(decode(FhirJson.instance.parseToJsonElement(bookedVisitReminder).jsonObject))
+
+    recording.record(entry("XXK-EPI-PENTA-1", "2025-12-31"))
+    assertEquals(listOf("Immunization/dose-1", "ImmunizationRecommendation/visit"), urls)
+    assertEquals(
+      listOf("complete", "due", "due"),
+      written.last().getValue("recommendation").jsonArray.map {
+        it.jsonObject
+          .getValue("forecastStatus")
+          .jsonObject
+          .getValue("coding")
+          .jsonArray
+          .single()
+          .jsonObject
+          .getValue("code")
+          .jsonPrimitive
+          .content
+      },
+    )
+
+    recording.record(entry("XXK-EPI-OPV-1", "2025-12-31"))
+    recording.record(entry("XXK-EPI-PCV-1", "2025-12-31"))
+    assertEquals("Task/reminder", urls.last())
+    assertEquals("completed", written.last().getValue("status").jsonPrimitive.content)
+    assertEquals(null, BookedVisits(repository).of("somsak"))
+    assertEquals(emptyList(), BookedVisits(repository).all())
+
+    urls.clear()
+    recording.record(entry("XXK-EPI-MR-1", "2026-07-28"))
+    assertEquals(listOf("Immunization/dose-4"), urls)
+  }
+
+  @Test
   fun fourRecordedDosesSatisfyTheYearContract() = runTest {
     withSyncedReferenceData()
     listOf(

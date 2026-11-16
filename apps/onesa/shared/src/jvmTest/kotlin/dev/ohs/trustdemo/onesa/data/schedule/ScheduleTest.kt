@@ -291,6 +291,22 @@ class ScheduleTest {
   }
 
   @Test
+  fun aYearOfDosesGivenAfterTheBookedVisitIsAllVerified() = runTest {
+    val service = ScheduleService(repository, { plans }) { LocalDate.parse("2026-11-18") }
+    child("2025-11-18")
+    yearOfDoses().forEach { (id, code, date) ->
+      dose(id, true, ScanTransactions.EPI_SYSTEM to code, date = date)
+    }
+    upsert(bookedVisitRecommendation)
+    upsert(bookedVisitReminder)
+
+    val items = service.evaluate("somsak").items
+
+    assertEquals(6, items.size)
+    assertEquals(List(6) { Standing.Complete }, items.map { it.standing })
+  }
+
+  @Test
   fun theExecutableScheduleKeepsTheIgActions() {
     val ours = plansJson().getValue("action").jsonArray.map { it.jsonObject }
     val ig =

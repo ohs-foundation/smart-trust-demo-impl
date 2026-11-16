@@ -18,6 +18,7 @@ package dev.ohs.trustdemo.onesa.util
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
@@ -38,6 +39,13 @@ fun putEntry(url: String, resource: JsonObject, ifMatch: String? = null): JsonOb
       ifMatch?.let { put("ifMatch", it) }
     }
   }
+
+/** [this] without the server's `versionId` and `lastUpdated`, to be written back. */
+fun JsonObject.unversioned(): JsonObject {
+  val kept = this["meta"]?.jsonObject?.filterKeys { it != "versionId" && it != "lastUpdated" }
+  return if (kept.isNullOrEmpty()) JsonObject(this - "meta")
+  else JsonObject(this + ("meta" to JsonObject(kept)))
+}
 
 fun deleteEntry(url: String): JsonObject = buildJsonObject {
   putJsonObject("request") {

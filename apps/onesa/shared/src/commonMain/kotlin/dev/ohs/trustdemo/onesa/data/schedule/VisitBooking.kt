@@ -23,6 +23,7 @@ import dev.ohs.trustdemo.onesa.data.verification.text
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import dev.ohs.trustdemo.onesa.util.createEntry
 import dev.ohs.trustdemo.onesa.util.putEntry
+import dev.ohs.trustdemo.onesa.util.unversioned
 import io.ktor.client.HttpClient
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
@@ -255,14 +256,8 @@ class VisitBooking(
     return "W/\"${checkNotNull(id) { "The gateway sent no version for ${resource.text("id")}." }}\""
   }
 
-  private fun completed(referral: JsonObject): JsonObject {
-    val meta = referral["meta"]?.jsonObject
-    val kept = meta?.filterKeys { it != "versionId" && it != "lastUpdated" }.orEmpty()
-    val unversioned =
-      if (kept.isEmpty()) JsonObject(referral - "meta")
-      else JsonObject(referral + ("meta" to JsonObject(kept)))
-    return JsonObject(unversioned + ("status" to JsonPrimitive("completed")))
-  }
+  private fun completed(referral: JsonObject): JsonObject =
+    JsonObject(referral.unversioned() + ("status" to JsonPrimitive("completed")))
 
   private fun coding(system: String, code: String, display: String): JsonObject = buildJsonObject {
     put("system", system)
@@ -271,7 +266,7 @@ class VisitBooking(
   }
 
   companion object {
-    private const val FORECAST_STATUS =
+    const val FORECAST_STATUS =
       "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status"
     private const val LOINC = "http://loinc.org"
     private const val REMINDER_DAYS = 7

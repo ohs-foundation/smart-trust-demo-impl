@@ -86,8 +86,8 @@ sealed interface RecordOutcome {
 /**
  * The nurse's own record of a dose given at the clinic: an Immunization with `primarySource` true,
  * shaped as the IG's `TrustDemoOnesaImmunization`, written by one transaction under the id of the
- * entry. A dose with the same schedule code that already counts (TD.DT.03) is written only after
- * she confirms, because a repeat dose is real.
+ * entry, with the booked visit it fulfils. A dose with the same schedule code that already counts
+ * (TD.DT.03) is written only after she confirms, because a repeat dose is real.
  */
 class DoseRecording(
   private val repository: FhirRepository,
@@ -138,10 +138,14 @@ class DoseRecording(
     }
 
     val dose = immunization(entry, current)
+    val visit = BookedVisits(repository).doseGiven(entry.patientId, entry.dose.code)
     val transaction = buildJsonObject {
       put("resourceType", "Bundle")
       put("type", "transaction")
-      putJsonArray("entry") { add(createEntry("Immunization", entry.id, dose)) }
+      putJsonArray("entry") {
+        add(createEntry("Immunization", entry.id, dose))
+        visit.forEach { add(it) }
+      }
     }
     val reply =
       httpClient.post(baseUrl) {
