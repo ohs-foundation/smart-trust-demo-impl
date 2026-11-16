@@ -189,9 +189,10 @@ render_templates() {
            nginx/host/gateway.conf \
            '${GATEWAY_HOST} ${FHIR_GATEWAY_PORT}'
 
+    export APP_LINK_DIR="${APP_LINK_DIR:-/var/lib/trust-demo/app-links}"
     render nginx/host/web.conf.example \
            nginx/host/web.conf \
-           '${WEB_HOST} ${OHS_PLAYER_WEB_PORT}'
+           '${WEB_HOST} ${OHS_PLAYER_WEB_PORT} ${APP_LINK_DIR}'
 
     render nginx/host/vhl.conf.example \
            nginx/host/vhl.conf \

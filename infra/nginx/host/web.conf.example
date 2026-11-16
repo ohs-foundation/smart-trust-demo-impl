@@ -50,6 +50,22 @@ server {
     # A large FHIR search can outrun the 60 second default.
     proxy_read_timeout 300s;
 
+    # `trust-demo apk-link` writes one page per short link to APP_LINK_DIR, named by its token, that
+    # forwards to the APK's signed URL. Only a well-formed token reaches a file there.
+    location ^~ /app/ {
+        root ${APP_LINK_DIR};
+        default_type text/html;
+        add_header Cache-Control "no-store" always;
+        add_header Referrer-Policy "no-referrer" always;
+        add_header X-Robots-Tag "noindex" always;
+
+        location ~ "^/app/([A-Za-z0-9_-]{22})$" {
+            try_files /$1 =404;
+        }
+
+        return 404;
+    }
+
     location / {
         proxy_pass http://127.0.0.1:${OHS_PLAYER_WEB_PORT};
         proxy_set_header Host              $host;

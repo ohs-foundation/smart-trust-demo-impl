@@ -62,7 +62,7 @@ private fun failureReason(text: String, store: TrustStore): String {
   return assertIs<VerificationResult.Failed>(result).value.reason.name
 }
 
-private fun decodeHalfBlocks(rendering: String): String {
+internal fun decodeHalfBlocks(rendering: String): String {
   val rows =
     rendering
       .lines()

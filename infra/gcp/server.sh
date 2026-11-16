@@ -30,7 +30,7 @@ usage() {
     cat <<EOF
 Usage: $0 <command>
   setup                clone or update $checkout at branch '$branch', give your user Docker and
-                       registry access, and copy infra/.env up
+                       registry access and the APK short links' folder, and copy infra/.env up
   nginx                ./dev.sh nginx: host vhosts and one certificate per name
   up [flags]           ./dev.sh up --pull [flags], e.g. --taifafeki --pipes
   cli                  build trust-demo here and ship it to the server
@@ -44,6 +44,7 @@ EOF
 case "${1:-}" in
     setup)
         [[ -n "$github" ]] || { echo "Set github_repository in config.yaml" >&2; exit 1; }
+        app_links="$(env_value APP_LINK_DIR)"
         remote "set -e
             if [ -d $checkout/.git ]; then
                 git -C $checkout fetch -q origin $branch
@@ -53,6 +54,7 @@ case "${1:-}" in
                 git clone -q -b $branch https://github.com/$github $checkout
             fi
             sudo usermod -aG docker \"\$USER\"
+            sudo install -d -o \"\$USER\" -m 755 ${app_links:-/var/lib/trust-demo/app-links}
             gcloud auth configure-docker $registry_host --quiet"
         copy "$repo/infra/.env" "$name:$checkout/infra/.env"
         remote "cd $checkout/infra && chmod 600 .env && sed -i 's|^GATEWAY_PLUGIN_DIR=.*|GATEWAY_PLUGIN_DIR=/tmp|' .env"

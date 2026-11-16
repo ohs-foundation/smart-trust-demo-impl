@@ -136,7 +136,7 @@ From the laptop, `infra/gcp/server.sh` runs steps 4 and 5 over IAP, using `confi
 
 | Command | Does |
 | --- | --- |
-| `server.sh setup` | clones or updates the checkout at the current branch, gives your user Docker and registry access, copies `.env` up |
+| `server.sh setup` | clones or updates the checkout at the current branch, gives your user Docker and registry access and the `APP_LINK_DIR` folder ([Share the APK](#share-the-apk)), copies `.env` up |
 | `server.sh nginx` | `./dev.sh nginx` |
 | `server.sh up --taifafeki` | `./dev.sh up --pull --taifafeki` (add `--pipes` as needed) |
 | `server.sh cli` | builds `trust-demo` here and ships it |
@@ -174,6 +174,7 @@ On the server, in `~/smart-trust-demo-impl/infra`:
 ```
 chmod 600 .env
 sudo usermod -aG docker "$USER"     # once, then sign in again
+sudo install -d -o "$USER" -m 755 /var/lib/trust-demo/app-links    # once, apk-link's short links
 gcloud auth configure-docker <region>-docker.pkg.dev    # once
 ./dev.sh nginx                      # vhosts and one certificate per name
 ./dev.sh up --pull --taifafeki      # add --pipes for the analytics pipeline and Superset
@@ -250,7 +251,7 @@ Install the APK on the phones. Release trusts the system CAs, so the public cert
 
 ### Share the APK
 
-Testers download the debug APK from an expiring link: anyone holding it gets the build without signing in until it expires, at most 7 days later. The bucket stays private; there is no public object or link left behind.
+Testers download the debug APK from an expiring short link: anyone holding it gets the build without signing in until it expires, at most 7 days later. The bucket stays private; the short link's page is all that is left behind, and the first run after it expires deletes it.
 
 ```
 infra/gcp/server.sh trust-demo apk-link                        # onesa-latest.apk, 7 days
@@ -260,12 +261,20 @@ infra/gcp/server.sh trust-demo apk-link --days 2 --version <short SHA or tag>
 ```
 Build    onesa-latest.apk, updated 2026-11-16T08:30:12Z
 Expires  2026-11-23T10:15:30Z
-Link     https://storage.googleapis.com/<bucket>/onesa-latest.apk?X-Goog-Algorithm=GOOG4-RSA-SHA256&...&X-Goog-Signature=<hex>
+Link     https://web.onesa.demo.example.org/app/EQ3G0QOBex3cdkK68fPoQw
+Direct   https://storage.googleapis.com/<bucket>/onesa-latest.apk?X-Goog-Algorithm=GOOG4-RSA-SHA256&...&X-Goog-Signature=<hex>
 
-<the link as a QR code>
+<the short link as a QR code, about 41 columns by 21 rows>
 ```
 
-It runs only on the server: the VM's service account, from the metadata server, reads the object and signs a Cloud Storage V4 signed URL with IAM Credentials `signBlob` as itself, so no key file exists. A link to `onesa-latest.apk` serves whichever build is latest when it is opened; `--version` pins one. Deleting the object is the only way to end a link early.
+`Link` is `https://<WEB_HOST>/app/<token>`, a random 128-bit token, so its QR fits a laptop terminal; scan or share that one. It opens a page that forwards at once to `Direct`, the signed URL of about 850 characters, which also works pasted into a message. Both download the build for anyone holding them until `Expires`.
+
+| Piece | Where |
+| --- | --- |
+| Pages | `APP_LINK_DIR` in `infra/.env`, default `/var/lib/trust-demo/app-links`: one file per token, its modification time its expiry |
+| Route | `location ^~ /app/` in the web portal's vhost: only a 22-character token reaches a file, sent `no-store`, `no-referrer`, `noindex`; anything else is 404 |
+
+It runs only on the server: the VM's service account, from the metadata server, reads the object and signs a Cloud Storage V4 signed URL with IAM Credentials `signBlob` as itself, so no key file exists. A link to `onesa-latest.apk` serves whichever build is latest when it is opened; `--version` pins one. Deleting the token's file in `APP_LINK_DIR` ends the short link early; deleting the object is the only way to end `Direct` early.
 
 Set it up once:
 
@@ -273,8 +282,9 @@ Set it up once:
 | --- | --- | --- |
 | 1 | Laptop | `cd infra/gcp && tofu apply`: the bucket replaces the `<repository>-apk` repository; CI may write it, the VM may read it and sign as itself |
 | 2 | Laptop | `gh secret set APK_BUCKET -R owner/repo -b <apk_bucket output>` |
-| 3 | Laptop | `APK_BUCKET=<apk_bucket output>` in `infra/.env`, then `infra/gcp/server.sh setup` (copies it up) and `infra/gcp/server.sh cli` |
-| 4 | Laptop | `gh workflow run artifacts.yml` (or a push to `main`) puts the first build in the bucket |
+| 3 | Laptop | `APK_BUCKET=<apk_bucket output>` in `infra/.env`, then `infra/gcp/server.sh setup` (copies it up, creates `APP_LINK_DIR`) and `infra/gcp/server.sh cli` |
+| 4 | Laptop | `infra/gcp/server.sh nginx`: adds the `/app/` route to the web portal's vhost; run it again once on a server set up before short links |
+| 5 | Laptop | `gh workflow run artifacts.yml` (or a push to `main`) puts the first build in the bucket |
 
 ### 7. Walk the story
 

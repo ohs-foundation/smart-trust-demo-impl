@@ -15,6 +15,7 @@
  */
 package dev.ohs.trustdemo.control
 
+import com.github.ajalt.clikt.testing.CliktCommandTestResult
 import com.github.ajalt.clikt.testing.test
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -23,10 +24,16 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import java.net.UnknownHostException
+import java.nio.file.attribute.FileTime
 import java.time.Instant
 import java.util.Base64
 import java.util.HexFormat
+import kotlin.io.path.createTempDirectory
 import kotlin.io.path.createTempFile
+import kotlin.io.path.exists
+import kotlin.io.path.getLastModifiedTime
+import kotlin.io.path.readText
+import kotlin.io.path.setLastModifiedTime
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -42,6 +49,7 @@ private const val TOKEN = "ya29.never-printed"
 private const val ACCOUNT = "trust-demo-server@my-trust-demo.iam.gserviceaccount.com"
 private val SIGNATURE = byteArrayOf(1, 2, 3, -2, -1)
 private val NOW = Instant.parse("2026-11-16T10:15:30.250Z")
+private val SHORT_LINK = Regex("https://web\\.onesa\\.demo\\.example\\.org/app/([A-Za-z0-9_-]{22})")
 
 /** The metadata server, Cloud Storage's object metadata and IAM Credentials' signBlob, faked. */
 private class FakeGoogle(
@@ -51,6 +59,7 @@ private class FakeGoogle(
 ) {
   val signed = mutableListOf<String>()
   val bearers = mutableListOf<String?>()
+  val pages = createTempDirectory()
 
   val engine = MockEngine { request ->
     val json = HttpHeaders.ContentType to listOf("application/json")
@@ -92,10 +101,20 @@ private class FakeGoogle(
     }
   }
 
-  fun run(args: String = "") =
-    ApkLinkCommand({ engine }, { NOW })
-      .test("$args --stack-env ${createTempFile().apply { writeText("APK_BUCKET=test-bucket\n") }}")
+  fun run(args: String = ""): CliktCommandTestResult {
+    val env =
+      createTempFile().apply {
+        writeText(
+          "APK_BUCKET=test-bucket\nBASE_DOMAIN=demo.example.org\n" +
+            "WEB_HOST=web.onesa.\${BASE_DOMAIN}\nAPP_LINK_DIR=$pages\n"
+        )
+      }
+    return ApkLinkCommand({ engine }, { NOW }).test("$args --stack-env $env")
+  }
 }
+
+private fun printed(output: String, label: String) =
+  output.lines().first { it.startsWith(label) }.substringAfter(label).trim()
 
 class ApkLinkTest {
   // googleapis/conformance-tests storage/v1/v4_signatures.json, "Simple GET".
@@ -152,7 +171,7 @@ class ApkLinkTest {
     assertTrue(google.bearers.isNotEmpty() && google.bearers.all { it == "Bearer $TOKEN" })
     assertContains(result.stdout, "onesa-latest.apk, updated 2026-11-16T08:30:12Z")
     assertContains(result.stdout, "Expires  2026-11-23T10:15:30Z")
-    val url = result.stdout.lines().first { it.startsWith("Link") }.substringAfter("Link").trim()
+    val url = printed(result.stdout, "Direct")
     assertTrue(url.startsWith("https://storage.googleapis.com/test-bucket/onesa-latest.apk?"), url)
     assertContains(url, "X-Goog-Date=20261116T101530Z&X-Goog-Expires=604800&")
     assertTrue(url.endsWith("&X-Goog-Signature=010203feff"), url)
@@ -183,5 +202,64 @@ class ApkLinkTest {
     val result = FakeGoogle(onGce = false).run()
     assertEquals(1, result.statusCode)
     assertContains(result.stderr, "run it on the server: infra/gcp/server.sh trust-demo apk-link")
+  }
+
+  @Test
+  fun theShortLinkPrintsBeforeTheSignedOneAndIsWhatTheQrHolds() {
+    val result = FakeGoogle().run()
+    val lines = result.stdout.lines()
+    val link = printed(result.stdout, "Link")
+
+    assertTrue(SHORT_LINK.matches(link), link)
+    assertTrue(
+      lines.indexOfFirst { it.startsWith("Link") } < lines.indexOfFirst { it.startsWith("Direct") }
+    )
+    assertEquals(link, decodeHalfBlocks(result.stdout.substringAfter("\n\n")))
+  }
+
+  @Test
+  fun theShortLinksQrFitsALaptopTerminal() {
+    val qr = FakeGoogle().run().stdout.substringAfter("\n\n").lines().filter { it.isNotEmpty() }
+    assertTrue(qr.size <= 22, "${qr.size} rows")
+    assertTrue(qr.all { it.length <= 41 }, "${qr.maxOf { it.length }} columns")
+  }
+
+  @Test
+  fun theShortLinksPageForwardsToTheSignedLinkAndLoadsNothingElse() {
+    val google = FakeGoogle()
+    val result = google.run()
+    val direct = printed(result.stdout, "Direct")
+    val page =
+      google.pages.resolve(SHORT_LINK.matchEntire(printed(result.stdout, "Link"))!!.groupValues[1])
+    val html = page.readText()
+    val href = direct.replace("&", "&amp;")
+
+    assertContains(html, """<meta http-equiv="refresh" content="0; url=$href">""")
+    assertContains(html, """<a href="$href">Download the Onesa app</a>""")
+    assertContains(html, "23 Nov 2026, 10:15 UTC")
+    assertEquals(
+      listOf(href, href),
+      Regex("""https?://[^"\s>]*""").findAll(html).map { it.value }.toList(),
+    )
+    listOf("src=", "<link", "<script", "url(").forEach { assertFalse(it in html, it) }
+    assertEquals(Instant.parse("2026-11-23T10:15:30Z"), page.getLastModifiedTime().toInstant())
+  }
+
+  @Test
+  fun aRunDeletesOnlyTheExpiredPages() {
+    val google = FakeGoogle()
+    fun page(name: String, expires: Instant) =
+      google.pages.resolve(name).apply {
+        writeText("page")
+        setLastModifiedTime(FileTime.from(expires))
+      }
+    val expired = page("expiredAAAAAAAAAAAAAAA", NOW.minusSeconds(1))
+    val live = page("liveAAAAAAAAAAAAAAAAAA", NOW.plusSeconds(60))
+    val other = page("notes.txt", NOW.minusSeconds(86_400))
+
+    google.run()
+
+    assertFalse(expired.exists())
+    assertTrue(live.exists() && other.exists())
   }
 }

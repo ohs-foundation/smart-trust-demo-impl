@@ -36,13 +36,27 @@ import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
 import java.io.IOException
 import java.nio.channels.UnresolvedAddressException
+import java.nio.file.Path
+import java.nio.file.attribute.FileTime
+import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
+import java.security.SecureRandom
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Base64
 import java.util.HexFormat
+import java.util.Locale
+import kotlin.io.path.Path
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.getLastModifiedTime
+import kotlin.io.path.isDirectory
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.name
+import kotlin.io.path.setLastModifiedTime
+import kotlin.io.path.setPosixFilePermissions
+import kotlin.io.path.writeText
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -57,6 +71,11 @@ private const val METADATA =
 private const val MAX_DAYS = 7
 private const val SECONDS_PER_DAY = 86_400L
 private val STAMP = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC)
+private const val DEFAULT_APP_LINK_DIR = "/var/lib/trust-demo/app-links"
+private const val TOKEN_BYTES = 16
+private val TOKEN = Regex("[A-Za-z0-9_-]{22}")
+private val UNTIL =
+  DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm 'UTC'", Locale.ENGLISH).withZone(ZoneOffset.UTC)
 
 /**
  * A GET link to one Cloud Storage object that works for anyone until it expires: a V4 query-string
@@ -173,6 +192,47 @@ class GoogleCloud(engine: HttpClientEngine) {
     Json.parseToJsonElement(json).jsonObject.getValue(name).jsonPrimitive.content
 }
 
+/**
+ * The short links' pages, one file per random token in [dir], which nginx serves at `/app/<token>`.
+ * A page's modification time is its expiry, so a later run deletes it once passed.
+ */
+class AppLinks(private val dir: Path, private val random: SecureRandom = SecureRandom()) {
+  fun purge(now: Instant) =
+    dir
+      .listDirectoryEntries()
+      .filter { TOKEN.matches(it.name) && it.getLastModifiedTime().toInstant() <= now }
+      .forEach { it.deleteIfExists() }
+
+  /** Writes the page forwarding to [url] until [expires] and returns its token. */
+  fun add(url: String, expires: Instant): String {
+    val token =
+      Base64.getUrlEncoder()
+        .withoutPadding()
+        .encodeToString(ByteArray(TOKEN_BYTES).also(random::nextBytes))
+    dir.resolve(token).apply {
+      writeText(page(url, expires))
+      setPosixFilePermissions(PosixFilePermissions.fromString("rw-r--r--"))
+      setLastModifiedTime(FileTime.from(expires))
+    }
+    return token
+  }
+
+  private fun page(url: String, expires: Instant): String {
+    val href = url.replace("&", "&amp;").replace("\"", "&quot;")
+    return """
+      |<!doctype html>
+      |<html lang="en">
+      |<meta charset="utf-8">
+      |<meta name="viewport" content="width=device-width, initial-scale=1">
+      |<meta http-equiv="refresh" content="0; url=$href">
+      |<title>Onesa app</title>
+      |<p><a href="$href">Download the Onesa app</a></p>
+      |<p>This link works until ${UNTIL.format(expires)}.</p>
+      |"""
+      .trimMargin()
+  }
+}
+
 class ApkLinkCommand(
   private val engine: () -> HttpClientEngine = ::serverEngine,
   private val now: () -> Instant = Instant::now,
@@ -186,14 +246,22 @@ class ApkLinkCommand(
     option("--version", help = "A build's short commit SHA or tag; default: the latest build")
 
   override fun help(context: Context) =
-    "Print an expiring download link and QR for the debug APK in the private bucket."
+    "Print an expiring short download link and QR for the debug APK in the private bucket."
 
   override fun run() = runBlocking {
+    val env = StackEnv.load(stackEnv)
     val bucket =
-      StackEnv.load(stackEnv).optional("APK_BUCKET")?.takeIf { it.isNotBlank() }
+      env.optional("APK_BUCKET")?.takeIf { it.isNotBlank() }
         ?: throw CliktError(
           "$stackEnv has no APK_BUCKET: set it to the apk_bucket output of infra/gcp"
         )
+    val webHost =
+      env.optional("WEB_HOST")?.takeIf { it.isNotBlank() }
+        ?: throw CliktError("$stackEnv has no WEB_HOST: the short link is served from it")
+    val pages =
+      Path(env.optional("APP_LINK_DIR")?.takeIf { it.isNotBlank() } ?: DEFAULT_APP_LINK_DIR)
+    if (!pages.isDirectory())
+      throw CliktError("$pages does not exist: infra/gcp/server.sh setup creates it")
     val name = "onesa-${version ?: "latest"}.apk"
     val google = GoogleCloud(engine())
     val account = google.account()
@@ -211,10 +279,14 @@ class ApkLinkCommand(
         days * SECONDS_PER_DAY,
       )
     val url = link.signed(google.signBlob(account, link.stringToSign))
+    val links = AppLinks(pages)
+    links.purge(now())
+    val short = "https://$webHost/app/${links.add(url, link.expires)}"
     echo("Build    $name, updated ${updated.truncatedTo(ChronoUnit.SECONDS)}")
     echo("Expires  ${link.expires}")
-    echo("Link     $url")
+    echo("Link     $short")
+    echo("Direct   $url")
     echo()
-    echo(TerminalQr.render(url))
+    echo(TerminalQr.render(short))
   }
 }
