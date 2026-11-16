@@ -11,8 +11,8 @@ if [ -n "${STACK_HOST:-}" ]; then
   live=0
   base="${STACK_HOST}:${PROXY_PORT}"
   tls="${STACK_HOST}:${VHL_TLS_PORT}"
-  keycloak="$keycloak"
-  gateway="$gateway"
+  keycloak="http://keycloak.onesa.${base}"
+  gateway="http://gateway.onesa.${base}"
   medplum="http://medplum.kesaro.${base}"
   trust="http://trust.gdhcn.${base}"
   vhl="https://vhl.onesa.${tls}"
