@@ -19,6 +19,7 @@ import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.hcert.ReadResult
 import dev.ohs.trustdemo.hcert.loadHcertEngine
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
+import dev.ohs.trustdemo.onesa.data.sync.IndexableCopy
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
@@ -220,6 +221,7 @@ class ShareService(
           .mapNotNull { it.jsonObject["resource"] }
           .map { json.decodeFromJsonElement(Resource.serializer(), it) }
           .filter { it.id in ids }
+          .map(IndexableCopy::of)
       if (consents.isNotEmpty()) repository.storeAsSynced(consents)
     } catch (e: CancellationException) {
       throw e

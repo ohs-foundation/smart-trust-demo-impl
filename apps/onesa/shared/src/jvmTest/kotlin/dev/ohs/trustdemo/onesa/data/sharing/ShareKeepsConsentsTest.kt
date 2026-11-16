@@ -65,6 +65,8 @@ class ShareKeepsConsentsTest {
 
   private fun consent(id: String) =
     """{"resourceType":"Consent","id":"$id","meta":{"versionId":"1"},"status":"active",
+      "dateTime":"2026-11-14T14:56:23.495871466Z",
+      "sourceAttachment":{"contentType":"application/json","title":"Explicit consent confirmed on the family wallet when the link was created"},
       "scope":{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/consentscope","code":"patient-privacy"}]},
       "category":[{"coding":[{"system":"http://loinc.org","code":"59284-0"}]}],
       "patient":{"reference":"Patient/somsak"},"performer":[{"reference":"Patient/bounmy"}],

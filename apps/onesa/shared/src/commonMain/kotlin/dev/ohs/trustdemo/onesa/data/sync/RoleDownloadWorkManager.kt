@@ -52,5 +52,5 @@ class RoleDownloadWorkManager(
     delegate().getSummaryRequestUrls()
 
   override suspend fun processResponse(response: Resource): Collection<Resource> =
-    delegate().processResponse(response).map(WholeSeconds::trim)
+    delegate().processResponse(response).map(IndexableCopy::of)
 }
