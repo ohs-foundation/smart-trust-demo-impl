@@ -126,6 +126,8 @@ gh secret set REGISTRY -R owner/repo -b <registry output>     # and the two GCP_
 
 The workflow runs on pushes to `seed-from-template` and `main`, by hand (`gh workflow run artifacts.yml`), and on version tags: `git tag -s v0.1.0 && git push origin v0.1.0` builds the APK `onesa-v0.1.0` and the images tagged `v0.1.0` and `latest`; a branch push tags them with the short commit SHA. The APK carries the live URLs, so it is not an Actions artifact: CI uploads it to the private APK bucket as `onesa-<tag or short SHA>.apk` and `onesa-latest.apk`, and `gcloud storage cp gs://<bucket>/onesa-latest.apk .` fetches it.
 
+The `fhir-gateway` image applies `stack/onesa/fhir-gateway-balp-query-per-search.patch` to the pinned core before packaging it.
+
 CI never builds `fhir-gateway`: its plugin comes from a private fork. Push it from the laptop with `GATEWAY_PLUGIN_DIR` set: `./dev.sh push <sha> fhir-gateway`, using the SHA CI tagged so the server pulls one `IMAGE_TAG` for all four.
 
 ### 4. Server

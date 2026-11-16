@@ -202,6 +202,7 @@ Refusal paths, all at J4.1:
 - The app is named "Taifafeki Facility Client" where the IG's device frame says "OHS Facility Client 2.4.1".
 - SDC's form layout is kept as it is.
 - A verified dose's CVX comes from a product table, since the IG has no rule.
+- The gateway image carries a patch to the core (`stack/onesa/fhir-gateway-balp-query-per-search.patch`) so that each search is audited once (IHE BALP Query), and a failed audit write is logged without failing the request.
 - Hep B's `vaccineCode.text` is the schedule display.
 - Registration works offline through an outbox; a registration the gateway refuses keeps its local records, marked refused with the reason on the Sync tab.
 - Fractional seconds are trimmed from downloaded records, because fhir-engine `2.0.0-alpha04` cannot index them.

@@ -3,6 +3,8 @@
 FROM maven:3.9.16-eclipse-temurin-21 AS gateway-build
 WORKDIR /src
 COPY --from=gateway . .
+COPY fhir-gateway-balp-query-per-search.patch /tmp/
+RUN git apply /tmp/fhir-gateway-balp-query-per-search.patch
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -B package -Dspotless.apply.skip=true -Dlicense.skip=true -DskipTests
 RUN cp exec/target/fhir-gateway-exec.jar /fhir-gateway.jar
