@@ -103,9 +103,11 @@ gcloud auth configure-docker <region>-docker.pkg.dev
 ./dev.sh push          # or ./dev.sh push v1; pushes the tag and latest
 ```
 
-`push [tag] [image...]` runs `./gradlew :services:vhl:installDist` and `make hcert-js` as the chosen images need, then builds and pushes `fhir-gateway`, `vhl`, `taifafeki-client` and `web-portal`, or only those named.
+`push [tag] [image...]` runs `./gradlew :services:vhl:installDist`, `:services:issuer:installDist` and `make hcert-js` as the chosen images need, then builds and pushes `fhir-gateway`, `vhl`, `issuer`, `taifafeki-client` and `web-portal`, or only those named.
 
-**CI builds the rest.** `.github/workflows/artifacts.yml` runs on pushes to `seed-from-template` and `main` (and by hand) and pushes `vhl`, `taifafeki-client` and `web-portal` as the short commit SHA and `latest`. Set these repository variables; a job whose variables are missing is skipped with a notice:
+The `issuer` image is Taifafeki's card signer: it needs no hostname, certificate or published port, because only the facility client calls it, over `taifafeki_net`; it mounts the TEST ONLY `testkit/XXR_CARD` key read-only.
+
+**CI builds the rest.** `.github/workflows/artifacts.yml` runs on pushes to `seed-from-template` and `main` (and by hand) and pushes `vhl`, `issuer`, `taifafeki-client` and `web-portal` as the short commit SHA and `latest`. Set these repository variables; a job whose variables are missing is skipped with a notice:
 
 | Variable | Value |
 |---|---|
@@ -260,7 +262,7 @@ Run `trust-demo watch --stack-env infra/.env` on the server and follow [Walk the
 ## Update
 
 ```
-git tag -s v0.2.0 && git push origin v0.2.0      # CI builds the APK and vhl, taifafeki-client, web-portal as v0.2.0
+git tag -s v0.2.0 && git push origin v0.2.0      # CI builds the APK and vhl, issuer, taifafeki-client, web-portal as v0.2.0
 infra/dev.sh push v0.2.0 fhir-gateway            # laptop: the gateway, from the private fork
 # laptop: set IMAGE_TAG=v0.2.0 in infra/.env, then
 infra/gcp/server.sh setup                        # pulls the code, copies .env

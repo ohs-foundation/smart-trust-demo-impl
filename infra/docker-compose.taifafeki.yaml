@@ -1,4 +1,4 @@
-# Taifafeki: Medplum and the facility client. Add-on to docker-compose.yaml, loaded by `./dev.sh up --taifafeki`.
+# Taifafeki: Medplum, the card issuer and the facility client. Add-on to docker-compose.yaml, loaded by `./dev.sh up --taifafeki`.
 # It reaches Onesa only through public names, so it can move to its own server with its own .env.
 # `make hcert-js` in the repo root builds the `hcert` build context; `trust-demo reset` writes the
 # secret files under ../stack/taifafeki/secrets.
@@ -84,6 +84,32 @@ services:
       retries: 10
       start_period: 60s
 
+  issuer:
+    build:
+      context: ..
+      dockerfile: services/issuer/Dockerfile
+    image: ${REGISTRY:-trust-demo}/issuer:${IMAGE_TAG:-local}
+    container_name: taifafeki-issuer
+    restart: unless-stopped
+    environment:
+      MEDPLUM_FHIR_URL: http://medplum:8103/fhir/R4
+      CARD_KEY_FILE: /run/keys/XXR_CARD.key.pem
+      CARD_CERT_FILE: /run/keys/XXR_CARD.crt.pem
+      JAVA_OPTS: -Xmx200m
+    volumes:
+      - ../testkit/XXR_CARD.key.pem:/run/keys/XXR_CARD.key.pem:ro
+      - ../testkit/XXR_CARD.crt.pem:/run/keys/XXR_CARD.crt.pem:ro
+    depends_on:
+      medplum:
+        condition: service_healthy
+    networks: [taifafeki_net]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   taifafeki-client:
     build:
       context: ../apps/taifafeki-client
@@ -97,6 +123,7 @@ services:
       MEDPLUM_BASE_URL: https://${MEDPLUM_HOST}
       MEDPLUM_INTERNAL_URL: http://medplum:8103
       CLIENT_ORIGIN: https://${CLIENT_HOST}
+      ISSUER_URL: http://issuer:8080
       MEDPLUM_CLIENT_ID_FILE: /run/secrets/medplum-client-id
       ONESA_VHL_HOSTS: ${VHL_HOST:?set VHL_HOST in .env to the public VHL hostname}
       CLINIC_KEY_FILE: /run/secrets/clinic-viewer.key
@@ -111,6 +138,8 @@ services:
       - "127.0.0.1:${CLIENT_PORT:-8087}:3000"
     depends_on:
       medplum:
+        condition: service_healthy
+      issuer:
         condition: service_healthy
     networks: [taifafeki_net]
     healthcheck:

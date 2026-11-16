@@ -16,9 +16,9 @@ Set `KEYCLOAK_HOST`, `GATEWAY_HOST`, `WEB_HOST` and `GATEWAY_PLUGIN_DIR` (a chec
 
 The VHL service runs from `../services/vhl/Dockerfile`, which packages `services/vhl/build/install/vhl`: run `./gradlew :services:vhl:installDist` in the repo root before `./dev.sh up`. The trust-list host serves the committed TEST ONLY `../testkit` list and DIDs as they are, so nothing needs generating; `./gradlew :libs:trustkit:generateTestKit` re-signs from the same keys and rewrites `testkit/local-test-list.json` and `testkit/gdhcn-signer-did.json`.
 
-Taifafeki (Medplum and the facility client) is the add-on `docker-compose.taifafeki.yaml`, started with `./dev.sh up --taifafeki`; it needs `make hcert-js` first and `trust-demo reset` to write its secret files, and it shares nothing with Onesa but public names.
+Taifafeki (Medplum, the card issuer and the facility client) is the add-on `docker-compose.taifafeki.yaml`, started with `./dev.sh up --taifafeki`; the issuer (`../services/issuer/Dockerfile`, so `./gradlew :services:issuer:installDist` first) is reachable only on `taifafeki_net`, with no vhost or published port, and mounts the TEST ONLY `../testkit/XXR_CARD` key read-only; it needs `make hcert-js` first and `trust-demo reset` to write its secret files, and it shares nothing with Onesa but public names.
 
-Set `REGISTRY` and `IMAGE_TAG` in `.env` to ship the demo's own images (`fhir-gateway`, `vhl`, `taifafeki-client`, `web-portal`) through a registry (the Portal image bakes in `WEB_HOST` and `KEYCLOAK_HOST`, so push with the server's names); the public images always come from their own.
+Set `REGISTRY` and `IMAGE_TAG` in `.env` to ship the demo's own images (`fhir-gateway`, `vhl`, `issuer`, `taifafeki-client`, `web-portal`) through a registry (the Portal image bakes in `WEB_HOST` and `KEYCLOAK_HOST`, so push with the server's names); the public images always come from their own.
 
 | Where | Command | Does |
 |---|---|---|

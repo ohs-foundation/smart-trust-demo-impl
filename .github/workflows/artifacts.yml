@@ -130,4 +130,4 @@ jobs:
           ./dev.sh init
           sed -i -e "s|^BASE_DOMAIN=.*|BASE_DOMAIN=$BASE|" -e "s|^REGISTRY=.*|REGISTRY=$REGISTRY|" .env
           if [ "$GITHUB_REF_TYPE" = tag ]; then tag="$GITHUB_REF_NAME"; else tag="$(git rev-parse --short HEAD)"; fi
-          ./dev.sh push "$tag" vhl taifafeki-client web-portal
+          ./dev.sh push "$tag" vhl issuer taifafeki-client web-portal

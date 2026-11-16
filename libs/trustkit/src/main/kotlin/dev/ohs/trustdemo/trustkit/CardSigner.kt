@@ -17,7 +17,13 @@ package dev.ohs.trustdemo.trustkit
 
 import dev.ohs.fhir.model.r4.Immunization
 import dev.ohs.fhir.model.r4.Patient
+import java.io.ByteArrayInputStream
+import java.security.KeyFactory
+import java.security.PrivateKey
 import java.security.Signature
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
+import java.security.spec.PKCS8EncodedKeySpec
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
@@ -31,7 +37,25 @@ import who.smart.trust.issuer.Validity
 import who.smart.trust.payloads.Payload
 import who.smart.trust.types.CoseAlgorithm
 
-/** Signs WHO DVC cards (HC1 text) through hcert-core's issuer, always with the XXR card key. */
+/** The key and certificate a card is signed with. */
+class CardKey(val privateKey: PrivateKey, val certificate: X509Certificate) {
+  companion object {
+    /** The committed XXR card key under `testkit/`; test only. */
+    val testkit: CardKey
+      get() = CardKey(TestKeys.privateKey(StandIn.XXR_CARD), TestKeys.certificate(StandIn.XXR_CARD))
+
+    /** A key from the PEM texts of a mounted key and its certificate. */
+    fun fromPem(keyPem: String, certificatePem: String): CardKey =
+      CardKey(
+        KeyFactory.getInstance("EC").generatePrivate(PKCS8EncodedKeySpec(TestKeys.pemDer(keyPem))),
+        CertificateFactory.getInstance("X.509")
+          .generateCertificate(ByteArrayInputStream(TestKeys.pemDer(certificatePem)))
+          as X509Certificate,
+      )
+  }
+}
+
+/** Signs WHO DVC cards (HC1 text) through hcert-core's issuer. */
 object CardSigner {
   private const val PRODUCT_SYSTEM =
     "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
@@ -41,7 +65,12 @@ object CardSigner {
   private const val VALID_DAYS = 365L
 
   /** The card for [dose], its dates moved by [clock]; valid from the shifted dose time. */
-  fun sign(dose: Immunization, patient: Patient, clock: StoryClock): String {
+  fun sign(
+    dose: Immunization,
+    patient: Patient,
+    clock: StoryClock = StoryClock.NONE,
+    key: CardKey = CardKey.testkit,
+  ): String {
     val givenAt = OffsetDateTime.parse(dose.occurrence.asDateTime()!!.value.value.toString())
     val issuedAt = givenAt.plusDays(clock.shiftDays())
     val request =
@@ -53,14 +82,14 @@ object CardSigner {
             iat = issuedAt.toEpochSecond(),
             exp = issuedAt.plus(VALID_DAYS, ChronoUnit.DAYS).toEpochSecond(),
           ),
-        dscDer = TestKeys.certificate(StandIn.XXR_CARD).encoded,
+        dscDer = key.certificate.encoded,
         alg = CoseAlgorithm.ES256,
         allowDevelopmentSubclaims = true,
       )
     val pending = ok(Hcert.issuer.prepare(request, Hcert.subclaims.newRegistry()))
     val signature =
       Signature.getInstance("SHA256withECDSA").run {
-        initSign(TestKeys.privateKey(StandIn.XXR_CARD))
+        initSign(key.privateKey)
         update(pending.toBeSigned())
         sign()
       }
@@ -68,11 +97,14 @@ object CardSigner {
   }
 
   /** The vaccination date a card carries, read without checking its signature or trust. */
-  fun vaccinationDate(hc1: String): LocalDate {
+  fun vaccinationDate(hc1: String): LocalDate = LocalDate.parse(vaccine(hc1).dv)
+
+  /** The product code a card carries, read without checking its signature or trust. */
+  fun product(hc1: String): String = vaccine(hc1).vp
+
+  private fun vaccine(hc1: String): DvcMinVaccineDetails {
     val card = ok(Hcert.verifier.readUnverified(hc1, Hcert.subclaims.newRegistry(), DEFAULT_LIMITS))
-    return LocalDate.parse(
-      card.entries.firstNotNullOf { it.payload as? Payload.DvcMin }.value.vx.dv
-    )
+    return card.entries.firstNotNullOf { it.payload as? Payload.DvcMin }.value.vx
   }
 
   private fun dvc(

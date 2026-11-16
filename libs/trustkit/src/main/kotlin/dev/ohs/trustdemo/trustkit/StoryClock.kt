@@ -23,4 +23,9 @@ class StoryClock(private val anchorIg: LocalDate, private val anchorReal: LocalD
   fun real(ig: LocalDate): LocalDate = ig.plusDays(shiftDays())
 
   fun shiftDays(): Long = ChronoUnit.DAYS.between(anchorIg, anchorReal)
+
+  companion object {
+    /** Records already on the real calendar. */
+    val NONE = StoryClock(LocalDate.EPOCH, LocalDate.EPOCH)
+  }
 }

@@ -35,6 +35,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -65,7 +66,7 @@ private const val ATTEMPTS_LEFT =
   "http://ohs.dev/fhir/trust-demo/StructureDefinition/passcode-attempts-left"
 
 class ReleaseRuleTest {
-  private var now = Instant.parse("2026-11-14T09:00:00Z")
+  private var now = Instant.now().truncatedTo(ChronoUnit.SECONDS)
   private val clock =
     object : Clock() {
       override fun getZone(): ZoneId = ZoneOffset.UTC
@@ -287,7 +288,7 @@ class ReleaseRuleTest {
           case.name,
         )
         assertEquals("110112", audit.getValue("type").jsonObject.text("code"), case.name)
-        assertEquals("2026-11-14T09:00:00Z", audit.text("recorded"), case.name)
+        assertEquals(now.toString(), audit.text("recorded"), case.name)
         assertFalse(audit.id().startsWith("TrustDemo"), case.name)
         if (case.reason == null) {
           assertEquals(HttpStatusCode.OK, response.status, case.name)

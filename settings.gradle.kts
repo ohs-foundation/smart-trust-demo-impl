@@ -63,6 +63,8 @@ include(":libs:hcert")
 
 include(":libs:trustkit")
 
+include(":services:issuer")
+
 include(":services:vhl")
 
 include(":tools:control")

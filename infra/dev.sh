@@ -295,13 +295,14 @@ cmd_push() {
     [[ -n "${REGISTRY:-}" ]] || error "Set REGISTRY in .env to the registry output of infra/gcp."
     local tag="${1:-$(git -C "$SCRIPT_DIR" rev-parse --short HEAD)}" name
     shift || true
-    local -a all=(fhir-gateway vhl taifafeki-client web-portal)
+    local -a all=(fhir-gateway vhl issuer taifafeki-client web-portal)
     local -a names=("$@")
     (( ${#names[@]} )) || names=("${all[@]}")
     for name in "${names[@]}"; do
         [[ " ${all[*]} " == *" $name "* ]] || error "Unknown image: $name. Choose from ${all[*]}."
     done
     if [[ " ${names[*]} " == *" vhl "* ]]; then (cd "$SCRIPT_DIR/.." && ./gradlew :services:vhl:installDist); fi
+    if [[ " ${names[*]} " == *" issuer "* ]]; then (cd "$SCRIPT_DIR/.." && ./gradlew :services:issuer:installDist); fi
     if [[ " ${names[*]} " == *" taifafeki-client "* ]]; then make -C "$SCRIPT_DIR/.." hcert-js; fi
     COMPOSE_FILES=(-f docker-compose.yaml -f docker-compose.taifafeki.yaml)
     IMAGE_TAG="$tag" compose build "${names[@]}"

@@ -74,6 +74,31 @@ services:
       retries: 10
       start_period: 60s
 
+  issuer:
+    build:
+      context: ../..
+      dockerfile: services/issuer/Dockerfile
+    image: trust-demo-issuer:local
+    restart: unless-stopped
+    environment:
+      MEDPLUM_FHIR_URL: http://medplum:8103/fhir/R4
+      CARD_KEY_FILE: /run/keys/XXR_CARD.key.pem
+      CARD_CERT_FILE: /run/keys/XXR_CARD.crt.pem
+      JAVA_OPTS: -Xmx200m
+    volumes:
+      - ../../testkit/XXR_CARD.key.pem:/run/keys/XXR_CARD.key.pem:ro
+      - ../../testkit/XXR_CARD.crt.pem:/run/keys/XXR_CARD.crt.pem:ro
+    mem_limit: 320m
+    depends_on:
+      medplum:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   client:
     build:
       context: ../../apps/taifafeki-client
@@ -86,6 +111,7 @@ services:
       MEDPLUM_BASE_URL: https://medplum.kesaro.${STACK_HOST}:${VHL_TLS_PORT}
       MEDPLUM_INTERNAL_URL: http://medplum:8103
       CLIENT_ORIGIN: https://client.kesaro.${STACK_HOST}:${VHL_TLS_PORT}
+      ISSUER_URL: http://issuer:8080
       MEDPLUM_CLIENT_ID_FILE: /run/secrets/medplum-client-id
       NODE_EXTRA_CA_CERTS: /run/secrets/tls/ca.crt
       ONESA_VHL_HOSTS: vhl.onesa.${STACK_HOST}:${VHL_TLS_PORT}
@@ -99,6 +125,9 @@ services:
       - ./secrets/clinic-viewer.crt:/run/secrets/clinic-viewer.crt:ro
       - ../tls/ca.crt:/run/secrets/tls/ca.crt:ro
     mem_limit: 256m
+    depends_on:
+      issuer:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 15s

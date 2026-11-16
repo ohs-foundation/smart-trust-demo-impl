@@ -37,6 +37,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,7 +56,7 @@ private const val FORM_BODY =
     "&recipient=Kesaro+clinic&passcode=482913"
 
 class SignedRequestsTest {
-  private var now = Instant.parse("2026-11-14T09:00:00Z")
+  private var now = Instant.now().truncatedTo(ChronoUnit.SECONDS)
   private val clinic = ClinicCertificates.issueClinicViewer("CN=clinic-viewer.kesaro.example")
   private val releases = mutableListOf<ReleaseRequest>()
   private var list: String = TrustListWriter.localTestList()

@@ -18,7 +18,7 @@ stack-up: hcert-js
 	mkdir -p stack/taifafeki/secrets
 	touch stack/taifafeki/secrets/medplum-client-id stack/taifafeki/secrets/clinic-viewer.key stack/taifafeki/secrets/clinic-viewer.crt
 	chmod 600 stack/taifafeki/secrets/clinic-viewer.key
-	./gradlew :services:vhl:installDist
+	./gradlew :services:vhl:installDist :services:issuer:installDist
 	docker compose -f stack/compose.yaml up -d --build --wait
 	docker compose -f stack/compose.yaml restart proxy
 

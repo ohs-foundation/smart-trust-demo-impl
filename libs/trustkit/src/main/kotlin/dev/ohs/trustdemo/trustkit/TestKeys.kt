@@ -61,9 +61,11 @@ object TestKeys {
   internal fun sha256(bytes: ByteArray): ByteArray =
     MessageDigest.getInstance("SHA-256").digest(bytes)
 
-  private fun pemBody(name: String): ByteArray =
+  private fun pemBody(name: String): ByteArray = pemDer(testkitText(name))
+
+  internal fun pemDer(pem: String): ByteArray =
     Base64.getMimeDecoder()
-      .decode(testkitText(name).lines().filterNot { it.startsWith("-----") }.joinToString(""))
+      .decode(pem.lines().filterNot { it.startsWith("-----") }.joinToString(""))
 
   internal fun testkitText(name: String): String =
     checkNotNull(TestKeys::class.java.getResource("/$name")) { "testkit/$name is missing" }
