@@ -206,6 +206,7 @@ Refusal paths, all at J4.1:
 - Hep B's `vaccineCode.text` is the schedule display.
 - Registration works offline through an outbox; a registration the gateway refuses keeps its local records, marked refused with the reason on the Sync tab.
 - Fractional seconds are trimmed from downloaded records, because fhir-engine `2.0.0-alpha04` cannot index them.
+- A Consent's `sourceAttachment` is dropped from the phone's copy, because fhir-engine `2.0.0-alpha04` indexes it as a reference and fails; the phone never uploads Consents.
 - The clinic's server sees the link's key once, while verifying the link's signature; it never stores it or returns it; the browser decrypts with its own copy.
 
 ## Security boundaries
