@@ -184,7 +184,7 @@ class FamilyTest {
     val refusal =
       assertFailsWith<CliktError> { Families(hapi.server, keycloak.admin).add("Father", "juma") }
     assertContains(refusal.message.orEmpty(), "its manager is RelatedPerson/RpMother")
-    assertContains(refusal.message.orEmpty(), "as the informant")
+    assertContains(refusal.message.orEmpty(), "with this parent holding the wallet")
     assertTrue(keycloak.users.isEmpty())
   }
 

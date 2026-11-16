@@ -90,8 +90,9 @@ class Families(
     throw CliktError(
       "No household is managed by Patient/$patientId" +
         (manager?.let { " — its manager is $it, another parent" } ?: "") +
-        ": the wallet finds a household only through its manager, the informant of the " +
-        "registration. Register the newborn in J2 with this parent as the informant"
+        ": the wallet finds a household only through its manager, the parent the J2 form " +
+        "names to hold the family's health wallet. Register the newborn in J2 with this parent " +
+        "holding the wallet"
     )
   }
 

@@ -81,9 +81,29 @@
     },
     {
       "linkId": "relationship",
-      "text": "Who is giving this information?",
+      "text": "Which parent will hold the family's health wallet?",
       "type": "choice",
       "required": true,
+      "item": [
+        {
+          "linkId": "relationship-help",
+          "text": "They are also recorded as the person giving this information.",
+          "type": "display",
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-displayCategory",
+              "valueCodeableConcept": {
+                "coding": [
+                  {
+                    "system": "http://hl7.org/fhir/questionnaire-display-category",
+                    "code": "instructions"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
       "answerOption": [
         {
           "valueCoding": {
