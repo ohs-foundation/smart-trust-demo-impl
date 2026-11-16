@@ -52,6 +52,7 @@ tofu output
 | `registry` | `REGISTRY` in `infra/.env` |
 | `github_workload_identity_provider` | `GCP_WORKLOAD_IDENTITY_PROVIDER` repository secret (CI, below) |
 | `github_ci_service_account` | `GCP_CI_SERVICE_ACCOUNT` repository secret (CI, below) |
+| `apk_bucket` | `APK_BUCKET` repository secret (CI, below) |
 | `ssh` | a ready `gcloud compute ssh ... --tunnel-through-iap` command |
 | `dns_records` | the three records of step 2 |
 
@@ -115,13 +116,14 @@ The `issuer` image is Taifafeki's card signer: it needs no hostname, certificate
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | `github_workload_identity_provider` output |
 | `GCP_CI_SERVICE_ACCOUNT` | `github_ci_service_account` output |
 | `REGISTRY` | `registry` output |
+| `APK_BUCKET` | `apk_bucket` output |
 
 ```
 gh secret set LIVE_BASE_DOMAIN -R owner/repo -b demo.example.org
 gh secret set REGISTRY -R owner/repo -b <registry output>     # and the two GCP_* secrets
 ```
 
-The workflow runs on pushes to `seed-from-template` and `main`, by hand (`gh workflow run artifacts.yml`), and on version tags: `git tag -s v0.1.0 && git push origin v0.1.0` builds the APK `onesa-v0.1.0` and the images tagged `v0.1.0` and `latest`; a branch push tags them with the short commit SHA. The APK carries the live URLs, so it is not an Actions artifact: CI uploads it to the `<repository>-apk` generic Artifact Registry repository, and `gcloud artifacts generic download --project=<project> --location=<region> --repository=<repository>-apk --package=onesa --version=<tag> --destination=.` fetches it.
+The workflow runs on pushes to `seed-from-template` and `main`, by hand (`gh workflow run artifacts.yml`), and on version tags: `git tag -s v0.1.0 && git push origin v0.1.0` builds the APK `onesa-v0.1.0` and the images tagged `v0.1.0` and `latest`; a branch push tags them with the short commit SHA. The APK carries the live URLs, so it is not an Actions artifact: CI uploads it to the private APK bucket as `onesa-<tag or short SHA>.apk` and `onesa-latest.apk`, and `gcloud storage cp gs://<bucket>/onesa-latest.apk .` fetches it.
 
 CI never builds `fhir-gateway`: its plugin comes from a private fork. Push it from the laptop with `GATEWAY_PLUGIN_DIR` set: `./dev.sh push <sha> fhir-gateway`, using the SHA CI tagged so the server pulls one `IMAGE_TAG` for all four.
 
@@ -229,7 +231,7 @@ tools/control/build/install/control/bin/trust-demo reset --stack-env infra/.env
 
 ### 6. APK
 
-CI builds a debug APK for test phones when `LIVE_BASE_DOMAIN` is set and, with the GCP secrets set, uploads it to the private `<repository>-apk` generic repository as package `onesa`, version the short SHA or tag. To build a release APK yourself, on the laptop:
+CI builds a debug APK for test phones when `LIVE_BASE_DOMAIN` is set and, with the GCP secrets set, uploads it to the private APK bucket as `onesa-<short SHA or tag>.apk` and `onesa-latest.apk`; per-build copies are deleted after 30 days. To build a release APK yourself, on the laptop:
 
 Release signing uses `keystore.properties` (`keystore.properties.template`).
 
@@ -280,4 +282,4 @@ Without a tag, CI tags images with the short commit SHA; `./dev.sh push <tag>` o
 cd infra/gcp && tofu destroy
 ```
 
-This removes the VM, address, registry and network. The project is kept (`deletion_policy = "PREVENT"`); delete it in the console if you want it gone. Remove the DNS records yourself.
+This removes the VM, address, registry, APK bucket and network. The project is kept (`deletion_policy = "PREVENT"`); delete it in the console if you want it gone. Remove the DNS records yourself.

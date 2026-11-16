@@ -15,3 +15,5 @@ repository: trust-demo
 server_name: trust-demo
 # owner/repo allowed to push images from CI (Workload Identity Federation); leave out for no CI access.
 github_repository: my-org/my-trust-demo
+# Private bucket for the debug APK; bucket names are global, so the default is <project_id>-apk.
+apk_bucket: my-trust-demo-apk

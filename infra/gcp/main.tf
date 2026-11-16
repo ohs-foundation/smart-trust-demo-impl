@@ -12,6 +12,7 @@ resource "google_project_service" "apis" {
     "artifactregistry.googleapis.com",
     "iap.googleapis.com",
     "iamcredentials.googleapis.com",
+    "storage.googleapis.com",
     "sts.googleapis.com",
   ])
   project            = google_project.demo.project_id
@@ -28,13 +29,23 @@ resource "google_artifact_registry_repository" "images" {
   depends_on    = [google_project_service.apis]
 }
 
-resource "google_artifact_registry_repository" "apk" {
-  project       = google_project.demo.project_id
-  location      = local.region
-  repository_id = "${local.repository}-apk"
-  format        = "GENERIC"
-  description   = "The debug APK, which embeds the live URLs, so it stays out of public CI artifacts"
-  depends_on    = [google_project_service.apis]
+resource "google_storage_bucket" "apk" {
+  project                     = google_project.demo.project_id
+  name                        = local.apk_bucket
+  location                    = local.region
+  uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
+  force_destroy               = true
+  # CI stamps only the per-build copies with a custom time, so onesa-latest.apk is never aged out.
+  lifecycle_rule {
+    condition {
+      days_since_custom_time = 30
+    }
+    action {
+      type = "Delete"
+    }
+  }
+  depends_on = [google_project_service.apis]
 }
 
 resource "google_compute_network" "demo" {
@@ -96,6 +107,18 @@ resource "google_artifact_registry_repository_iam_member" "server_pull" {
   repository = google_artifact_registry_repository.images.repository_id
   role       = "roles/artifactregistry.reader"
   member     = "serviceAccount:${google_service_account.server.email}"
+}
+
+resource "google_storage_bucket_iam_member" "server_apk_read" {
+  bucket = google_storage_bucket.apk.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.server.email}"
+}
+
+resource "google_service_account_iam_member" "server_sign_self" {
+  service_account_id = google_service_account.server.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.server.email}"
 }
 
 resource "google_project_iam_member" "server_logs" {
@@ -184,13 +207,12 @@ resource "google_artifact_registry_repository_iam_member" "ci_push" {
   member     = "serviceAccount:${google_service_account.ci[0].email}"
 }
 
-resource "google_artifact_registry_repository_iam_member" "ci_apk_upload" {
-  count      = local.github_repo == "" ? 0 : 1
-  project    = google_project.demo.project_id
-  location   = google_artifact_registry_repository.apk.location
-  repository = google_artifact_registry_repository.apk.repository_id
-  role       = "roles/artifactregistry.writer"
-  member     = "serviceAccount:${google_service_account.ci[0].email}"
+# objectUser, not objectCreator: replacing onesa-latest.apk needs delete as well as create.
+resource "google_storage_bucket_iam_member" "ci_apk_upload" {
+  count  = local.github_repo == "" ? 0 : 1
+  bucket = google_storage_bucket.apk.name
+  role   = "roles/storage.objectUser"
+  member = "serviceAccount:${google_service_account.ci[0].email}"
 }
 
 resource "google_service_account_iam_member" "ci_github" {

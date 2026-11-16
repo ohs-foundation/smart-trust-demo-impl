@@ -57,11 +57,13 @@ jobs:
     env:
       BASE: ${{ secrets.LIVE_BASE_DOMAIN }}
       REGISTRY: ${{ secrets.REGISTRY }}
+      APK_BUCKET: ${{ secrets.APK_BUCKET }}
     steps:
       - name: Mask derived values
         run: |
           for host in keycloak gateway vhl; do echo "::add-mask::$host.onesa.$BASE"; done
           echo "::add-mask::trust.gdhcn.$BASE"
+          if [ -n "$APK_BUCKET" ]; then echo "::add-mask::$APK_BUCKET"; echo "::add-mask::gs://$APK_BUCKET"; fi
           if [ -n "$REGISTRY" ]; then
             echo "::add-mask::${REGISTRY%%/*}"
             echo "::add-mask::${REGISTRY#*/}"
@@ -104,20 +106,19 @@ jobs:
           service_account: ${{ secrets.GCP_CI_SERVICE_ACCOUNT }}
 
       # A public repository's artifacts are downloadable by any GitHub user, and the APK embeds the live URLs.
+      # The custom time marks the per-build copy for the bucket's 30-day lifecycle rule; onesa-latest.apk has none.
       - name: Publish the APK privately
-        if: ${{ needs.gate.outputs.gcp == 'true' }}
+        if: ${{ needs.gate.outputs.gcp == 'true' && env.APK_BUCKET != '' }}
         env:
           VERSION: ${{ steps.version.outputs.tag }}
         run: |
-          host="${REGISTRY%%/*}"
-          path="${REGISTRY#*/}"
-          gcloud artifacts generic upload --quiet \
-            --project="${path%%/*}" --location="${host%-docker.pkg.dev}" --repository="${path#*/}-apk" \
-            --package=onesa --version="${VERSION,,}" \
-            --source="$(ls apps/onesa/android/build/outputs/apk/debug/*.apk)" > /dev/null
+          apk="$(ls apps/onesa/android/build/outputs/apk/debug/*.apk)"
+          type=application/vnd.android.package-archive
+          gcloud storage cp --content-type="$type" --custom-time="$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$apk" "gs://$APK_BUCKET/onesa-$VERSION.apk"
+          gcloud storage cp --content-type="$type" "$apk" "gs://$APK_BUCKET/onesa-latest.apk"
 
-      - if: ${{ needs.gate.outputs.gcp != 'true' }}
-        run: echo "::notice title=APK not published::Set the GCP secrets to publish the APK to the private artifact repository."
+      - if: ${{ needs.gate.outputs.gcp != 'true' || env.APK_BUCKET == '' }}
+        run: echo "::notice title=APK not published::Set the GCP secrets and APK_BUCKET to publish the APK to the private bucket."
 
   images:
     name: Server images

@@ -24,7 +24,7 @@ output "github_ci_service_account" {
   description = "GCP_CI_SERVICE_ACCOUNT secret; null until github_repository is set"
 }
 
-output "apk_repository" {
-  value       = google_artifact_registry_repository.apk.repository_id
-  description = "Generic repository holding the debug APK; CI uploads it, the owner downloads it with gcloud artifacts generic download"
+output "apk_bucket" {
+  value       = google_storage_bucket.apk.name
+  description = "APK_BUCKET secret and infra/.env line; CI uploads the debug APK there, trust-demo apk-link shares it"
 }
