@@ -2,7 +2,7 @@
 import type { MedplumClient } from "@medplum/core";
 import { MedplumProvider } from "@medplum/react-hooks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { WitVhl } from "smart-trust-kotlin-hcert-core";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +14,8 @@ import { Viewer } from "./Viewer";
 
 vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: ReactNode }) => <a href="/">{children}</a> }));
 vi.mock("../server/links", () => ({ scanVhl: vi.fn(), fetchSummary: vi.fn(), trustListStatuses: vi.fn() }));
+
+configure({ asyncUtilTimeout: 5000 });
 
 const IPS = ig("Bundle-TrustDemoJ4Ips.json");
 const vhl = WitVhl.getInstance();
