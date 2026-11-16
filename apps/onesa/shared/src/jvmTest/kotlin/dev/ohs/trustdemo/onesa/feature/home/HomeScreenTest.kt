@@ -161,6 +161,18 @@ class HomeScreenTest {
     }
   }
 
+  /** Lets the sync that reaching Home starts succeed, then answers a tap with [tapped]. */
+  private fun arrivalThen(tapped: suspend () -> SyncJobStatus): suspend () -> SyncJobStatus {
+    var arrived = false
+    return {
+      if (arrived) tapped()
+      else {
+        arrived = true
+        SyncJobStatus.Succeeded()
+      }
+    }
+  }
+
   private fun ComposeUiTest.waitForText(text: String) =
     waitUntil(timeoutMillis = 5_000L) {
       onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
@@ -204,6 +216,18 @@ class HomeScreenTest {
     onNodeWithContentDescription("Back").performClick()
     waitForText("Select a household to view details")
     assertTrue(onAllNodesWithContentDescription("Back").fetchSemanticsNodes().isEmpty())
+  }
+
+  @Test
+  fun reachingHome_startsOneSync() = runComposeUiTest {
+    val fake = FakeSyncManager { SyncJobStatus.Succeeded() }
+    startTestKoin(fake)
+    setContent { Home() }
+
+    waitUntil(timeoutMillis = 5_000L) { fake.syncNowCount == 1 }
+    onNodeWithText("Sync").performClick()
+    waitForText("Sync Now")
+    assertEquals(1, fake.syncNowCount)
   }
 
   @Test
@@ -251,10 +275,12 @@ class HomeScreenTest {
     val syncStarted = CompletableDeferred<Unit>()
     val releaseSyncResult = CompletableDeferred<SyncJobStatus>()
     startTestKoin(
-      FakeSyncManager {
-        syncStarted.complete(Unit)
-        releaseSyncResult.await()
-      }
+      FakeSyncManager(
+        arrivalThen {
+          syncStarted.complete(Unit)
+          releaseSyncResult.await()
+        }
+      )
     )
     val registry = buildAppViewRegistry()
     setContent {
@@ -295,10 +321,13 @@ class HomeScreenTest {
   fun tappingCancelSync_whileSyncing_callsCancelAndShowsCancelledMessage() = runComposeUiTest {
     val syncStarted = CompletableDeferred<Unit>()
     val releaseSyncResult = CompletableDeferred<SyncJobStatus>()
-    val fake = FakeSyncManager {
-      syncStarted.complete(Unit)
-      releaseSyncResult.await()
-    }
+    val fake =
+      FakeSyncManager(
+        arrivalThen {
+          syncStarted.complete(Unit)
+          releaseSyncResult.await()
+        }
+      )
     startTestKoin(fake)
     val registry = buildAppViewRegistry()
     setContent {

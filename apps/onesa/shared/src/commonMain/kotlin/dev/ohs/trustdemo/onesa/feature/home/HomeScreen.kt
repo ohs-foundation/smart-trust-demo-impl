@@ -40,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass
 import dev.ohs.fhir.engine.sync.FhirDataStore
@@ -131,6 +133,7 @@ fun HomeScreen(
 ) {
   val homeViewModel: HomeViewModel = koinViewModel()
   val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+  LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { homeViewModel.syncOnArrival() }
   val statusViewModel: SyncStatusViewModel = koinViewModel()
   val pending by statusViewModel.pending.collectAsStateWithLifecycle()
   LaunchedEffect(uiState.isSyncing) { if (!uiState.isSyncing) statusViewModel.refresh() }

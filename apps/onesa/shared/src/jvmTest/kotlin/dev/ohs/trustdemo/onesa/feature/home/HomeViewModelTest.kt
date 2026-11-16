@@ -24,6 +24,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 
@@ -53,6 +56,10 @@ private class RecordingSyncManager(
   override suspend fun startPeriodicSync() {}
 
   override suspend fun cancelPeriodicSync() {}
+}
+
+private class TestClock(var now: Instant) : Clock {
+  override fun now() = now
 }
 
 class HomeViewModelTest {
@@ -171,6 +178,53 @@ class HomeViewModelTest {
 
     viewModel.clearSyncError()
 
+    assertNull(viewModel.uiState.value.syncError)
+  }
+
+  @Test
+  fun syncOnArrival_twiceWithin30Seconds_syncsOnce() = runTest {
+    val fhirDataStore = newFhirDataStore()
+    val fake = RecordingSyncManager(fhirDataStore) { SyncJobStatus.Succeeded() }
+    val clock = TestClock(Instant.parse("2026-11-16T09:00:00Z"))
+    val viewModel = HomeViewModel(fake, fhirDataStore, clock)
+
+    viewModel.syncOnArrival()?.join()
+    clock.now += 29.seconds
+    assertNull(viewModel.syncOnArrival())
+    assertEquals(1, fake.invocationCount)
+
+    viewModel.syncNow()?.join()
+    assertEquals(2, fake.invocationCount, "a tap on Sync Now is not throttled")
+
+    clock.now += 2.seconds
+    viewModel.syncOnArrival()?.join()
+    assertEquals(3, fake.invocationCount)
+  }
+
+  @Test
+  fun syncOnArrival_whileASyncRuns_startsNone() = runTest {
+    val fhirDataStore = newFhirDataStore()
+    val release = CompletableDeferred<SyncJobStatus>()
+    val fake = RecordingSyncManager(fhirDataStore) { release.await() }
+    val viewModel = HomeViewModel(fake, fhirDataStore)
+
+    val running = viewModel.syncNow()
+    assertNull(viewModel.syncOnArrival())
+    release.complete(SyncJobStatus.Succeeded())
+    running?.join()
+
+    assertEquals(1, fake.invocationCount)
+  }
+
+  @Test
+  fun syncOnArrival_onFailure_setsNoSyncError() = runTest {
+    val fhirDataStore = newFhirDataStore()
+    val viewModel =
+      HomeViewModel(RecordingSyncManager(fhirDataStore) { SyncJobStatus.Failed() }, fhirDataStore)
+
+    viewModel.syncOnArrival()?.join()
+
+    assertEquals(false, viewModel.uiState.value.isSyncing)
     assertNull(viewModel.uiState.value.syncError)
   }
 }
