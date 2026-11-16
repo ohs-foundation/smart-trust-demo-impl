@@ -15,6 +15,8 @@ ALLOWED = {
     "localhost": "loopback",
     "token.actions.githubusercontent.com": "GitHub Actions OIDC issuer the GCP config trusts for keyless CI, an identifier",
     "quay.io": "container registry the stack pulls the Keycloak image from, pinned by tag",
+    "us-docker.pkg.dev": "registry the pipeline controller image is pulled from, pinned by tag",
+    "superset.app": "the Python module superset.app in the Superset gunicorn entry point, not a host",
     ".googleapis.com": "Google Cloud APIs the GCP OpenTofu config enables",
     "-docker.pkg.dev": "Artifact Registry's <region>-docker.pkg.dev, interpolated in the GCP OpenTofu config",
     "download.docker.com": "Docker's apt repository the GCP server installs Docker from",

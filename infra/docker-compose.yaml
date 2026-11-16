@@ -224,6 +224,88 @@ services:
         condition: service_started
     networks: [fhir_net]
 
+  postgres-analytics:
+    profiles: [pipes]
+    image: postgres:18
+    container_name: ohs-postgres-analytics
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_analytics_data:/var/lib/postgresql
+      - ./data-pipes/postgres-init.sql:/docker-entrypoint-initdb.d/01-analytics-init.sql:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_ANALYTICS_PORT:-5434}:5432"
+    networks: [fhir_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  pipeline-controller:
+    profiles: [pipes]
+    image: us-docker.pkg.dev/cloud-build-fhir/fhir-analytics/main:0.6.0
+    platform: linux/amd64
+    container_name: ohs-pipeline-controller
+    restart: unless-stopped
+    depends_on:
+      postgres-analytics:
+        condition: service_healthy
+      hapi-fhir:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${PIPELINE_PORT:-8090}:8080"
+    environment:
+      - JAVA_OPTS=${PIPELINE_JAVA_OPTS:--Xms512m -Xmx4g}
+      - FHIRDATA_FHIRSERVERURL=${PIPELINE_FHIR_SOURCE:-http://hapi-fhir:8080/fhir}
+      - FHIRDATA_SINKDBCONFIGPATH=config/postgres-analytics.json
+    volumes:
+      # This REPLACES the image's own /app/config rather than merging with it, so
+      # every file the controller expects there has to exist on this side too.
+      # The image ships application.yaml, views/, sample JDBC configs and
+      # flink-conf.yaml, and FLINK_CONF_DIR points at that directory. Omitting
+      # flink-conf.yaml costs a pipeline run: Flink reads it during static
+      # initialisation and throws IllegalConfigurationException, which surfaces as
+      # an ExceptionInInitializerError with no mention of the mount.
+      - ./data-pipes/config:/app/config:ro
+      - ./data-pipes/dwh:/dwh
+    networks: [fhir_net]
+
+  superset:
+    profiles: [pipes]
+    image: apache/superset:6.1.0
+    container_name: ohs-superset
+    restart: unless-stopped
+    user: root
+    depends_on:
+      postgres-analytics:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${SUPERSET_PORT:-8088}:8088"
+    environment:
+      - SUPERSET_SECRET_KEY=${SUPERSET_SECRET_KEY}
+      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://postgres:${POSTGRES_ADMIN_PASSWORD}@postgres-analytics:5432/superset
+    volumes:
+      - superset_home:/app/superset_home
+    command:
+      - sh
+      - -c
+      - |
+        superset db upgrade &&
+        superset fab create-admin \
+          --username ${SUPERSET_ADMIN_USERNAME:-admin} \
+          --firstname OHS \
+          --lastname Admin \
+          --email admin@ohs.local \
+          --password ${SUPERSET_ADMIN_PASSWORD} || true &&
+        superset init &&
+        gunicorn --bind 0.0.0.0:8088 --workers 2 --timeout 120 'superset.app:create_app()'
+    networks: [fhir_net]
+
 networks:
   fhir_net:
     external: false
