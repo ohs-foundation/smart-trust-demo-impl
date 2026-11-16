@@ -30,6 +30,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 
 /**
+ * Every AuditEvent but the gateway's read audits (action R): its write audits, the apps' scan
+ * audits and the VHL service's accesses, so a read never wakes `watch`.
+ */
+internal const val WATCH_CRITERIA = "AuditEvent?action=C,U,D,E"
+
+/**
  * Puts both countries into the story's starting state, before journey J1: Onesa's HAPI server and
  * Taifafeki's Medplum project, and in [secretsDir] the clinic certificate and the facility client's
  * id.
@@ -71,7 +77,7 @@ class Reset(
         Resource.serializer(),
         """{"resourceType":"Subscription","id":"TrustDemoWatch","status":"requested",
           "reason":"trust-demo watch follows the story as the apps write records",
-          "criteria":"AuditEvent?",
+          "criteria":"$WATCH_CRITERIA",
           "channel":{"type":"rest-hook","endpoint":"http://host.docker.internal:$watchPort/hook"}}""",
       )
     return Bundle(

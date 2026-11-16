@@ -106,6 +106,14 @@ class SharedLinksTest {
   }
 
   @Test
+  fun aGatewayReadOfTheConsentIsNotALook() = runTest {
+    twoSharesForSomsak()
+    repository.upsert(decode(gatewayRead("r1", "Consent/c1")))
+
+    assertEquals(emptyList(), linksOver(HttpStatusCode.OK).list().flatMap { it.looks })
+  }
+
+  @Test
   fun withdrawingOneShareLeavesTheOtherWorking() = runTest {
     twoSharesForSomsak()
     val shared = linksOver(HttpStatusCode.OK)
@@ -207,4 +215,18 @@ class SharedLinksTest {
       "source":{"observer":{"display":"Onesa VHL service"}},
       "entity":[$entities]}"""
   }
+
+  private fun gatewayRead(id: String, what: String) =
+    """{"resourceType":"AuditEvent","id":"$id",
+      "meta":{"profile":["https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientRead"]},
+      "type":{"system":"http://terminology.hl7.org/CodeSystem/audit-event-type","code":"rest"},
+      "subtype":[{"system":"http://hl7.org/fhir/restful-interaction","code":"read"}],
+      "action":"R","recorded":"2026-11-14T09:20:00Z","outcome":"0",
+      "agent":[{"who":{"identifier":{"system":"http://keycloak.test/realms/onesa","value":"bounmy-sub"},
+                "display":"bounmy"},"requestor":true}],
+      "source":{"observer":{"display":"http://gateway.test/fhir"}},
+      "entity":[{"what":{"reference":"Patient/somsak"},
+                 "role":{"system":"http://terminology.hl7.org/CodeSystem/object-role","code":"1"}},
+                {"what":{"reference":"$what"},
+                 "role":{"system":"http://terminology.hl7.org/CodeSystem/object-role","code":"4"}}]}"""
 }

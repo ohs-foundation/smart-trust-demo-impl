@@ -112,7 +112,7 @@ class ResetTest {
         .run(today)
     }
     val subscription = hapi.stored.values.filterIsInstance<Subscription>().single()
-    assertEquals("AuditEvent?", subscription.criteria.value)
+    assertEquals(WATCH_CRITERIA, subscription.criteria.value)
     assertEquals(
       "http://host.docker.internal:$WATCH_PORT/hook",
       subscription.channel.endpoint?.value,
