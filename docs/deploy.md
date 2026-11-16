@@ -247,6 +247,8 @@ Install the APK on the phones. Release trusts the system CAs, so the public cert
 
 Run `trust-demo watch --stack-env infra/.env` on the server and follow [Walk the story](../README.md#walk-the-story). Logins are in `infra/.env` (`TRUSTDEMO_USER_PASSWORD`).
 
+For a new household, `trust-demo family add --patient <id> --username <name> --stack-env infra/.env` creates the parent's wallet login through Keycloak on loopback (`KEYCLOAK_PORT`), and `--newborn <hospital number>` on `status`, `journeys`, `inspect` and `watch` follows that child.
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |

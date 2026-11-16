@@ -29,6 +29,7 @@ import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
 import com.github.ajalt.mordant.input.interactiveSelectList
 import com.github.ajalt.mordant.terminal.YesNoPrompt
@@ -76,6 +77,15 @@ private class Stack(env: StackEnv, envFile: Path) {
   val secretsDir = urls.secretsDir
   val watchPort = urls.watchPort
   val onesa = FhirServer(hapiUrl, { null }, serverEngine())
+  val keycloak by lazy {
+    KeycloakAdmin(
+      urls.keycloakAdmin,
+      env.optional("KEYCLOAK_REALM") ?: "onesa",
+      env.optional("GATEWAY_CLIENT_ID") ?: "onesa-fhir-gateway",
+      env.require("FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET"),
+      serverEngine(),
+    )
+  }
   val kesaro =
     MedplumAdmin(
       medplumUrl,
@@ -226,6 +236,29 @@ class ExpireConsentsCommand : StackCommand("expire-consents") {
   }
 }
 
+class FamilyCommand : CliktCommand(name = "family") {
+  override fun help(context: Context) = "Manage the family wallet's logins."
+
+  override fun run() = Unit
+}
+
+class FamilyAddCommand : StackCommand("add") {
+  private val patient by option("--patient", help = "The parent's Patient id on Onesa").required()
+  private val username by option("--username", help = "The new login's name").required()
+
+  override fun help(context: Context) =
+    "Create a family login for a registered parent, with a one-time password."
+
+  override fun run() = runBlocking {
+    val stack = Stack(StackEnv.load(stackEnv), stackEnv)
+    val login = Families(stack.onesa, stack.keycloak).add(patient, username)
+    echo("Created ${login.username} for ${login.patient}; the wallet will open ${login.household}.")
+    echo(
+      "One-time password (shown once; Keycloak asks for a new one at first sign-in): ${login.password}"
+    )
+  }
+}
+
 fun trustDemo() =
   TrustDemo()
     .subcommands(
@@ -236,6 +269,7 @@ fun trustDemo() =
       QrCommand(),
       InspectCommand(),
       TimeCommand().subcommands(MoveCommand(), ExpireConsentsCommand()),
+      FamilyCommand().subcommands(FamilyAddCommand()),
     )
 
 fun main(args: Array<String>) = trustDemo().main(args)

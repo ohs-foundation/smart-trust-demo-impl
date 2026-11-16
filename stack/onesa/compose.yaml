@@ -43,6 +43,9 @@ services:
       - --hostname-strict=false
       - --health-enabled=true
       - --import-realm
+    # Loopback only, for the trust-demo CLI's family logins; the proxy keeps the admin API off the LAN.
+    ports:
+      - "127.0.0.1:${KEYCLOAK_HOST_PORT:-18083}:8080"
     mem_limit: 1200m
     depends_on:
       onesa-postgres:

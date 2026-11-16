@@ -19,16 +19,18 @@ import com.github.ajalt.clikt.core.CliktError
 import java.nio.file.Path
 
 private const val DEFAULT_WATCH_PORT = 18090
+private const val DEFAULT_KEYCLOAK_PORT = 18083
 
 /**
  * Where the stack's services are, worked out from either env file: `stack/.env` (hostnames under
  * sslip.io, HTTP on the proxy port, HTTPS only for VHL and the facility client) or `infra/.env`
- * (HTTPS on 443 under the base domain, HAPI on loopback).
+ * (HTTPS on 443 under the base domain, HAPI and Keycloak on loopback).
  */
 class StackUrls
 private constructor(
   val hapi: String,
   val keycloak: String,
+  val keycloakAdmin: String,
   val gateway: String,
   val medplum: String,
   val clientOrigin: String,
@@ -48,6 +50,8 @@ private constructor(
         return StackUrls(
           hapi = "http://127.0.0.1:${env.require("HAPI_HOST_PORT")}/fhir",
           keycloak = "http://keycloak.onesa.$http",
+          keycloakAdmin =
+            "http://127.0.0.1:${env.optional("KEYCLOAK_HOST_PORT") ?: DEFAULT_KEYCLOAK_PORT}",
           gateway = "http://gateway.onesa.$http",
           medplum = "http://medplum.kesaro.$http",
           clientOrigin = "https://client.kesaro.$tls",
@@ -67,6 +71,7 @@ private constructor(
       return StackUrls(
         hapi = "http://127.0.0.1:${env.require("HAPI_FHIR_PORT")}/fhir",
         keycloak = host("KEYCLOAK_HOST", "keycloak.onesa"),
+        keycloakAdmin = "http://127.0.0.1:${env.optional("KEYCLOAK_PORT") ?: "8081"}",
         gateway = host("GATEWAY_HOST", "gateway.onesa"),
         medplum = host("MEDPLUM_HOST", "medplum.kesaro"),
         clientOrigin = host("CLIENT_HOST", "client.kesaro"),

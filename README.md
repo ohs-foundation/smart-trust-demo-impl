@@ -141,9 +141,18 @@ The debug build trusts `stack/tls/ca.crt`, so `make stack-up` comes first. Sign 
 | `journeys` | each app's box with its journeys, live from the records; also heads `status` |
 | `inspect [J1\|J2\|J3a\|J3b\|Year\|J4.0\|J4.1]` | the records behind the current or named step (`--json` in full) |
 | `watch` | follows the story live from HAPI's webhook and a poll |
+| `family add --patient <id> --username <name>` | a family-wallet login for a registered parent, with a one-time password (needs `FHIR_GATEWAY_KEYCLOAK_CLIENT_SECRET` in the env file) |
 | `qr <card>` | prints a test QR (`--text` for pasting) |
 | `time move J4.0` | shifts every story date so J4.0 falls today (`--dry-run`, `--with-year-doses`) |
 | `time expire-consents` | ends the current consents a minute ago |
+
+`status`, `journeys`, `inspect` and `watch` follow Somsak unless given `--newborn <hospital number>`. A
+newborn is found on Medplum by that number and on Onesa through the fingerprints of the cards issued for it.
+
+`family add` refuses a Patient that is not on Onesa, a username or parent that already has a login, and a parent
+who is not the household's manager: the wallet finds a household through the Group's `managingEntity`, the
+informant of Register Household, reached from the parent's Patient link to that RelatedPerson. The login carries
+`fhirUser=Patient/<id>` and the family group, as `bounmy` does, and Keycloak asks for a new password at first sign-in.
 
 Run on its own in a terminal, `trust-demo` opens an arrow-key menu (map, current step, QR, inspect,
 watch, move time, reset). Piped, or without colour or Unicode, the map falls back to ASCII.
@@ -176,6 +185,13 @@ Refusal paths, all at J4.1:
 | Withdrawn | Bounmy withdraws the link in the wallet, then Dr Anan opens it |
 | Expired | `trust-demo time expire-consents`, then open the link |
 | Unknown key | paste the output of `trust-demo qr unknown-key-link --text` |
+
+### With a new household
+
+1. J1: Dr Anan registers a new newborn with a new hospital number and prints the cards.
+2. J2: Vilay scans a card and runs Register Household with the wallet parent as the informant.
+3. Before J4.0: `trust-demo family add --patient <parent's Patient id> --username <name>`; sign in to the wallet with the one-time password.
+4. Follow it with `trust-demo status --newborn <hospital number>` (the same flag on `journeys`, `inspect`, `watch`). `time move J4.0` and `qr somsak-*` stay Somsak's.
 
 ## Departures from the IG
 

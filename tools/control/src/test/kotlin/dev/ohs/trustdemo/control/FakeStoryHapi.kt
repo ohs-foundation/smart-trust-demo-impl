@@ -89,6 +89,11 @@ class FakeStoryHapi(records: List<JsonObject> = emptyList()) {
         }
       "identifier" -> identifiers().any { it in value.split(',') }
       "patient" -> references("patient").any { it in value.split(',') }
+      "managing-entity" -> text("managingEntity", "reference") in value.split(',')
+      "member" ->
+        this["member"]?.jsonArray.orEmpty().any {
+          it.jsonObject["entity"]?.jsonObject?.text("reference") == value
+        }
       "family" -> names().any { it.text("family") == value }
       "given" ->
         names().any { name ->
@@ -96,6 +101,8 @@ class FakeStoryHapi(records: List<JsonObject> = emptyList()) {
         }
       else -> text(name) == value
     }
+
+  private fun JsonObject.text(field: String, name: String) = this[field]?.jsonObject?.text(name)
 
   private fun JsonObject.references(field: String) =
     listOfNotNull(this[field]?.jsonObject?.text("reference")?.removePrefix("Patient/"))
