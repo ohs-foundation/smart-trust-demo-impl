@@ -17,7 +17,9 @@ package dev.ohs.trustdemo.control
 
 import dev.ohs.fhir.model.r4.Organization
 import dev.ohs.fhir.model.r4.Practitioner
+import dev.ohs.fhir.model.r4.StructureDefinition
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -56,5 +58,21 @@ class MedplumSeedTest {
     assertTrue(codes[0].contains("\"code\":\"facility-emr\""))
     assertTrue(codes[1].contains("\"code\":\"vhl-viewer\""))
     assertTrue(codes.all { it.contains("http://ohs.dev/fhir/CodeSystem/app-role") })
+  }
+
+  @Test
+  fun theTaifafekiProfilesAreSeededWithSnapshots() = runTest {
+    val medplum = FakeMedplum()
+    medplum.admin.seedBase(ig)
+    val seeded =
+      medplum.stored.values.filter { it.igId()?.startsWith("TrustDemoTaifafeki") == true }
+    val igUrls =
+      ig
+        .filterIsInstance<StructureDefinition>()
+        .filter { it.id?.startsWith("TrustDemoTaifafeki") == true }
+        .map { it.url?.value }
+    assertEquals(3, igUrls.size)
+    assertEquals(igUrls.toSet(), seeded.map { it["url"]?.jsonPrimitive?.content }.toSet())
+    seeded.forEach { assertTrue(it.containsKey("snapshot"), "${it["url"]} has no snapshot") }
   }
 }

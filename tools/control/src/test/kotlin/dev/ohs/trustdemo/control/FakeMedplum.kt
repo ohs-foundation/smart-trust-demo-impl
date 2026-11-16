@@ -40,7 +40,12 @@ import kotlinx.serialization.json.put
  * project.
  */
 class FakeMedplum {
-  val stored = mutableMapOf<String, JsonObject>()
+  val stored =
+    baseDefinitions
+      .associateBy {
+        "StructureDefinition/core-${it.getValue("url").jsonPrimitive.content.substringAfterLast('/')}"
+      }
+      .toMutableMap()
   var invites = 0
 
   private val engine = MockEngine { request ->

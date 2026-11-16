@@ -70,6 +70,26 @@ check "Medplum issues the super-admin client a token" yes \
     -d "client_secret=${MEDPLUM_SUPER_ADMIN_CLIENT_SECRET}" "$medplum/oauth2/token" |
     jq -e '.access_token' >/dev/null && echo yes || echo no)"
 
+mp_token=$(curl -s --max-time 10 -d grant_type=client_credentials -d "client_id=${MEDPLUM_SUPER_ADMIN_CLIENT_ID}" \
+  -d "client_secret=${MEDPLUM_SUPER_ADMIN_CLIENT_SECRET}" "$medplum/oauth2/token" | jq -r '.access_token // empty')
+mp_project=$(curl -s --max-time 10 -H "Authorization: Bearer $mp_token" --get \
+  --data-urlencode "name=Taifafeki Ministry of Public Health" "$medplum/fhir/R4/Project" | jq -r '.entry[0].resource.id // empty')
+hn_profile=http://smart.who.int/trust-demo/StructureDefinition/TrustDemoTaifafekiPatient
+mp_patient() {
+  jq -n --arg project "$mp_project" --arg profile "$hn_profile" "{resourceType: \"Patient\",
+    meta: {project: \$project, profile: [\$profile]}} + $1" |
+    curl -s --max-time 10 -w '\n%{http_code}' -H "Authorization: Bearer $mp_token" \
+      -H 'Content-Type: application/fhir+json' --data-binary @- "$medplum/fhir/R4/Patient"
+}
+broken=$(mp_patient '{gender: "male"}')
+check "Medplum refuses a Taifafeki Patient missing the profile's elements" 400 "${broken##*$'\n'}"
+conforming=$(mp_patient '{identifier: [{system: "http://smart.who.int/trust-demo/sid/xxr-kesaro-hn", value: "CHECK-HN-0"}],
+  name: [{family: "Check", given: ["Profile"]}], birthDate: "2025-10-28"}')
+check "Medplum accepts a conforming Taifafeki Patient" 201 "${conforming##*$'\n'}"
+created=$(printf '%s' "${conforming%$'\n'*}" | jq -r '.id // empty')
+[ -z "$created" ] || curl -s -o /dev/null --max-time 10 -X POST -H "Authorization: Bearer $mp_token" \
+  -H 'Content-Type: application/fhir+json' -d '{"resourceType":"Parameters"}' "$medplum/fhir/R4/Patient/$created/\$expunge"
+
 check "Facility client health over TLS" 200 "$(status "${ca[@]}" "$client/")"
 [ "$live" -eq 1 ] || check "Facility client's plain-HTTP address redirects to TLS" 301 "$(status "http://client.kesaro.${base}/")"
 check "Facility client sends sign-in to Medplum with a PKCE challenge" yes \

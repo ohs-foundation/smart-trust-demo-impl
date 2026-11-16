@@ -20,6 +20,7 @@ import dev.ohs.fhir.model.r4.Device
 import dev.ohs.fhir.model.r4.Organization
 import dev.ohs.fhir.model.r4.Practitioner
 import dev.ohs.fhir.model.r4.Resource
+import dev.ohs.fhir.model.r4.StructureDefinition
 import dev.ohs.fhir.model.r4.ValueSet
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
@@ -55,6 +56,7 @@ const val IG_ID_SYSTEM = "http://ohs.dev/fhir/trust-demo/ig-id"
 private const val HOSPITAL = "TrustDemoKesaroHospital"
 private const val CLINIC = "TrustDemoKesaroClinic"
 private const val ANAN = "TrustDemoAnan"
+private const val PROFILE_PREFIX = "TrustDemoTaifafeki"
 private const val PROJECT_NAME = "Taifafeki Ministry of Public Health"
 private const val POLICY_NAME = "Taifafeki clinician"
 private const val CLIENT_NAME = "taifafeki-facility-client"
@@ -204,12 +206,26 @@ class MedplumAdmin(
     send(HttpMethod.Post, "$baseUrl/fhir/R4", bundle.toString())
   }
 
-  /** Upserts the base records by their IG id, pointing references between them at Medplum's ids. */
+  /**
+   * Upserts the base records by their IG id, pointing references between them at Medplum's ids. The
+   * Taifafeki profiles go in with snapshots, so Medplum validates records that name them.
+   */
   suspend fun seedBase(ig: List<Resource>) {
     val ids = mutableMapOf<String, String>()
+    val snapshots = ProfileSnapshots { url ->
+      checkNotNull(search("StructureDefinition", "url" to url).firstOrNull()) {
+        "Medplum has no $url"
+      }
+    }
+    val profiles =
+      ig
+        .filterIsInstance<StructureDefinition>()
+        .filter { it.id?.startsWith(PROFILE_PREFIX) == true }
+        .map { snapshots.withSnapshot(encode(it)) }
     val base =
       ig.filterIsInstance<CodeSystem>().map(::encode) +
         ig.filterIsInstance<ValueSet>().map(::encode) +
+        profiles +
         ig
           .filterIsInstance<Organization>()
           .filter { it.id in listOf(HOSPITAL, CLINIC) }
