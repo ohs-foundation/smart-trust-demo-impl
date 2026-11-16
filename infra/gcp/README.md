@@ -34,7 +34,7 @@ With `github_repository` set, a workload identity pool trusts GitHub's OIDC toke
 | `LIVE_BASE_DOMAIN` | `base_domain` from `config.yaml` |
 | `APK_BUCKET` | output `apk_bucket` |
 
-CI uploads the debug APK, which embeds the live URLs, to the `apk_bucket` bucket (`<project_id>-apk` unless `config.yaml` names one) instead of an Actions artifact, as `onesa-<tag or short SHA>.apk` and `onesa-latest.apk`. The bucket has uniform access and enforced public access prevention; per-build copies are deleted after 30 days. Download one with `gcloud storage cp gs://<bucket>/onesa-latest.apk .`.
+CI uploads the debug APK, which embeds the live URLs, to the `apk_bucket` bucket (`<project_id>-apk` unless `config.yaml` names one) instead of an Actions artifact, as `onesa-<tag or short SHA>.apk` and `onesa-latest.apk`. The bucket has uniform access and enforced public access prevention; per-build copies are deleted after 30 days. Download one with `gcloud storage cp gs://<bucket>/onesa-latest.apk .`. To hand a build to testers, `server.sh trust-demo apk-link` prints a link and QR that download it without sign-in for up to 7 days: the VM's account signs a V4 signed URL with IAM Credentials `signBlob` as itself, so no key leaves Google ([Share the APK](../../docs/deploy.md#share-the-apk)).
 
 The server then runs `../dev.sh` as `../README.md` describes.
 

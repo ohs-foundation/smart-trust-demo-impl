@@ -52,7 +52,7 @@ tofu output
 | `registry` | `REGISTRY` in `infra/.env` |
 | `github_workload_identity_provider` | `GCP_WORKLOAD_IDENTITY_PROVIDER` repository secret (CI, below) |
 | `github_ci_service_account` | `GCP_CI_SERVICE_ACCOUNT` repository secret (CI, below) |
-| `apk_bucket` | `APK_BUCKET` repository secret (CI, below) |
+| `apk_bucket` | `APK_BUCKET` repository secret (CI, below) and `infra/.env` line ([Share the APK](#share-the-apk)) |
 | `ssh` | a ready `gcloud compute ssh ... --tunnel-through-iap` command |
 | `dns_records` | the three records of step 2 |
 
@@ -94,6 +94,7 @@ Edit `infra/.env`:
 | `IMAGE_TAG` | `latest`, or the tag you push |
 | `CERTBOT_EMAIL` | the address Let's Encrypt registers |
 | `GATEWAY_PLUGIN_DIR` | the backend fork checkout on this machine |
+| `APK_BUCKET` | the `apk_bucket` output, for `trust-demo apk-link` |
 
 `./dev.sh init` leaves an existing `.env` alone: add any key `.env.example` has that it lacks (`REGISTRY` and `IMAGE_TAG` arrived later).
 
@@ -244,6 +245,34 @@ TRUST_LIST_URL=https://trust.gdhcn.demo.example.org/local-test-list.json \
 ```
 
 Install the APK on the phones. Release trusts the system CAs, so the public certificates need nothing extra.
+
+### Share the APK
+
+Testers download the debug APK from an expiring link: anyone holding it gets the build without signing in until it expires, at most 7 days later. The bucket stays private; there is no public object or link left behind.
+
+```
+infra/gcp/server.sh trust-demo apk-link                        # onesa-latest.apk, 7 days
+infra/gcp/server.sh trust-demo apk-link --days 2 --version <short SHA or tag>
+```
+
+```
+Build    onesa-latest.apk, updated 2026-11-16T08:30:12Z
+Expires  2026-11-23T10:15:30Z
+Link     https://storage.googleapis.com/<bucket>/onesa-latest.apk?X-Goog-Algorithm=GOOG4-RSA-SHA256&...&X-Goog-Signature=<hex>
+
+<the link as a QR code>
+```
+
+It runs only on the server: the VM's service account, from the metadata server, reads the object and signs a Cloud Storage V4 signed URL with IAM Credentials `signBlob` as itself, so no key file exists. A link to `onesa-latest.apk` serves whichever build is latest when it is opened; `--version` pins one. Deleting the object is the only way to end a link early.
+
+Set it up once:
+
+| # | Where | Do |
+| --- | --- | --- |
+| 1 | Laptop | `cd infra/gcp && tofu apply`: the bucket replaces the `<repository>-apk` repository; CI may write it, the VM may read it and sign as itself |
+| 2 | Laptop | `gh secret set APK_BUCKET -R owner/repo -b <apk_bucket output>` |
+| 3 | Laptop | `APK_BUCKET=<apk_bucket output>` in `infra/.env`, then `infra/gcp/server.sh setup` (copies it up) and `infra/gcp/server.sh cli` |
+| 4 | Laptop | `gh workflow run artifacts.yml` (or a push to `main`) puts the first build in the bucket |
 
 ### 7. Walk the story
 

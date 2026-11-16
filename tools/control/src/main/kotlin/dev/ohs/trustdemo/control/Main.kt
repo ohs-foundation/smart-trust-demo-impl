@@ -270,6 +270,7 @@ fun trustDemo() =
       InspectCommand(),
       TimeCommand().subcommands(MoveCommand(), ExpireConsentsCommand()),
       FamilyCommand().subcommands(FamilyAddCommand()),
+      ApkLinkCommand(),
     )
 
 fun main(args: Array<String>) = trustDemo().main(args)

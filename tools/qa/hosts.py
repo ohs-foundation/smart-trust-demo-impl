@@ -14,6 +14,7 @@ ALLOWED = {
     "stackoverflow.com": "explanatory link in a comment of the infra's flink-conf.yaml, never called",
     "localhost": "loopback",
     "token.actions.githubusercontent.com": "GitHub Actions OIDC issuer the GCP config trusts for keyless CI, an identifier",
+    "metadata.google.internal": "the GCE metadata server trust-demo apk-link takes the VM's account from, reachable only on Google Cloud",
     "quay.io": "container registry the stack pulls the Keycloak image from, pinned by tag",
     "us-docker.pkg.dev": "registry the pipeline controller image is pulled from, pinned by tag",
     "superset.app": "the Python module superset.app in the Superset gunicorn entry point, not a host",
