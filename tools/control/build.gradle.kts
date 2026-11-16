@@ -48,6 +48,17 @@ val igIndex =
 
 sourceSets.main { resources.srcDirs(igDir, files(igIndexDir).builtBy(igIndex)) }
 
+tasks.test {
+  inputs
+    .files(
+      rootProject.file("stack/onesa/compose.yaml"),
+      rootProject.file("infra/docker-compose.yaml"),
+      rootProject.file("apps/onesa/shared/src/commonMain/composeResources/files/sync"),
+    )
+    .withPropertyName("auditedActions")
+    .withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
 dependencies {
   implementation(projects.libs.trustkit)
   implementation(libs.clikt)

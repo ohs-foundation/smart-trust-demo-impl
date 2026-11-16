@@ -60,6 +60,13 @@ check "Keycloak issues vilay a token" yes "$([ -n "$token" ] && echo yes || echo
 patients=$(status -H "Authorization: Bearer $token" "$gateway/fhir/Patient")
 check "gateway serves vilay's Patient search" 200 "$patients"
 [ "$patients" = 403 ] && echo "      vilay has no Practitioner yet: run 'trust-demo reset' before this check"
+since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+check "gateway serves vilay a Patient read" 200 \
+  "$(status -H "Authorization: Bearer $token" "$gateway/fhir/Patient/TrustDemoBounmyPatient")"
+check "gateway audits that read" yes \
+  "$(curl -s --max-time 10 --get --data-urlencode "entity=Patient/TrustDemoBounmyPatient" -d action=R \
+    --data-urlencode "date=ge$since" "http://127.0.0.1:${hapi_port}/fhir/AuditEvent" |
+    jq -e '.entry | length > 0' >/dev/null && echo yes || echo no)"
 
 check "VHL service health over TLS" 200 "$(status "${ca[@]}" "$vhl/vhl/health")"
 [ "$live" -eq 1 ] || check "VHL has no plain-HTTP route" 404 "$(status "http://vhl.onesa.${base}/vhl/health")"
