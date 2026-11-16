@@ -46,6 +46,12 @@ a { color: var(--brand); text-underline-offset: 2px }
 .onesa-card :is(input, select, textarea):focus-visible { outline-offset: 0; border-color: var(--brand) }
 .onesa-card :is(input, select, textarea)[aria-invalid="true"] { border-color: var(--crimson) }
 .onesa-card :is(input, select, textarea)[aria-invalid="true"]:focus-visible { outline-color: var(--crimson) }
+.onesa-password { position: relative }
+.onesa-password .onesa-input { padding-right: 38px }
+.onesa-reveal { position: absolute; inset: 0 0 0 auto; display: grid; place-items: center; width: 36px; padding: 0; border: 0; border-radius: 0 10px 10px 0; background: none; color: var(--s500); cursor: pointer }
+.onesa-reveal:hover { color: var(--ink) }
+.onesa-reveal .onesa-eye-off, .onesa-reveal[aria-pressed="true"] .onesa-eye { display: none }
+.onesa-reveal[aria-pressed="true"] .onesa-eye-off { display: block }
 .onesa-field-error { font-size: 11.5px; color: var(--crimson) }
 
 .onesa-check { display: flex; gap: 9px; align-items: center; font-size: 12.5px }

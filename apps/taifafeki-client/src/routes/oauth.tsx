@@ -7,6 +7,7 @@ import { CONTROL, Field } from "@/components/Field";
 import { Loading, Problem } from "@/components/Feedback";
 import { Page } from "@/components/Page";
 import { Panel } from "@/components/Panel";
+import { PasswordInput } from "@/components/PasswordInput";
 import { Input } from "@/components/ui/input";
 import { login } from "../auth/oauth";
 import { checkSignIn, exchange } from "../server/settings";
@@ -86,7 +87,7 @@ function SignIn() {
           <Input id={`${id}-email`} name="email" type="email" autoComplete="username" required className={CONTROL} />
         </Field>
         <Field id={`${id}-password`} label="Password">
-          <Input id={`${id}-password`} name="password" type="password" autoComplete="current-password" required className={CONTROL} />
+          <PasswordInput id={`${id}-password`} />
         </Field>
       </Panel>
     </Page>
