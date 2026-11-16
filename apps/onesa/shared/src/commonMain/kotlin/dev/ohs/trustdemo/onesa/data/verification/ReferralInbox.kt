@@ -55,7 +55,7 @@ data class SentReferral(
 )
 
 /** A referred child as the synced record names them. */
-data class Child(val name: String, val birthDate: String?)
+data class Child(val name: String, val birthDate: String?, val personName: PersonName)
 
 /** The referrals waiting at this clinic, read from the synced copy. */
 class ReferralInbox(private val repository: FhirRepository) {
@@ -184,7 +184,19 @@ class ReferralInbox(private val repository: FhirRepository) {
   /** The child as the synced record has them: the name to show and the date of birth. */
   suspend fun child(patientId: String): Child {
     val patient = repository.get("Patient", patientId)?.toJson()
-    return Child(patientName(patientId), patient?.get("birthDate")?.jsonPrimitive?.contentOrNull)
+    val name = patientName(patientId)
+    return Child(
+      name,
+      patient?.get("birthDate")?.jsonPrimitive?.contentOrNull,
+      patient?.get("name")?.jsonArray?.firstOrNull()?.jsonObject?.personName()
+        ?: NameMatch.ofText(name),
+    )
+  }
+
+  private fun JsonObject.personName(): PersonName? {
+    val family = this["family"]?.jsonPrimitive?.contentOrNull
+    val given = this["given"]?.jsonArray.orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }
+    return if (family == null && given.isEmpty()) null else PersonName(family, given)
   }
 
   private suspend fun patientName(patientId: String): String =

@@ -54,6 +54,8 @@ import java.security.MessageDigest
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -68,6 +70,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 private const val MAP_ID = "TrustDemoProductToOnesaEpi"
+private const val REASON = "Card spells the name as on the passport"
 
 class CardVerificationTest {
   private val nowSeconds = 1_800_000_000L
@@ -142,7 +145,8 @@ class CardVerificationTest {
   private suspend fun scan(card: String, text: String = card): ScanOutcome =
     when (val checked = service.check(referral, text)) {
       is ScanCheck.Settled -> checked.outcome
-      is ScanCheck.Pending -> service.import(checked.pending)
+      is ScanCheck.Pending ->
+        service.import(checked.pending, REASON.takeIf { checked.pending.nameDiffers })
     }
 
   @Test
@@ -252,6 +256,56 @@ class CardVerificationTest {
   }
 
   @Test
+  fun aNameThatDiffersNeedsAReasonAndRecordsItInTheProvenanceAndAudit() = runTest {
+    withReportedDoses()
+    val pending = assertIs<ScanCheck.Pending>(service.check(referral, hepB)).pending
+    assertTrue(pending.nameDiffers)
+
+    assertFailsWith<IllegalArgumentException> { service.import(pending, "  ") }
+    assertEquals(0, gateway.transactions.size)
+
+    assertIs<ScanOutcome.Imported>(service.import(pending, REASON))
+    val provenance = gateway.provenances.values.single()
+    assertEquals(
+      REASON,
+      provenance
+        .getValue("reason")
+        .jsonArray
+        .single()
+        .jsonObject
+        .getValue("text")
+        .jsonPrimitive
+        .content,
+    )
+    val audit = gateway.auditEvents.single()
+    assertTrue(REASON in audit.getValue("outcomeDesc").jsonPrimitive.content)
+  }
+
+  @Test
+  fun aMatchingNameNeedsNoReasonAndRecordsNone() = runTest {
+    withReportedDoses()
+    repository.upsert(
+      decode(
+        FhirJson.instance
+          .parseToJsonElement(
+            """{"resourceType":"Patient","id":"$patientId","birthDate":"2026-01-01",
+            "name":[{"family":"CHILD","given":["test"]}]}"""
+          )
+          .jsonObject
+      )
+    )
+    val pending = assertIs<ScanCheck.Pending>(service.check(referral, hepB)).pending
+    assertFalse(pending.nameDiffers)
+
+    assertIs<ScanOutcome.Imported>(service.import(pending))
+    assertTrue("reason" !in gateway.provenances.values.single())
+    assertEquals(
+      "Card verified; its dose imported",
+      gateway.auditEvents.single().getValue("outcomeDesc").jsonPrimitive.content,
+    )
+  }
+
+  @Test
   fun nothingIsWrittenBeforeTheNurseConfirms() = runTest {
     withReportedDoses()
 
@@ -261,7 +315,7 @@ class CardVerificationTest {
     assertEquals("2026-01-01", pending.holderBirthDate)
     assertEquals("Test Child", pending.holderName)
     assertEquals("Somsak Sengmany", pending.childName)
-    assertIs<ScanOutcome.Imported>(service.import(pending))
+    assertIs<ScanOutcome.Imported>(service.import(pending, REASON))
     assertEquals(1, gateway.transactions.size)
   }
 
@@ -271,8 +325,8 @@ class CardVerificationTest {
     val first = assertIs<ScanCheck.Pending>(service.check(referral, hepB)).pending
     val second = assertIs<ScanCheck.Pending>(service.check(referral, hepB)).pending
 
-    assertIs<ScanOutcome.Imported>(service.import(first))
-    assertIs<ScanOutcome.AlreadyImported>(service.import(second))
+    assertIs<ScanOutcome.Imported>(service.import(first, REASON))
+    assertIs<ScanOutcome.AlreadyImported>(service.import(second, REASON))
 
     assertEquals(setOf("AuditEvent"), gateway.transactions.last().map { it.type }.toSet())
     assertEquals(1, gateway.immunizations.values.count { it.flag("primarySource") == true })

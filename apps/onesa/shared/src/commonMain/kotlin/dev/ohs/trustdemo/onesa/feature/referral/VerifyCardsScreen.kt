@@ -64,7 +64,9 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_already_title
 import dev.ohs.trustdemo.onesa.generated.resources.verify_card_born
 import dev.ohs.trustdemo.onesa.generated.resources.verify_card_holder
 import dev.ohs.trustdemo.onesa.generated.resources.verify_child_born
+import dev.ohs.trustdemo.onesa.generated.resources.verify_child_name
 import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm
+import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm_anyway
 import dev.ohs.trustdemo.onesa.generated.resources.verify_could_not_save
 import dev.ohs.trustdemo.onesa.generated.resources.verify_decline
 import dev.ohs.trustdemo.onesa.generated.resources.verify_decoded
@@ -83,6 +85,10 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_keep_reported
 import dev.ohs.trustdemo.onesa.generated.resources.verify_kid
 import dev.ohs.trustdemo.onesa.generated.resources.verify_list_fetched_label
 import dev.ohs.trustdemo.onesa.generated.resources.verify_list_stale
+import dev.ohs.trustdemo.onesa.generated.resources.verify_name_differs
+import dev.ohs.trustdemo.onesa.generated.resources.verify_name_differs_title
+import dev.ohs.trustdemo.onesa.generated.resources.verify_name_reason_hint
+import dev.ohs.trustdemo.onesa.generated.resources.verify_name_reason_label
 import dev.ohs.trustdemo.onesa.generated.resources.verify_none_pending
 import dev.ohs.trustdemo.onesa.generated.resources.verify_nothing_imported
 import dev.ohs.trustdemo.onesa.generated.resources.verify_origin
@@ -143,6 +149,7 @@ class VerifyActions(
   val onScan: (QrScan) -> Unit,
   val onText: (String) -> Unit,
   val confirm: () -> Unit,
+  val reason: (String) -> Unit,
   val decline: () -> Unit,
   val proceed: () -> Unit,
   val scanAgain: () -> Unit,
@@ -190,6 +197,7 @@ fun VerifyCardsScreen(
       },
       onText = viewModel::onText,
       confirm = viewModel::confirm,
+      reason = viewModel::reason,
       decline = viewModel::decline,
       proceed = { if (state.unmatched.isNotEmpty()) matching = true else onOpenSchedule() },
       scanAgain = { dismissed = state.results.size },
@@ -285,6 +293,11 @@ fun VerifyCardsContent(
                   )
                 ) +
                 listOfNotNull(
+                  Field(stringResource(Res.string.verify_child_name), pending.childName).takeIf {
+                    pending.nameDiffers
+                  }
+                ) +
+                listOfNotNull(
                   pending.list.fetchedAtEpochSeconds?.let {
                     Field(stringResource(Res.string.verify_list_fetched_label), displayTime(it))
                   }
@@ -292,6 +305,22 @@ fun VerifyCardsContent(
             detail =
               stringResource(Res.string.verify_pass_detail, day(pending.card.hcert.dsc.notAfter)),
           )
+          if (pending.nameDiffers) {
+            AlertCard(
+              stringResource(Res.string.verify_name_differs_title),
+              stringResource(Res.string.verify_name_differs, pending.holderName, pending.childName),
+              Tone.Warning,
+            )
+            SectionCard {
+              OnesaTextField(
+                label = stringResource(Res.string.verify_name_reason_label),
+                value = state.overrideReason,
+                onValueChange = actions.reason,
+                placeholder = stringResource(Res.string.verify_name_reason_hint),
+                minLines = 2,
+              )
+            }
+          }
           if (pending.list.stale) {
             AlertCard(null, stringResource(Res.string.verify_list_stale), Tone.Warning)
           }
@@ -335,10 +364,11 @@ fun VerifyCardsContent(
                   enabled = !busy,
                 ),
                 Action(
-                  stringResource(Res.string.verify_confirm, pending.childName),
+                  if (pending.nameDiffers) stringResource(Res.string.verify_confirm_anyway)
+                  else stringResource(Res.string.verify_confirm, pending.childName),
                   onClick = actions.confirm,
                   busy = busy,
-                  enabled = !busy,
+                  enabled = state.canConfirm,
                 ),
               )
             refused ->

@@ -59,7 +59,12 @@ data class VerifyCardsUiState(
   val matchChanged: Boolean = false,
   val matchedTo: List<EpiDose> = emptyList(),
   val listStale: Boolean = false,
-)
+  val overrideReason: String = "",
+) {
+  /** A card whose name differs from the child's is confirmed only with the nurse's reason. */
+  val canConfirm: Boolean
+    get() = pending != null && !busy && (!pending.nameDiffers || overrideReason.isNotBlank())
+}
 
 /** Scans each card of a referral's child through [VerificationService]. */
 class VerifyCardsViewModel(
@@ -144,7 +149,7 @@ class VerifyCardsViewModel(
         is ScanCheck.Settled -> record(checked.outcome, card)
         is ScanCheck.Pending -> {
           lastText = card
-          _uiState.update { it.copy(busy = false, pending = checked.pending) }
+          _uiState.update { it.copy(busy = false, pending = checked.pending, overrideReason = "") }
         }
         null -> _uiState.update { it.copy(busy = false, couldNotSave = true) }
       }
@@ -153,11 +158,12 @@ class VerifyCardsViewModel(
 
   /** The nurse says the pending card is the child's: only now is anything imported. */
   fun confirm() {
-    val pending = _uiState.value.pending ?: return
-    if (_uiState.value.busy) return
+    val state = _uiState.value
+    val pending = state.pending ?: return
+    if (!state.canConfirm) return
     _uiState.update { it.copy(busy = true, couldNotSave = false) }
     viewModelScope.launch {
-      val outcome = attempt { service.import(pending) }
+      val outcome = attempt { service.import(pending, state.overrideReason) }
       if (outcome == null) _uiState.update { it.copy(busy = false, couldNotSave = true) }
       else record(outcome, pending.hc1)
     }
@@ -165,13 +171,17 @@ class VerifyCardsViewModel(
 
   fun decline() {
     lastText = null
-    _uiState.update { it.copy(pending = null, couldNotSave = false) }
+    _uiState.update { it.copy(pending = null, couldNotSave = false, overrideReason = "") }
   }
+
+  fun reason(text: String) = _uiState.update { it.copy(overrideReason = text) }
 
   private fun record(outcome: ScanOutcome, card: String) {
     lastText =
       card.takeIf { outcome is ScanOutcome.Imported || outcome is ScanOutcome.AlreadyImported }
-    _uiState.update { it.copy(busy = false, pending = null, results = it.results + outcome) }
+    _uiState.update {
+      it.copy(busy = false, pending = null, overrideReason = "", results = it.results + outcome)
+    }
     viewModelScope.launch { loadUnmatched() }
   }
 

@@ -144,6 +144,7 @@ object ScanTransactions {
     reported: List<ReportedDose>,
     epiCodes: Map<String, String>,
     scheduleDisplays: Map<String, String>,
+    overrideReason: String? = null,
   ): JsonObject {
     val dvc = card.dvc
     val immunizationId = immunizationId(request.hc1)
@@ -179,9 +180,9 @@ object ScanTransactions {
       createEntry(
         "Provenance",
         provenanceId(request.hc1),
-        provenance(provenance, request.patientId, card, reported),
+        provenance(provenance, request.patientId, card, reported, overrideReason),
       ),
-      createEntry("AuditEvent", request.newId(), audit(request, Result.Imported)),
+      createEntry("AuditEvent", request.newId(), audit(request, Result.Imported(overrideReason))),
       *reported.map { deleteEntry("Immunization/${it.id}") }.toTypedArray(),
     )
   }
@@ -242,6 +243,7 @@ object ScanTransactions {
     patientId: String,
     card: VerifiedCard,
     replaced: List<ReportedDose>,
+    overrideReason: String?,
   ): JsonObject {
     val resource = json.encodeToJsonElement(Provenance.serializer(), provenance).jsonObject
     val patient = buildJsonObject { put("reference", "Patient/$patientId") }
@@ -252,6 +254,8 @@ object ScanTransactions {
           putJsonObject("what") { put("reference", "Immunization/${it.id}") }
         }
       }
+    val reason =
+      overrideReason?.let { "reason" to JsonArray(listOf(buildJsonObject { put("text", it) })) }
     return JsonObject(
       resource +
         mapOf(
@@ -259,7 +263,8 @@ object ScanTransactions {
           "target" to JsonArray(resource.getValue("target").jsonArray + patient),
           "activity" to buildJsonObject { put("text", activity(card)) },
           "entity" to JsonArray(resource.getValue("entity").jsonArray + removals),
-        )
+        ) +
+        listOfNotNull(reason)
     )
   }
 
@@ -273,7 +278,7 @@ object ScanTransactions {
   }
 
   private sealed interface Result {
-    data object Imported : Result
+    data class Imported(val overrideReason: String?) : Result
 
     data object AlreadyImported : Result
 
@@ -306,7 +311,11 @@ object ScanTransactions {
       put(
         "outcomeDesc",
         when (result) {
-          Result.Imported -> "Card verified; its dose imported"
+          is Result.Imported ->
+            "Card verified; its dose imported" +
+              result.overrideReason
+                ?.let { "; name differs from the child's, nurse's reason: $it" }
+                .orEmpty()
           Result.AlreadyImported -> "Card verified; already imported, nothing written"
           is Result.Declined -> result.refusal.description
           is Result.Refused ->

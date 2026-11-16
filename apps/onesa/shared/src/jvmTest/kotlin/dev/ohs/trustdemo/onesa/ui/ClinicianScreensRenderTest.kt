@@ -95,6 +95,8 @@ import java.util.zip.Deflater
 import java.util.zip.Inflater
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
@@ -209,7 +211,7 @@ class ClinicianScreensRenderTest {
 
   private val clinicTabs = listOf("Referrals (1)", "Patients", "Schedule", "Trust list", "Sync")
 
-  private val noActions = VerifyActions({}, {}, {}, {}, {}, {}, { _, _ -> }, {})
+  private val noActions = VerifyActions({}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {})
 
   @Composable
   private fun ClinicTopBar() =
@@ -271,20 +273,38 @@ class ClinicianScreensRenderTest {
     val verified =
       (runBlocking { hcert.verifyCard(hepBCard, now.epochSeconds) } as VerificationResult.Verified)
         .hcert
-    val pending =
+    fun pendingOf(childName: String, nameDiffers: Boolean) =
       PendingImport(
         state.referral!!,
         hepBCard,
         VerifiedCard(verified.dvc!!, verified, "https://trust.gdhcn.example/local-test-list.json"),
         "Somsak SENGMANY",
         "2025-10-28",
-        "Somsak Sengmany",
+        childName,
         "Hepatitis B vaccine, paediatric, monovalent, 2025-10-28",
         runBlocking { hcert.freshness(verified.dsc, now.epochSeconds) },
+        nameDiffers,
       )
+    val pending = pendingOf("Somsak Sengmany", nameDiffers = false)
     clinic("0-03-s4-verify", 1024.dp to 900.dp) {
       VerifyCardsContent(
         state = state.copy(pending = pending, scanned = hepBCard),
+        today = visitDay,
+        topBar = { ClinicTopBar() },
+        showOutcome = true,
+        actions = noActions,
+      )
+    }
+
+    val differs =
+      state.copy(pending = pendingOf("Noy Sengmany", nameDiffers = true), scanned = hepBCard)
+    assertFalse(differs.canConfirm)
+    assertFalse(differs.copy(overrideReason = "  ").canConfirm)
+    assertTrue(differs.copy(overrideReason = "Card uses a nickname").canConfirm)
+    assertTrue(state.copy(pending = pending).canConfirm)
+    clinic("1-14-s4-name-differs", 1024.dp to 1100.dp) {
+      VerifyCardsContent(
+        state = differs.copy(overrideReason = "Card uses a nickname"),
         today = visitDay,
         topBar = { ClinicTopBar() },
         showOutcome = true,

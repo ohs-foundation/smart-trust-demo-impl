@@ -49,8 +49,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-private val FULL_DATE = Regex("""\d{4}-\d{2}-\d{2}""")
-
 /** What a scan came to, for S4 to show. */
 sealed interface ScanOutcome {
   /** The card verified and its dose is now on the patient's record as a verified Immunization. */
@@ -91,6 +89,8 @@ internal constructor(
   val dose: String,
   /** The card list the verification ran against: when it was fetched, and whether it is stale. */
   val list: ListFreshness,
+  /** The birth dates agree but the names do not: confirming needs the nurse's reason. */
+  val nameDiffers: Boolean = false,
 )
 
 /** What checking a scanned card found: an outcome already settled, or a card to confirm. */
@@ -150,7 +150,8 @@ class VerificationService(
     }
 
     val child = inbox.child(referral.patientId)
-    if (!FULL_DATE.matches(dvc.dob) || child.birthDate != dvc.dob) {
+    val match = NameMatch.match(child, dvc.n, dvc.dob)
+    if (match == CardMatch.OtherChild) {
       post(current, ScanTransactions.refused(request, Refusal.HolderMismatch))
       return settled(ScanOutcome.HolderMismatch(dvc.dob, child.birthDate))
     }
@@ -158,11 +159,26 @@ class VerificationService(
     val holder = DvcFhirMapper.humanName(dvc.n).text?.value ?: dvc.n
     val list = hcert.freshness(verified.dsc, request.now.epochSeconds)
     return ScanCheck.Pending(
-      PendingImport(referral, hc1, card, holder, dvc.dob, child.name, dose, list)
+      PendingImport(
+        referral,
+        hc1,
+        card,
+        holder,
+        dvc.dob,
+        child.name,
+        dose,
+        list,
+        match == CardMatch.NameDiffers,
+      )
     )
   }
 
-  suspend fun import(pending: PendingImport): ScanOutcome {
+  /** [reason] is the nurse's, and required when the card's name differs from the child's. */
+  suspend fun import(pending: PendingImport, reason: String? = null): ScanOutcome {
+    val overrideReason = reason?.trim()?.takeIf { pending.nameDiffers && it.isNotEmpty() }
+    require(!pending.nameDiffers || overrideReason != null) {
+      "Say why the card's name differs from the child's."
+    }
     val current = session() ?: error("Sign in again to verify a card.")
     val request = request(current, pending.referral, pending.hc1)
     val dvc = pending.card.dvc
@@ -173,7 +189,14 @@ class VerificationService(
     try {
       post(
         current,
-        ScanTransactions.imported(request, pending.card, replaced, epiCodes(), scheduleDisplays()),
+        ScanTransactions.imported(
+          request,
+          pending.card,
+          replaced,
+          epiCodes(),
+          scheduleDisplays(),
+          overrideReason,
+        ),
       )
     } catch (e: CancellationException) {
       throw e

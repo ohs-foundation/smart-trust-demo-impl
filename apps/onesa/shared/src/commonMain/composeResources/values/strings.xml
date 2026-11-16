@@ -242,6 +242,12 @@
     <string name="verify_could_not_save">The scan could not be saved. Check the connection and scan again.</string>
     <string name="verify_confirm">Confirm Verification for %1$s</string>
     <string name="verify_decline">Not This Child</string>
+    <string name="verify_confirm_anyway">Confirm anyway</string>
+    <string name="verify_child_name">Child</string>
+    <string name="verify_name_differs_title">The card's name differs from the child's</string>
+    <string name="verify_name_differs">The card names %1$s; the child is %2$s. The birth date matches. Confirm only if the card is the child's, and say why.</string>
+    <string name="verify_name_reason_label">Reason the card is the child's</string>
+    <string name="verify_name_reason_hint">For example, the card spells the name differently</string>
     <string name="match_confirm">Confirm Equivalence</string>
     <string name="match_changed">The national map or the dose changed meanwhile. Nothing was saved. Check the choices and pick again.</string>
     <string name="match_done">Matched to %1$s. The national map now has this product.</string>
