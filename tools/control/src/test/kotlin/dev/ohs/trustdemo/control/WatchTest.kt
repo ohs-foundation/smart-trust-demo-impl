@@ -15,10 +15,13 @@
  */
 package dev.ohs.trustdemo.control
 
+import com.github.ajalt.clikt.core.CliktError
 import io.ktor.client.request.post
 import io.ktor.server.testing.testApplication
+import java.net.ServerSocket
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 private class FakeStates(private vararg val fixtures: String) : StoryStates {
@@ -40,4 +43,19 @@ class WatchTest {
     assertTrue("J4.0" in printed[0], printed[0])
     assertTrue("J4.1" in printed[1], printed[1])
   }
+
+  @Test
+  fun aBusyPortSaysAnotherWatchIsRunning() =
+    ServerSocket(0).use { taken ->
+      val port = taken.localPort
+      val printed = mutableListOf<String>()
+      val failure =
+        assertFailsWith<CliktError> { Watch(port, FakeStates("before-J40"), printed::add).serve() }
+      assertEquals(
+        "Port $port is in use: another `trust-demo watch` is already running on this host. " +
+          "Stop it first.",
+        failure.message,
+      )
+      assertTrue(printed.isEmpty(), printed.toString())
+    }
 }

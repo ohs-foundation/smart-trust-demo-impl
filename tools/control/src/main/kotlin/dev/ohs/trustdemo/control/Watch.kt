@@ -15,13 +15,18 @@
  */
 package dev.ohs.trustdemo.control
 
+import com.github.ajalt.clikt.core.CliktError
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.cio.CIO
+import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.response.respond
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import java.net.BindException
+import java.net.InetSocketAddress
+import java.net.ServerSocket
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 import kotlin.time.Duration.Companion.seconds
@@ -71,7 +76,28 @@ class Watch(
   }
 
   fun serve() {
-    embeddedServer(CIO, port = port) { install(this) }.start(wait = true)
+    // CIO reports a taken port only as an uncaught stack trace, after the poll has started.
+    try {
+      ServerSocket().use {
+        it.reuseAddress = true
+        it.bind(InetSocketAddress(port))
+      }
+    } catch (_: BindException) {
+      throw CliktError(
+        "Port $port is in use: another `trust-demo watch` is already running on this host. " +
+          "Stop it first."
+      )
+    }
+    embeddedServer(
+        CIO,
+        configure = {
+          connector { port = this@Watch.port }
+          reuseAddress = true
+        },
+      ) {
+        install(this)
+      }
+      .start(wait = true)
   }
 
   // The read is inside the lock too, so a slow poll cannot print an older step after a delivery.
