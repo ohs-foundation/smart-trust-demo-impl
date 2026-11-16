@@ -59,6 +59,9 @@ CLAUDE.MD
 #bin directories
 ig-codegen/bin/
 build-logic/bin/
+libs/*/bin/
+services/*/bin/
+tools/*/bin/
 stack/.env
 stack/taifafeki/secrets/
 stack/tls/
