@@ -17,7 +17,10 @@ package dev.ohs.trustdemo.onesa.feature.wallet
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +28,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
@@ -51,11 +57,13 @@ import dev.ohs.trustdemo.onesa.generated.resources.wallet_relation_child
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_relation_father
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_relation_head
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_relation_mother
-import dev.ohs.trustdemo.onesa.generated.resources.wallet_selected
+import dev.ohs.trustdemo.onesa.generated.resources.wallet_viewing
+import dev.ohs.trustdemo.onesa.ui.CardTitle
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.RecordRow
 import dev.ohs.trustdemo.onesa.ui.SectionCard
 import dev.ohs.trustdemo.onesa.ui.Status
+import dev.ohs.trustdemo.onesa.ui.StatusChip
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import kotlin.time.Clock
@@ -65,26 +73,25 @@ import kotlinx.datetime.todayIn
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
-/** S6: the household the signed-in family member manages, and the selected member's doses. */
+/** S6: the household the signed-in family member manages, each open member's doses under them. */
 @Composable
 fun WalletScreen() {
   val viewModel: WalletViewModel = koinViewModel()
   val family by viewModel.family.collectAsStateWithLifecycle()
-  val selected by viewModel.selected.collectAsStateWithLifecycle()
+  val open by viewModel.open.collectAsStateWithLifecycle()
   val doses by viewModel.doses.collectAsStateWithLifecycle()
   val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-  WalletContent(family, selected, doses, today, viewModel::select)
+  WalletContent(family, open, doses, today, viewModel::toggle)
 }
 
 @Composable
 fun WalletContent(
   family: List<FamilyMember>,
-  selected: String?,
-  doses: List<FamilyDose>,
+  open: Set<String>,
+  doses: Map<String, List<FamilyDose>>,
   today: LocalDate,
-  onSelect: (String) -> Unit,
+  onToggle: (String) -> Unit,
 ) {
-  val shown = family.firstOrNull { it.id == selected }
   Column(
     Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -92,46 +99,59 @@ fun WalletContent(
     SectionCard(title = stringResource(Res.string.wallet_household), icon = OnesaIcons.Users) {
       if (family.isEmpty()) Muted(stringResource(Res.string.wallet_empty))
       family.forEach { member ->
+        val viewing = member.id in open
         RecordRow(
           label = member.given ?: member.name ?: stringResource(Res.string.wallet_not_synced),
           icon = if (member.relation == FamilyRecords.CHILD) OnesaIcons.Baby else OnesaIcons.User,
           detail = relationLine(member, today),
           status =
-            if (member.id == selected) Status(stringResource(Res.string.wallet_selected), Tone.Info)
-            else null,
-          onClick = { onSelect(member.id) },
+            if (viewing) Status(stringResource(Res.string.wallet_viewing), Tone.Info) else null,
+          selected = viewing,
+          onClick = { onToggle(member.id) },
         )
+        if (viewing) doses[member.id]?.let { MemberSummary(member, it, today) }
       }
     }
-    if (shown != null) {
-      val cards = doses.count { it.fromCard && it.primarySource }
-      SectionCard(
-        title = stringResource(Res.string.wallet_ips),
-        icon = OnesaIcons.ShieldCheck,
-        summary =
-          doses
-            .count { it.primarySource }
-            .takeIf { it > 0 }
-            ?.let { Status(stringResource(Res.string.wallet_doses_verified, it), Tone.Success) },
-        footnote =
-          doses
-            .takeIf { it.isNotEmpty() }
-            ?.let {
-              stringResource(
-                Res.string.wallet_doses_footnote,
-                listOfNotNull(
-                    shown.name,
-                    displayAge(shown.birthDate, today)?.let { age -> "($age)" },
-                  )
-                  .joinToString(" "),
-                cards,
-                doses.size - cards,
-              )
-            },
-      ) {
-        if (doses.isEmpty()) Muted(stringResource(Res.string.wallet_no_doses))
-        doses.forEach { dose -> DoseRow(dose) }
+  }
+}
+
+/** A member's immunization summary, threaded under their row in the brand. */
+@Composable
+private fun MemberSummary(member: FamilyMember, doses: List<FamilyDose>, today: LocalDate) {
+  val brand = MaterialTheme.colorScheme.primary
+  val cards = doses.count { it.fromCard && it.primarySource }
+  val verified = doses.count { it.primarySource }
+  Column(
+    Modifier.fillMaxWidth()
+      .drawBehind { drawRect(brand, size = Size(2.dp.toPx(), size.height)) }
+      .padding(start = 12.dp, top = 2.dp, bottom = 2.dp),
+    verticalArrangement = Arrangement.spacedBy(6.dp),
+  ) {
+    FlowRow(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalArrangement = Arrangement.spacedBy(6.dp),
+      itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+      CardTitle(stringResource(Res.string.wallet_ips), OnesaIcons.ShieldCheck)
+      if (verified > 0) {
+        StatusChip(Status(stringResource(Res.string.wallet_doses_verified, verified), Tone.Success))
       }
+    }
+    if (doses.isEmpty()) Muted(stringResource(Res.string.wallet_no_doses))
+    doses.forEach { dose -> DoseRow(dose) }
+    if (doses.isNotEmpty()) {
+      Text(
+        stringResource(
+          Res.string.wallet_doses_footnote,
+          listOfNotNull(member.name, displayAge(member.birthDate, today)?.let { "($it)" })
+            .joinToString(" "),
+          cards,
+          doses.size - cards,
+        ),
+        style = MaterialTheme.typography.bodySmall,
+        color = OnesaColors.Slate500,
+      )
     }
   }
 }

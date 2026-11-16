@@ -152,7 +152,8 @@ class FamilyScreensRenderTest {
 
   @Test
   fun householdWallet() {
-    val doses = runBlocking { records.doses("TrustDemoSomsak") }
+    val open = setOf("TrustDemoSomsak", "TrustDemoBounmyPatient")
+    val doses = runBlocking { open.associateWith { records.doses(it) } }
     wallet("0-05-s6-wallet", 1240) {
       HomeShell(
         header = header,
@@ -167,7 +168,7 @@ class FamilyScreensRenderTest {
           ),
         caption = "Hosted in Onesa • Records stay in home country custody",
       ) {
-        WalletContent(family, "TrustDemoSomsak", doses, LocalDate.parse("2026-10-28"), {})
+        WalletContent(family, open, doses, LocalDate.parse("2026-10-28"), {})
       }
     }
   }

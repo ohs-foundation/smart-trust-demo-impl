@@ -491,7 +491,7 @@
     <string name="trust_refresh_now">Refresh Now</string>
     <!-- Family wallet -->
     <string name="wallet_caption">Hosted in Onesa • Records stay in home country custody</string>
-    <string name="wallet_selected">Selected</string>
+    <string name="wallet_viewing">Viewing</string>
     <string name="wallet_relation_child">Child</string>
     <string name="wallet_relation_father">Father</string>
     <string name="wallet_relation_mother">Mother</string>
