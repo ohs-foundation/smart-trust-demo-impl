@@ -359,6 +359,49 @@ class GenerateVhlTest {
   }
 
   @Test
+  fun anotherHouseholdsParentSharesTwoOfItsMembers() = withService {
+    gateway =
+      FakeGateway(
+        groups = mapOf("rp-bounmy" to household, "rp-noy" to group("noy", "kham", "lattana")),
+        patients =
+          patients +
+            listOf(
+              patient("noy", "VONGSA", "Noy", managedBy = "rp-noy"),
+              patient("kham", "VONGSA", "Kham"),
+              patient("lattana", "VONGSA", "Lattana"),
+            ),
+        immunizations = listOf(immunization("penta", "lattana"), immunization("hepb", "somsak")),
+      )
+    val noy = idp.token("Patient/noy")
+
+    val response = generate(noy, parameters("noy", "lattana", passcode = "7310"))
+
+    assertEquals(HttpStatusCode.OK, response.status)
+    val issued = links(response.bodyAsText())
+    assertEquals(listOf("Patient/noy", "Patient/lattana"), issued.map { it.person })
+    val consents = written().filter { it.type() == "Consent" }
+    assertEquals(
+      listOf("Patient/noy", "Patient/lattana"),
+      consents.map { it.getValue("patient").jsonObject.text("reference") },
+    )
+    assertEquals(
+      listOf("Patient/noy", "Patient/noy"),
+      consents.map { it.getValue("performer").jsonArray.objects().single().text("reference") },
+    )
+    issued.forEach {
+      verified(it.hc1)
+      assertEquals(PasscodeCheck.MATCH, passcodes.check(it.consentId(), "7310"))
+    }
+    assertEquals(
+      listOf(0, 1),
+      issued.map { decryptedIps(it).resources().count { r -> r.type() == "Immunization" } },
+    )
+
+    assertEquals(HttpStatusCode.Forbidden, generate(noy, parameters("noy", "somsak")).status)
+    assertEquals(1, hapi.transactions.size)
+  }
+
+  @Test
   fun theLinkVerifiesAgainstTheLocalListUnderDemoVhl() = withService {
     val link = links(generate(bounmyToken(), parameters("bounmy")).bodyAsText()).single()
 
