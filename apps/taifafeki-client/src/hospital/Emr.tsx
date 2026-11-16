@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Baby, HospitalIcon, Plus, Printer, Syringe } from "lucide-react";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { Action, ActionBar } from "@/components/ActionBar";
-import { AppHeader } from "@/components/AppHeader";
+import { AppHeader, SessionLinks } from "@/components/AppHeader";
 import { DoseRow } from "@/components/DoseRow";
 import { CONTROL, Field } from "@/components/Field";
 import { Loading, Notice, Problem } from "@/components/Feedback";
@@ -116,7 +116,7 @@ function HospitalHeader({ hospital, practitioner, subtitle }: { hospital: Organi
       subtitle={subtitle ?? `Practitioner: ${nameOf(practitioner)}`}
       chips={participant && <StatusChip tone="success">GDHCN DEV Participant: {country}</StatusChip>}
       status={<StatusChip tone={online ? "success" : "warning"}>{online ? "Online" : "Offline"}</StatusChip>}
-      links={<a href="/?choose=true" className="hover:text-white">Change workplace</a>}
+      links={<SessionLinks />}
     />
   );
 }

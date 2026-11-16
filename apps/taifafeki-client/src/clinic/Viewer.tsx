@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Camera, CameraOff, HousePlus, ShieldX } from "lucide-react";
 import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Action, ActionBar } from "@/components/ActionBar";
-import { AppHeader } from "@/components/AppHeader";
+import { AppHeader, SessionLinks } from "@/components/AppHeader";
 import { Facts } from "@/components/Facts";
 import { CONTROL, Field } from "@/components/Field";
 import { Notice, Problem } from "@/components/Feedback";
@@ -145,7 +145,7 @@ function ViewerFor({ organization }: { organization: string }) {
       title="Taifafeki Clinic Point-of-Care VHL Viewer (Country A)"
       subtitle={[practitioner && `Practitioner: ${practitioner}`, clinic].filter(Boolean).join(" • ")}
       chips={chip}
-      links={<a href="/?choose=true" className="hover:text-white">Change workplace</a>}
+      links={<SessionLinks />}
     />
   );
 

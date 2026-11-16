@@ -1,6 +1,8 @@
+import { useMedplum } from "@medplum/react-hooks";
 import { HospitalIcon, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Action } from "./ActionBar";
 import { CONTAINER } from "./Page";
 
 interface Props {
@@ -40,4 +42,18 @@ export function AppHeader({ icon: Icon, title, subtitle, chips, status, links }:
 
 export function ClientHeader() {
   return <AppHeader icon={HospitalIcon} title="Taifafeki Facility Client" subtitle="Taifafeki Ministry of Public Health • Medplum" />;
+}
+
+export function SessionLinks() {
+  const medplum = useMedplum();
+  return (
+    <>
+      <a href="/?choose=true" className="hover:text-white">
+        Change workplace
+      </a>
+      <Action className="min-h-0 px-2.5 py-1 text-xs" onClick={() => void medplum.signOut().then(() => window.location.assign("/"))}>
+        Sign Out
+      </Action>
+    </>
+  );
 }

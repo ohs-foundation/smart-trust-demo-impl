@@ -25,7 +25,7 @@ const JWE = vhl.encrypt(Buffer.from(JSON.stringify(IPS)), "application/fhir+json
 const MARKERS = ["SENGMANY", "XXR-4821", "Hepatitis", KEY, JWE.split(".")[3] ?? ""];
 const indexedDbOpen = vi.fn();
 
-function medplumWith(createResource: (resource: unknown) => Promise<unknown>) {
+function medplumWith(createResource: (resource: unknown) => Promise<unknown>, signOut = vi.fn(async () => undefined)) {
   return {
     isLoading: () => false,
     getProfile: () => ({ resourceType: "Practitioner", id: "anan-id" }),
@@ -33,6 +33,7 @@ function medplumWith(createResource: (resource: unknown) => Promise<unknown>) {
     searchResources: searchAnansWorkplaces,
     searchOne: async () => ({ resourceType: "Device", id: "viewer-id" }),
     createResource,
+    signOut,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
   } as unknown as MedplumClient;
@@ -176,5 +177,20 @@ describe("theSummaryScreen", () => {
     await screen.findByText(/Somsak SENGMANY/);
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("receipt could not be recorded"));
     expect(screen.getByText(/Somsak SENGMANY/)).toBeTruthy();
+  });
+});
+
+describe("signOutOnTheViewer", () => {
+  it("offers Sign Out in the header", async () => {
+    const signOut = vi.fn(async () => undefined);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MedplumProvider medplum={medplumWith(vi.fn(), signOut)}>
+          <Viewer organization="clinic-org" />
+        </MedplumProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Sign Out" }));
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
   });
 });

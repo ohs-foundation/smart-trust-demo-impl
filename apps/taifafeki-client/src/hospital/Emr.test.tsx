@@ -16,6 +16,7 @@ const PRODUCTS = [
 ];
 
 function mount(organization: string) {
+  const signOut = vi.fn(async () => undefined);
   const executeBatch = vi.fn(async () => ({ resourceType: "Bundle", type: "transaction-response", entry: [{ response: { location: "Patient/new/_history/1" } }] }));
   const readResource = vi.fn(async (type: string, id: string) => ({ resourceType: type, id }));
   const searchResources = vi.fn(async (type: string) => (type === "Patient" ? [] : searchAnansWorkplaces(type)));
@@ -28,6 +29,7 @@ function mount(organization: string) {
     readResource,
     valueSetExpand: async () => ({ expansion: { contains: PRODUCTS } }),
     executeBatch,
+    signOut,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
   } as unknown as MedplumClient;
@@ -39,7 +41,7 @@ function mount(organization: string) {
       </MedplumProvider>
     </QueryClientProvider>,
   );
-  return { executeBatch, readResource, searchResources };
+  return { executeBatch, readResource, searchResources, signOut };
 }
 
 afterEach(cleanup);
@@ -78,5 +80,13 @@ describe("aUrlNamingAnotherOrganisationWritesNothing", () => {
     expect(screen.queryByText("Loading")).toBeNull();
     expect(found.readResource).not.toHaveBeenCalled();
     expect(found.executeBatch).not.toHaveBeenCalled();
+  });
+});
+
+describe("signOutOnTheEmr", () => {
+  it("offers Sign Out in the header", async () => {
+    const found = mount("hospital-org");
+    fireEvent.click(await screen.findByRole("button", { name: "Sign Out" }));
+    await waitFor(() => expect(found.signOut).toHaveBeenCalledTimes(1));
   });
 });
