@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -178,14 +179,25 @@ fun OptionRow(
     horizontalArrangement = Arrangement.spacedBy(9.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    val shape = if (check) RoundedCornerShape(4.dp) else CircleShape
     val brand = MaterialTheme.colorScheme.primary
-    Box(
-      Modifier.size(16.dp)
-        .border(2.dp, if (selected) brand else OnesaColors.Slate400, shape)
-        .padding(4.dp)
-        .background(if (selected) brand else Color.Transparent, shape)
-    )
+    if (check) {
+      val shape = RoundedCornerShape(4.dp)
+      Box(
+        Modifier.size(18.dp)
+          .background(if (selected) brand else Color.White, shape)
+          .border(2.dp, if (selected) brand else OnesaColors.Slate400, shape),
+        contentAlignment = Alignment.Center,
+      ) {
+        if (selected) Icon(OnesaIcons.Check, null, Modifier.size(12.dp), tint = Color.White)
+      }
+    } else {
+      Box(
+        Modifier.size(16.dp)
+          .border(2.dp, if (selected) brand else OnesaColors.Slate400, CircleShape)
+          .padding(4.dp)
+          .background(if (selected) brand else Color.Transparent, CircleShape)
+      )
+    }
     Text(
       label,
       style = MaterialTheme.typography.bodyMedium,

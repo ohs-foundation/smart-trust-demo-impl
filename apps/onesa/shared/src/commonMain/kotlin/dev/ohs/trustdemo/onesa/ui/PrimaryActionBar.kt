@@ -64,14 +64,16 @@ data class Action(
 )
 
 /**
- * The bar pinned under a screen: its [actions], stacked full width on a phone and lined up at the
- * end on a tablet, and a [caption] in monospace saying what the main action writes.
+ * The bar pinned under a screen: a [lead] line above its [actions], such as who the main action is
+ * for, the actions stacked full width on a phone and lined up at the end on a tablet, and a
+ * [caption] in monospace saying what the main action writes.
  */
 @Composable
 fun PrimaryActionBar(
   actions: List<Action>,
   modifier: Modifier = Modifier,
   caption: String? = null,
+  lead: (@Composable () -> Unit)? = null,
 ) {
   Column(modifier.fillMaxWidth()) {
     HorizontalDivider(color = OnesaColors.Line)
@@ -83,6 +85,7 @@ fun PrimaryActionBar(
         ),
       verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+      lead?.invoke()
       BoxWithConstraints(Modifier.fillMaxWidth()) {
         if (maxWidth >= 600.dp) {
           FlowRow(

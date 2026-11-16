@@ -187,7 +187,7 @@ class FamilyScreensRenderTest {
           ShareUiState(
             members = people,
             family = family,
-            selected = people.map { it.id }.toSet(),
+            selected = setOf("TrustDemoSomsak", "TrustDemoBounmyPatient"),
             terms = terms,
             today = shareDay,
             end = end,

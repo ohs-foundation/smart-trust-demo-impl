@@ -15,9 +15,14 @@
  */
 package dev.ohs.trustdemo.onesa.feature.wallet
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,6 +33,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.data.sharing.ShareProblem
@@ -41,6 +51,8 @@ import dev.ohs.trustdemo.onesa.generated.resources.share_caption
 import dev.ohs.trustdemo.onesa.generated.resources.share_confirm
 import dev.ohs.trustdemo.onesa.generated.resources.share_end
 import dev.ohs.trustdemo.onesa.generated.resources.share_end_value
+import dev.ohs.trustdemo.onesa.generated.resources.share_for
+import dev.ohs.trustdemo.onesa.generated.resources.share_for_none
 import dev.ohs.trustdemo.onesa.generated.resources.share_hidden
 import dev.ohs.trustdemo.onesa.generated.resources.share_ok
 import dev.ohs.trustdemo.onesa.generated.resources.share_passcode
@@ -57,6 +69,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.wallet_not_synced
 import dev.ohs.trustdemo.onesa.ui.Action
 import dev.ohs.trustdemo.onesa.ui.AlertCard
 import dev.ohs.trustdemo.onesa.ui.FormLabel
+import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
 import dev.ohs.trustdemo.onesa.ui.OnesaSelectField
 import dev.ohs.trustdemo.onesa.ui.OnesaTextField
@@ -64,6 +77,7 @@ import dev.ohs.trustdemo.onesa.ui.OptionRow
 import dev.ohs.trustdemo.onesa.ui.PasscodeCard
 import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
 import dev.ohs.trustdemo.onesa.ui.SectionCard
+import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import dev.ohs.trustdemo.onesa.util.displayDate
 import kotlin.time.Instant
@@ -158,6 +172,11 @@ internal fun ShareContent(
           )
         ),
         caption = stringResource(Res.string.share_caption),
+        lead = {
+          SharingFor(
+            state.family.filter { it.id in state.selected }.mapNotNull { it.given ?: it.name }
+          )
+        },
       )
     },
   ) {
@@ -224,6 +243,31 @@ internal fun ShareContent(
       Tone.Info,
     )
     state.refusal?.let { AlertCard(null, it, Tone.Danger) }
+  }
+}
+
+/** Who the links are for, by name, or a prompt to choose when no one is ticked. */
+@Composable
+private fun SharingFor(names: List<String>) {
+  val ink = if (names.isEmpty()) Tone.Warning.ink else OnesaColors.Ink
+  Row(
+    horizontalArrangement = Arrangement.spacedBy(6.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Icon(
+      if (names.isEmpty()) OnesaIcons.Alert else OnesaIcons.Users,
+      null,
+      tint = if (names.isEmpty()) ink else MaterialTheme.colorScheme.primary,
+      modifier = Modifier.size(16.dp),
+    )
+    Text(
+      if (names.isEmpty()) stringResource(Res.string.share_for_none)
+      else stringResource(Res.string.share_for, names.joinToString(", ")),
+      style = MaterialTheme.typography.bodyMedium,
+      fontSize = 12.5.sp,
+      fontWeight = FontWeight.SemiBold,
+      color = ink,
+    )
   }
 }
 

@@ -277,6 +277,8 @@
     <string name="share_passcode">Choose a %1$d-digit passcode you can say aloud</string>
     <string name="share_passcode_differ">The passcodes differ. Type it again.</string>
     <string name="share_confirm">Agree &amp; Create %1$d Links</string>
+    <string name="share_for">Sharing for: %1$s</string>
+    <string name="share_for_none">Choose who is travelling</string>
     <string name="issued_title">Travel Credential — %1$s</string>
     <string name="issued_passcode_hint">Show the QR; say the passcode yourself. It is not in the QR.</string>
     <string name="issued_show_full_screen">Show QR Full Screen</string>
