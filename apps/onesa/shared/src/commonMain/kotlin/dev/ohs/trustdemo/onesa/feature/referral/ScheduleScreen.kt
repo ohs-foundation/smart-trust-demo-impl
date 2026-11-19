@@ -42,6 +42,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.adjudication_could_not_save
 import dev.ohs.trustdemo.onesa.generated.resources.adjudication_detail
 import dev.ohs.trustdemo.onesa.generated.resources.adjudication_dual_coding
 import dev.ohs.trustdemo.onesa.generated.resources.adjudication_epi
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_inspect
 import dev.ohs.trustdemo.onesa.generated.resources.adjudication_keep_issued
 import dev.ohs.trustdemo.onesa.generated.resources.adjudication_match
 import dev.ohs.trustdemo.onesa.generated.resources.adjudication_pending
@@ -138,13 +139,15 @@ fun ScheduleScreen(referralId: String, onBack: () -> Unit, onBooked: () -> Unit)
     onBooked,
     viewModel::choose,
     viewModel::confirm,
+    viewModel::inspect,
   )
 }
 
 /**
  * S5 for [state]; the [upcoming] display-only rows join the schedule card, never the booking. While
  * a dose waits for the nurse's equivalence, she picks with [onChoose] and confirms with
- * [onConfirm], and the booking waits. [onBooked] runs once the visit is booked.
+ * [onConfirm], and the booking waits. [onInspect] shows or hides the confirmed doses' dual coding.
+ * [onBooked] runs once the visit is booked.
  */
 @Composable
 fun ScheduleContent(
@@ -156,11 +159,13 @@ fun ScheduleContent(
   onBooked: () -> Unit = {},
   onChoose: (EpiDose) -> Unit = {},
   onConfirm: () -> Unit = {},
+  onInspect: () -> Unit = {},
 ) {
   LaunchedEffect(state.booked) { if (state.booked != null) onBooked() }
   val schedule = state.schedule
   val due = schedule?.items.orEmpty().filter { it.standing is Standing.Due }
   val waiting = state.unmatched.firstOrNull()
+  val dualCoded = state.doses.any { it.adjudication != null && it.schedule != null }
   OnesaScaffold(
     topBar = {
       ChildTopBar(
@@ -216,8 +221,8 @@ fun ScheduleContent(
     },
     actions = {
       PrimaryActionBar(
-        listOf(
-          if (waiting != null)
+        if (waiting != null)
+          listOf(
             Action(
               stringResource(
                 if (state.choice == NotCounted) Res.string.adjudication_keep_issued
@@ -228,15 +233,25 @@ fun ScheduleContent(
               busy = state.busy,
               enabled = state.choice != null && !state.busy,
             )
-          else
+          )
+        else
+          listOfNotNull(
+            Action(
+                stringResource(Res.string.adjudication_inspect),
+                onClick = onInspect,
+                primary = false,
+                icon = OnesaIcons.File,
+                pressed = state.dualCodingShown,
+              )
+              .takeIf { dualCoded },
             Action(
               due.lastOrNull()?.age?.let { stringResource(Res.string.schedule_book_age, it) }
                 ?: stringResource(Res.string.schedule_book),
               onClick = onBook,
               busy = state.busy,
               enabled = state.canBook,
-            )
-        ),
+            ),
+          ),
         caption =
           stringResource(
             if (waiting != null) Res.string.adjudication_caption
@@ -271,11 +286,13 @@ fun ScheduleContent(
               adjudication.recorded?.take(10).orEmpty(),
             ),
         )
-        NoteLine(
-          stringResource(Res.string.adjudication_dual_coding, dualCoding(dose)),
-          icon = OnesaIcons.File,
-          mono = true,
-        )
+        if (state.dualCodingShown) {
+          NoteLine(
+            stringResource(Res.string.adjudication_dual_coding, dualCoding(dose)),
+            icon = OnesaIcons.File,
+            mono = true,
+          )
+        }
       }
     schedule?.let {
       val uncounted =

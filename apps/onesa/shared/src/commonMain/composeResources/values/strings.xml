@@ -447,6 +447,7 @@
     <string name="adjudication_caption">The foreign code is kept as issued; the national code is added beside it, never in its place</string>
     <string name="adjudication_could_not_save">The equivalence could not be saved. Check the connection and try again.</string>
     <string name="adjudication_dual_coding">Immunization.vaccineCode.coding[] = %1$s</string>
+    <string name="adjudication_inspect">Inspect Dual Coding Array</string>
     <string name="schedule_card_title">Calculated National Schedule (PlanDefinition)</string>
     <string name="schedule_card_footnote">Evaluated via FHIRPath against PlanDefinition TrustDemoOnesaInfantSchedule</string>
     <string name="schedule_verified">Verified</string>

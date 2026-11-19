@@ -44,9 +44,9 @@ val NotCounted = EpiDose("", "")
 
 /**
  * S5's state: the referral, the schedule as evaluated and the outcome of booking the visit, with
- * the [child]'s household and audits and the coding of their foreign [doses]. A verified dose the
- * national map does not name waits in [unmatched] for the nurse's [choice] from [choices]; the
- * visit is booked only once none waits.
+ * the [child]'s household and audits and the coding of their foreign [doses], shown when
+ * [dualCodingShown]. A verified dose the national map does not name waits in [unmatched] for the
+ * nurse's [choice] from [choices]; the visit is booked only once none waits.
  */
 data class ScheduleUiState(
   val referral: Referral? = null,
@@ -65,6 +65,7 @@ data class ScheduleUiState(
   val matchChanged: Boolean = false,
   val couldNotMatch: Boolean = false,
   val listStale: Boolean = false,
+  val dualCodingShown: Boolean = false,
 ) {
   val isOpen: Boolean
     get() = open?.status == "active"
@@ -102,6 +103,8 @@ class ScheduleViewModel(
   }
 
   fun choose(choice: EpiDose) = _uiState.update { it.copy(choice = choice) }
+
+  fun inspect() = _uiState.update { it.copy(dualCodingShown = !it.dualCodingShown) }
 
   /**
    * The nurse confirms her choice for the first unmatched dose: DT.02 rule 3 writes the map, the

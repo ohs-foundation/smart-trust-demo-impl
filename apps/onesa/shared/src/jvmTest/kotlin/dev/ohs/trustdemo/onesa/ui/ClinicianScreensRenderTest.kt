@@ -17,11 +17,19 @@ package dev.ohs.trustdemo.onesa.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -474,21 +482,46 @@ class ClinicianScreensRenderTest {
     clinic("0-04-s5-confirmed-phone", 360.dp to 2500.dp) {
       ScheduleContent(confirmed, visitDay, upcoming, onBack = {}, onBook = {})
     }
+    clinic("0-04-s5-dual-coding-phone", 360.dp to 2700.dp) {
+      ScheduleContent(
+        confirmed.copy(dualCodingShown = true),
+        visitDay,
+        upcoming,
+        onBack = {},
+        onBook = {},
+      )
+    }
     runComposeUiTest {
       setContent {
+        var shown by remember { mutableStateOf(confirmed) }
         OnesaTheme(OnesaColors.BrandClinic) {
-          Registry { ScheduleContent(confirmed, visitDay, upcoming, onBack = {}, onBook = {}) }
+          Registry {
+            ScheduleContent(
+              shown,
+              visitDay,
+              upcoming,
+              onBack = {},
+              onBook = {},
+              onInspect = { shown = shown.copy(dualCodingShown = !shown.dualCodingShown) },
+            )
+          }
         }
       }
+      val dualCoding =
+        "Immunization.vaccineCode.coding[] = [" +
+          """{"system":"${ScanTransactions.PRODUCT_SYSTEM}","code":"$HEPB",""" +
+          """"display":"Hepatitis B vaccine, paediatric, monovalent"},""" +
+          """{"system":"${ScanTransactions.EPI_SYSTEM}","code":"XXK-EPI-HEPB-BD",""" +
+          """"display":"Hepatitis B birth dose"}]"""
       onNodeWithText("CONFIRMED").assertExists()
-      onNodeWithText(
-          "Immunization.vaccineCode.coding[] = [" +
-            """{"system":"${ScanTransactions.PRODUCT_SYSTEM}","code":"$HEPB",""" +
-            """"display":"Hepatitis B vaccine, paediatric, monovalent"},""" +
-            """{"system":"${ScanTransactions.EPI_SYSTEM}","code":"XXK-EPI-HEPB-BD",""" +
-            """"display":"Hepatitis B birth dose"}]"""
-        )
-        .assertExists()
+      onNodeWithText(dualCoding).assertDoesNotExist()
+      onNodeWithText("Inspect Dual Coding Array")
+        .assertIsOff()
+        .assertHeightIsAtLeast(48.dp)
+        .performClick()
+      onNodeWithText(dualCoding).assertExists()
+      onNodeWithText("Inspect Dual Coding Array").assertIsOn().performClick()
+      onNodeWithText(dualCoding).assertDoesNotExist()
       onNodeWithText("Complete Referral", substring = true).assertIsEnabled()
     }
   }
