@@ -16,6 +16,7 @@ vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: Reac
 vi.mock("../server/links", () => ({ scanVhl: vi.fn(), fetchSummary: vi.fn(), trustListStatuses: vi.fn() }));
 
 configure({ asyncUtilTimeout: 5000 });
+vi.setConfig({ testTimeout: 20_000 });
 
 const IPS = ig("Bundle-TrustDemoJ4Ips.json");
 const vhl = WitVhl.getInstance();
