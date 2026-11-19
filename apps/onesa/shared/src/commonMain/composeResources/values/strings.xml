@@ -248,9 +248,7 @@
     <string name="verify_name_differs">The card names %1$s; the child is %2$s. The birth date matches. Confirm only if the card is the child's, and say why.</string>
     <string name="verify_name_reason_label">Reason the card is the child's</string>
     <string name="verify_name_reason_hint">For example, the card spells the name differently</string>
-    <string name="match_confirm">Confirm Equivalence</string>
     <string name="match_changed">The national map or the dose changed meanwhile. Nothing was saved. Check the choices and pick again.</string>
-    <string name="match_done">Matched to %1$s. The national map now has this product.</string>
     <string name="schedule_could_not">Could not be evaluated</string>
     <string name="schedule_reported">Reported, not counted</string>
     <string name="schedule_unmapped">Verified, but not mapped to a schedule dose</string>
@@ -379,17 +377,11 @@
     <string name="verify_proceed">Continue to Schedule Evaluation</string>
     <string name="verify_status_local">Status: Cryptographic trust verified via GDHCN (%1$s)</string>
     <string name="verify_status_gdhcn">Status: signature verified against the GDHCN DEV trust list</string>
-    <string name="match_list_title">Matching the foreign doses to the Onesan schedule</string>
     <string name="match_mapped">Mapped Automatically</string>
-    <string name="match_needs_decision">Needs Your Decision</string>
-    <string name="match_found">Found in ConceptMap %1$s</string>
-    <string name="match_not_found">No entry in the national ConceptMap</string>
     <string name="match_question">Which Onesan schedule dose is this?</string>
     <string name="match_given">Given %1$s at %2$s • Lot %3$s</string>
     <string name="match_birth_day">on the day of birth</string>
     <string name="match_not_counted">Not counted on the Onesan schedule</string>
-    <string name="match_records_title">What your choice records</string>
-    <string name="match_records_text">You, as attester, on a Provenance. %1$s joins the national map, so future cards map automatically. The certificate code is kept as issued.</string>
     <string name="layers_title">3-Layer Terminology &amp; ConceptMap Adjudication</string>
     <string name="layer1">Layer 1: Certificate product code (issued %1$s)</string>
     <string name="layer1_detail">Stored exactly as issued, from the card's DVCMin PreQual product.</string>
@@ -406,9 +398,16 @@
     <string name="layers_footnote_gap">Resolve the missing national concept mapping for this foreign dose</string>
     <string name="adjudication_title">Clinician Adjudication &amp; Equivalence Confirmation</string>
     <string name="adjudication_verdict">CONFIRMED</string>
-    <string name="adjudication_match">Proposed Onesan EPI match</string>
+    <string name="adjudication_match">Proposed Onesan EPI Match</string>
+    <string name="adjudication_epi">Onesan EPI: %1$s</string>
     <string name="adjudication_code">Code</string>
-    <string name="adjudication_detail">Equivalence confirmed &amp; dual coding active • %1$s, %2$s</string>
+    <string name="adjudication_detail">Equivalence Confirmed &amp; Dual-Coding Active • %1$s, %2$s</string>
+    <string name="adjudication_pending">Not confirmed yet: press Confirm Equivalence &amp; Add Second Coding</string>
+    <string name="adjudication_confirm">Confirm Equivalence &amp; Add Second Coding</string>
+    <string name="adjudication_keep_issued">Keep the Product Code Only</string>
+    <string name="adjudication_caption">The foreign code is kept as issued; the national code is added beside it, never in its place</string>
+    <string name="adjudication_could_not_save">The equivalence could not be saved. Check the connection and try again.</string>
+    <string name="adjudication_dual_coding">Immunization.vaccineCode.coding[] = %1$s</string>
     <string name="schedule_card_title">Calculated National Schedule (PlanDefinition)</string>
     <string name="schedule_card_footnote">Evaluated via FHIRPath against PlanDefinition TrustDemoOnesaInfantSchedule</string>
     <string name="schedule_verified">Verified</string>
@@ -423,7 +422,7 @@
     <string name="booking_date">Date</string>
     <string name="booking_task">FHIR Task / Appointment</string>
     <string name="booking_booked">✓ Appointment Booked</string>
-    <string name="booking_not_booked">Not booked yet</string>
+    <string name="booking_not_booked">Not booked: Confirm Date</string>
     <string name="booking_referral_done">The referral is already completed</string>
     <string name="schedule_book_age">Book %1$s Visit &amp; Complete Referral</string>
     <string name="schedule_book_caption">Writes the ImmunizationRecommendation and its reminder Task, and completes the referral</string>

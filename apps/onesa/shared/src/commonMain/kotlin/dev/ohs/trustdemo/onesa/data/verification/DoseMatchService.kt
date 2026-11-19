@@ -115,6 +115,20 @@ class DoseMatchService(
   suspend fun choices(): List<EpiDose> =
     national.scheduleDisplays().map { (code, display) -> EpiDose(code, display) }
 
+  /**
+   * The choice put to the nurse for [dose]: the one whose name shares the most words with the
+   * product's, when only one does. It is a proposal; nothing is written until she confirms it.
+   */
+  fun proposal(dose: UnmatchedDose, choices: List<EpiDose>): EpiDose? {
+    val product = words(NewbornRegistration.PRODUCTS[dose.product] ?: dose.product)
+    val shared = choices.associateWith { (words(it.display) intersect product).size }
+    val most = shared.values.maxOrNull()?.takeIf { it > 0 } ?: return null
+    return shared.filterValues { it == most }.keys.singleOrNull()
+  }
+
+  private fun words(text: String): Set<String> =
+    text.lowercase().split(Regex("[^a-z0-9]+")).filter { it.isNotEmpty() }.toSet()
+
   /** Records that [dose] counts as [choice], unless the map or the dose has changed meanwhile. */
   suspend fun confirm(dose: UnmatchedDose, choice: EpiDose): MatchOutcome {
     val current = session() ?: error("Sign in again to match a dose.")

@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -33,30 +32,12 @@ import dev.ohs.trustdemo.onesa.auth.AppRole
 import dev.ohs.trustdemo.onesa.data.hcert.TrustDomain
 import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.repository.displayAge
-import dev.ohs.trustdemo.onesa.data.verification.EpiDose
 import dev.ohs.trustdemo.onesa.data.verification.ScanOutcome
-import dev.ohs.trustdemo.onesa.data.verification.ScanTransactions
-import dev.ohs.trustdemo.onesa.data.verification.UnmatchedDose
-import dev.ohs.trustdemo.onesa.data.verification.shortName
 import dev.ohs.trustdemo.onesa.feature.home.RoleTopBar
 import dev.ohs.trustdemo.onesa.feature.scan.CardCameraPanel
 import dev.ohs.trustdemo.onesa.feature.scan.QrScan
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.list_stale
-import dev.ohs.trustdemo.onesa.generated.resources.match_birth_day
-import dev.ohs.trustdemo.onesa.generated.resources.match_changed
-import dev.ohs.trustdemo.onesa.generated.resources.match_confirm
-import dev.ohs.trustdemo.onesa.generated.resources.match_done
-import dev.ohs.trustdemo.onesa.generated.resources.match_found
-import dev.ohs.trustdemo.onesa.generated.resources.match_given
-import dev.ohs.trustdemo.onesa.generated.resources.match_list_title
-import dev.ohs.trustdemo.onesa.generated.resources.match_mapped
-import dev.ohs.trustdemo.onesa.generated.resources.match_needs_decision
-import dev.ohs.trustdemo.onesa.generated.resources.match_not_counted
-import dev.ohs.trustdemo.onesa.generated.resources.match_not_found
-import dev.ohs.trustdemo.onesa.generated.resources.match_question
-import dev.ohs.trustdemo.onesa.generated.resources.match_records_text
-import dev.ohs.trustdemo.onesa.generated.resources.match_records_title
 import dev.ohs.trustdemo.onesa.generated.resources.scan_error_camera
 import dev.ohs.trustdemo.onesa.generated.resources.scan_paste_label
 import dev.ohs.trustdemo.onesa.generated.resources.verify_age
@@ -115,17 +96,14 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_verified_count
 import dev.ohs.trustdemo.onesa.generated.resources.verify_verified_title
 import dev.ohs.trustdemo.onesa.ui.Action
 import dev.ohs.trustdemo.onesa.ui.AlertCard
-import dev.ohs.trustdemo.onesa.ui.BackHandler
 import dev.ohs.trustdemo.onesa.ui.ChildAvatar
 import dev.ohs.trustdemo.onesa.ui.Field
 import dev.ohs.trustdemo.onesa.ui.FieldGrid
-import dev.ohs.trustdemo.onesa.ui.FormLabel
 import dev.ohs.trustdemo.onesa.ui.NoteLine
 import dev.ohs.trustdemo.onesa.ui.OnesaButton
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
 import dev.ohs.trustdemo.onesa.ui.OnesaTextField
-import dev.ohs.trustdemo.onesa.ui.OptionRow
 import dev.ohs.trustdemo.onesa.ui.PatientBanner
 import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
 import dev.ohs.trustdemo.onesa.ui.RecordRow
@@ -154,14 +132,11 @@ class VerifyActions(
   val decline: () -> Unit,
   val proceed: () -> Unit,
   val scanAgain: () -> Unit,
-  val match: (UnmatchedDose, EpiDose?) -> Unit,
-  val back: () -> Unit,
 )
 
 /**
  * S4: verifies each of a referred child's cards against the trust list and imports its dose; a card
- * that fails shows why (1-12). Before the schedule, a dose whose product the national map does not
- * name goes to the dose match picker (1-13).
+ * that fails shows why (1-12).
  */
 @Composable
 fun VerifyCardsScreen(
@@ -172,18 +147,9 @@ fun VerifyCardsScreen(
 ) {
   val viewModel = koinViewModel<VerifyCardsViewModel>(key = referralId) { parametersOf(referralId) }
   val state by viewModel.uiState.collectAsStateWithLifecycle()
-  var matching by rememberSaveable { mutableStateOf(false) }
   var dismissed by rememberSaveable { mutableIntStateOf(0) }
   var cameraFailed by remember { mutableStateOf(false) }
-  var choice by remember(state.unmatched.firstOrNull()?.id) { mutableStateOf<EpiDose?>(null) }
   val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-
-  LaunchedEffect(matching, state.unmatched, state.busy) {
-    if (matching && state.unmatched.isEmpty() && !state.busy) {
-      matching = false
-      onOpenSchedule()
-    }
-  }
   val actions =
     VerifyActions(
       onScan = { scan ->
@@ -200,26 +166,17 @@ fun VerifyCardsScreen(
       confirm = viewModel::confirm,
       reason = viewModel::reason,
       decline = viewModel::decline,
-      proceed = { if (state.unmatched.isNotEmpty()) matching = true else onOpenSchedule() },
+      proceed = onOpenSchedule,
       scanAgain = { dismissed = state.results.size },
-      match = { dose, picked ->
-        if (picked == null) viewModel.leaveUnmapped(dose) else viewModel.match(dose, picked)
-      },
-      back = { matching = false },
     )
-  BackHandler(enabled = matching, onBack = actions.back)
-  if (matching) {
-    DoseMatchContent(state, today, choice, { choice = it }, actions)
-  } else {
-    VerifyCardsContent(
-      state = state,
-      today = today,
-      topBar = { RoleTopBar(role, onBack) },
-      showOutcome = state.results.size > dismissed,
-      cameraFailed = cameraFailed,
-      actions = actions,
-    )
-  }
+  VerifyCardsContent(
+    state = state,
+    today = today,
+    topBar = { RoleTopBar(role, onBack) },
+    showOutcome = state.results.size > dismissed,
+    cameraFailed = cameraFailed,
+    actions = actions,
+  )
 }
 
 /** S4, or 1-12 when the last card shown was refused: the referral, the doses and the scanner. */
@@ -461,119 +418,6 @@ fun VerifyCardsContent(
   }
 }
 
-/** The picker's answer that the dose counts as no national schedule dose. */
-val NotCounted = EpiDose("", "")
-
-/**
- * 1-13: the nurse says which national schedule dose a product the map does not name counts as;
- * [choice] is her pick so far, [NotCounted] when none fits.
- */
-@Composable
-fun DoseMatchContent(
-  state: VerifyCardsUiState,
-  today: LocalDate,
-  choice: EpiDose?,
-  onChoose: (EpiDose) -> Unit,
-  actions: VerifyActions,
-) {
-  val dose = state.unmatched.firstOrNull()
-  val unmatched = state.unmatched.map { it.id }.toSet()
-  val about = state.doses.firstOrNull { it.id == dose?.id }
-
-  OnesaScaffold(
-    topBar = {
-      ChildTopBar(
-        child = state.child,
-        fallbackName = state.referral?.patientName.orEmpty(),
-        today = today,
-        onBack = actions.back,
-        doses = state.doses,
-      )
-    },
-    side = {
-      AlertCard(
-        stringResource(Res.string.match_records_title),
-        stringResource(
-          Res.string.match_records_text,
-          about?.productName ?: dose?.product.orEmpty(),
-        ),
-        Tone.Info,
-      )
-    },
-    actions = {
-      PrimaryActionBar(
-        listOf(
-          Action(
-            stringResource(Res.string.match_confirm),
-            onClick = {
-              val picked = choice
-              if (dose != null && picked != null) {
-                actions.match(dose, picked.takeIf { it != NotCounted })
-              }
-            },
-            busy = state.busy,
-            enabled = dose != null && choice != null && !state.busy,
-          )
-        )
-      )
-    },
-  ) {
-    SectionCard(title = stringResource(Res.string.match_list_title)) {
-      state.doses.forEach { foreign ->
-        val open = foreign.id in unmatched
-        RecordRow(
-          label = foreign.productName,
-          code = "${foreign.product} → ${foreign.schedule?.code?.takeUnless { open } ?: "?"}",
-          detail =
-            if (open) stringResource(Res.string.match_not_found)
-            else
-              stringResource(
-                Res.string.match_found,
-                ScanTransactions.EPI_MAP.substringAfterLast('/'),
-              ),
-          status =
-            if (open) Status(stringResource(Res.string.match_needs_decision), Tone.Warning)
-            else Status(stringResource(Res.string.match_mapped), Tone.Success),
-        )
-      }
-    }
-    if (dose != null) {
-      SectionCard(title = stringResource(Res.string.match_question)) {
-        FormLabel(
-          listOfNotNull(
-              about?.let {
-                stringResource(
-                  Res.string.match_given,
-                  it.date.orEmpty(),
-                  it.origin?.let(NewbornRegistration::countryName).orEmpty(),
-                  it.lot.orEmpty(),
-                )
-              } ?: dose.label,
-              about
-                ?.takeIf { it.date != null && it.date == state.child?.birthDate }
-                ?.let { stringResource(Res.string.match_birth_day) },
-            )
-            .joinToString(" • ")
-        )
-        state.choices.forEach { option ->
-          OptionRow(
-            label = option.shortName,
-            selected = choice == option,
-            onClick = { onChoose(option) },
-            code = option.code,
-          )
-        }
-        OptionRow(
-          label = stringResource(Res.string.match_not_counted),
-          selected = choice == NotCounted,
-          onClick = { onChoose(NotCounted) },
-        )
-      }
-    }
-    Messages(state)
-  }
-}
-
 @Composable
 private fun DoseRow(product: String, lot: String?, origin: String?, status: Status) {
   RecordRow(
@@ -591,13 +435,6 @@ private fun Messages(state: VerifyCardsUiState) {
   if (state.couldNotSave) {
     AlertCard(null, stringResource(Res.string.verify_could_not_save), Tone.Danger)
   }
-  if (state.matchChanged) {
-    AlertCard(null, stringResource(Res.string.match_changed), Tone.Warning)
-  }
-  state.matchedTo.forEach {
-    AlertCard(null, stringResource(Res.string.match_done, it.display), Tone.Info)
-  }
-  if (state.listStale) NoteLine(stringResource(Res.string.list_stale))
 }
 
 @Composable

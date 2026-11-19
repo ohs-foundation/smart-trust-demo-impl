@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
+import dev.ohs.trustdemo.onesa.ui.theme.OnesaTheme
 import dev.ohs.trustdemo.onesa.ui.theme.Tone
 
 /**
@@ -72,9 +73,14 @@ fun AlertCard(title: String?, text: String?, tone: Tone, modifier: Modifier = Mo
   }
 }
 
-/** A quiet line of guidance under or between blocks, led by an icon. */
+/** A quiet line of guidance under or between blocks, led by an icon; [mono] for a record's code. */
 @Composable
-fun NoteLine(text: String, modifier: Modifier = Modifier, icon: ImageVector = OnesaIcons.Info) {
+fun NoteLine(
+  text: String,
+  modifier: Modifier = Modifier,
+  icon: ImageVector = OnesaIcons.Info,
+  mono: Boolean = false,
+) {
   Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
     Icon(
       icon,
@@ -82,6 +88,10 @@ fun NoteLine(text: String, modifier: Modifier = Modifier, icon: ImageVector = On
       tint = OnesaColors.Slate500,
       modifier = Modifier.padding(top = 1.dp).size(14.dp),
     )
-    Text(text, style = MaterialTheme.typography.bodySmall, color = OnesaColors.Slate500)
+    Text(
+      text,
+      style = if (mono) OnesaTheme.mono.code else MaterialTheme.typography.bodySmall,
+      color = OnesaColors.Slate500,
+    )
   }
 }

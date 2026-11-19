@@ -20,18 +20,31 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.schedule.DisplayOnlyRow
 import dev.ohs.trustdemo.onesa.data.schedule.DisplayOnlyRows
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleDose
 import dev.ohs.trustdemo.onesa.data.schedule.Standing
+import dev.ohs.trustdemo.onesa.data.verification.EpiDose
 import dev.ohs.trustdemo.onesa.data.verification.ForeignDose
+import dev.ohs.trustdemo.onesa.data.verification.ScanTransactions
+import dev.ohs.trustdemo.onesa.data.verification.UnmatchedDose
 import dev.ohs.trustdemo.onesa.data.verification.shortName
+import dev.ohs.trustdemo.onesa.data.verification.text
 import dev.ohs.trustdemo.onesa.generated.resources.Res
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_caption
 import dev.ohs.trustdemo.onesa.generated.resources.adjudication_code
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_confirm
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_could_not_save
 import dev.ohs.trustdemo.onesa.generated.resources.adjudication_detail
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_dual_coding
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_epi
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_keep_issued
 import dev.ohs.trustdemo.onesa.generated.resources.adjudication_match
+import dev.ohs.trustdemo.onesa.generated.resources.adjudication_pending
 import dev.ohs.trustdemo.onesa.generated.resources.adjudication_title
 import dev.ohs.trustdemo.onesa.generated.resources.adjudication_verdict
 import dev.ohs.trustdemo.onesa.generated.resources.booking_booked
@@ -57,7 +70,12 @@ import dev.ohs.trustdemo.onesa.generated.resources.layer3_mapped_detail
 import dev.ohs.trustdemo.onesa.generated.resources.layers_footnote_gap
 import dev.ohs.trustdemo.onesa.generated.resources.layers_title
 import dev.ohs.trustdemo.onesa.generated.resources.list_stale
+import dev.ohs.trustdemo.onesa.generated.resources.match_birth_day
+import dev.ohs.trustdemo.onesa.generated.resources.match_changed
+import dev.ohs.trustdemo.onesa.generated.resources.match_given
 import dev.ohs.trustdemo.onesa.generated.resources.match_mapped
+import dev.ohs.trustdemo.onesa.generated.resources.match_not_counted
+import dev.ohs.trustdemo.onesa.generated.resources.match_question
 import dev.ohs.trustdemo.onesa.generated.resources.not_counted_title
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_book
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_book_age
@@ -74,9 +92,11 @@ import dev.ohs.trustdemo.onesa.ui.Action
 import dev.ohs.trustdemo.onesa.ui.AlertCard
 import dev.ohs.trustdemo.onesa.ui.Field
 import dev.ohs.trustdemo.onesa.ui.FieldGrid
+import dev.ohs.trustdemo.onesa.ui.FormLabel
 import dev.ohs.trustdemo.onesa.ui.NoteLine
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
+import dev.ohs.trustdemo.onesa.ui.OptionRow
 import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
 import dev.ohs.trustdemo.onesa.ui.RecordRow
 import dev.ohs.trustdemo.onesa.ui.SectionCard
@@ -88,14 +108,19 @@ import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
+import kotlinx.serialization.json.JsonArray
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
+/** Material's alpha for disabled content: the booking waits for the nurse's equivalence. */
+private const val DISABLED_ALPHA = 0.38f
+
 /**
- * S5: how each foreign dose reaches the national schedule, the schedule evaluated for the child,
- * and the booking of the visit it recommends; [onBooked] once the visit is booked.
+ * S5: how each foreign dose reaches the national schedule, the nurse's equivalence for one the
+ * national map does not name, the schedule evaluated for the child, and the booking of the visit it
+ * recommends; [onBooked] once the visit is booked.
  */
 @Composable
 fun ScheduleScreen(referralId: String, onBack: () -> Unit, onBooked: () -> Unit) {
@@ -103,12 +128,22 @@ fun ScheduleScreen(referralId: String, onBack: () -> Unit, onBooked: () -> Unit)
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
   val upcoming by produceState(emptyList<DisplayOnlyRow>()) { value = DisplayOnlyRows.load() }
-  ScheduleContent(state, today, upcoming, onBack, viewModel::book, onBooked)
+  ScheduleContent(
+    state,
+    today,
+    upcoming,
+    onBack,
+    viewModel::book,
+    onBooked,
+    viewModel::choose,
+    viewModel::confirm,
+  )
 }
 
 /**
- * S5 for [state]; the [upcoming] display-only rows join the schedule card, never the booking.
- * [onBooked] runs once the visit is booked.
+ * S5 for [state]; the [upcoming] display-only rows join the schedule card, never the booking. While
+ * a dose waits for the nurse's equivalence, she picks with [onChoose] and confirms with
+ * [onConfirm], and the booking waits. [onBooked] runs once the visit is booked.
  */
 @Composable
 fun ScheduleContent(
@@ -118,10 +153,13 @@ fun ScheduleContent(
   onBack: () -> Unit,
   onBook: () -> Unit,
   onBooked: () -> Unit = {},
+  onChoose: (EpiDose) -> Unit = {},
+  onConfirm: () -> Unit = {},
 ) {
   LaunchedEffect(state.booked) { if (state.booked != null) onBooked() }
   val schedule = state.schedule
   val due = schedule?.items.orEmpty().filter { it.standing is Standing.Due }
+  val waiting = state.unmatched.firstOrNull()
   OnesaScaffold(
     topBar = {
       ChildTopBar(
@@ -136,7 +174,11 @@ fun ScheduleContent(
     sideWide = true,
     side = {
       schedule?.let { ScheduleCard(it, upcoming) }
-      SectionCard(title = stringResource(Res.string.booking_title), icon = OnesaIcons.Clock) {
+      SectionCard(
+        modifier = if (waiting != null) Modifier.alpha(DISABLED_ALPHA) else Modifier,
+        title = stringResource(Res.string.booking_title),
+        icon = OnesaIcons.Clock,
+      ) {
         FieldGrid(
           listOfNotNull(
             schedule
@@ -174,19 +216,36 @@ fun ScheduleContent(
     actions = {
       PrimaryActionBar(
         listOf(
-          Action(
-            due.lastOrNull()?.age?.let { stringResource(Res.string.schedule_book_age, it) }
-              ?: stringResource(Res.string.schedule_book),
-            onClick = onBook,
-            busy = state.busy,
-            enabled = state.canBook,
-          )
+          if (waiting != null)
+            Action(
+              stringResource(
+                if (state.choice == NotCounted) Res.string.adjudication_keep_issued
+                else Res.string.adjudication_confirm
+              ),
+              onClick = onConfirm,
+              icon = OnesaIcons.Check,
+              busy = state.busy,
+              enabled = state.choice != null && !state.busy,
+            )
+          else
+            Action(
+              due.lastOrNull()?.age?.let { stringResource(Res.string.schedule_book_age, it) }
+                ?: stringResource(Res.string.schedule_book),
+              onClick = onBook,
+              busy = state.busy,
+              enabled = state.canBook,
+            )
         ),
-        caption = stringResource(Res.string.schedule_book_caption),
+        caption =
+          stringResource(
+            if (waiting != null) Res.string.adjudication_caption
+            else Res.string.schedule_book_caption
+          ),
       )
     },
   ) {
     state.doses.filter { it.adjudication != null || it.schedule == null }.forEach { Layers(it) }
+    waiting?.let { Unconfirmed(it, state, onChoose) }
     state.doses
       .filter { it.adjudication != null && it.schedule != null }
       .forEach { dose ->
@@ -198,7 +257,10 @@ fun ScheduleContent(
           verdict = stringResource(Res.string.adjudication_verdict),
           fields =
             listOf(
-              Field(stringResource(Res.string.adjudication_match), coded.display),
+              Field(
+                stringResource(Res.string.adjudication_match),
+                stringResource(Res.string.adjudication_epi, coded.display),
+              ),
               Field(stringResource(Res.string.adjudication_code), coded.code, mono = true),
             ),
           detail =
@@ -207,6 +269,11 @@ fun ScheduleContent(
               adjudication.attester,
               adjudication.recorded?.take(10).orEmpty(),
             ),
+        )
+        NoteLine(
+          stringResource(Res.string.adjudication_dual_coding, dualCoding(dose)),
+          icon = OnesaIcons.File,
+          mono = true,
         )
       }
     schedule?.let {
@@ -228,6 +295,79 @@ fun ScheduleContent(
     Messages(state)
   }
 }
+
+/**
+ * DT.02 before the nurse confirms: the national dose proposed for [dose], and the others she can
+ * pick instead, or none.
+ */
+@Composable
+private fun Unconfirmed(dose: UnmatchedDose, state: ScheduleUiState, onChoose: (EpiDose) -> Unit) {
+  val choice = state.choice
+  val about = state.doses.firstOrNull { it.id == dose.id }
+  VerificationResultCard(
+    title = stringResource(Res.string.adjudication_title),
+    tone = Tone.Warning,
+    fields =
+      listOf(
+        Field(
+          stringResource(Res.string.adjudication_match),
+          when (choice) {
+            null -> "-"
+            NotCounted -> stringResource(Res.string.match_not_counted)
+            else -> stringResource(Res.string.adjudication_epi, choice.display)
+          },
+        ),
+        Field(
+          stringResource(Res.string.adjudication_code),
+          choice?.code?.ifEmpty { null } ?: "-",
+          mono = true,
+        ),
+      ),
+    detail = stringResource(Res.string.adjudication_pending),
+  )
+  SectionCard(title = stringResource(Res.string.match_question)) {
+    FormLabel(
+      listOfNotNull(
+          about?.let {
+            stringResource(
+              Res.string.match_given,
+              it.date.orEmpty(),
+              it.origin?.let(NewbornRegistration::countryName).orEmpty(),
+              it.lot.orEmpty(),
+            )
+          } ?: dose.label,
+          about
+            ?.takeIf { it.date != null && it.date == state.child?.birthDate }
+            ?.let { stringResource(Res.string.match_birth_day) },
+        )
+        .joinToString(" • ")
+    )
+    state.choices.forEach { option ->
+      OptionRow(
+        label = option.shortName,
+        selected = choice == option,
+        onClick = { onChoose(option) },
+        code = option.code,
+      )
+    }
+    OptionRow(
+      label = stringResource(Res.string.match_not_counted),
+      selected = choice == NotCounted,
+      onClick = { onChoose(NotCounted) },
+    )
+  }
+}
+
+/** The dose's issuer and national codings, as the saved record carries them, issuer first. */
+private fun dualCoding(dose: ForeignDose): String =
+  JsonArray(
+      dose.codings
+        .filter {
+          it.text("system") in listOf(ScanTransactions.PRODUCT_SYSTEM, ScanTransactions.EPI_SYSTEM)
+        }
+        .sortedBy { it.text("system") != ScanTransactions.PRODUCT_SYSTEM }
+    )
+    .toString()
 
 @Composable
 private fun doses(
@@ -293,6 +433,11 @@ private fun Messages(state: ScheduleUiState) {
   if (state.failed) {
     AlertCard(null, stringResource(Res.string.schedule_could_not_load), Tone.Danger)
   }
+  if (state.couldNotMatch) {
+    AlertCard(null, stringResource(Res.string.adjudication_could_not_save), Tone.Danger)
+  }
+  if (state.matchChanged) AlertCard(null, stringResource(Res.string.match_changed), Tone.Warning)
+  if (state.listStale) NoteLine(stringResource(Res.string.list_stale))
   if (state.syncFirst) AlertCard(null, stringResource(Res.string.sync_first), Tone.Warning)
   if (state.referralChanged) {
     AlertCard(null, stringResource(Res.string.schedule_referral_changed), Tone.Warning)
