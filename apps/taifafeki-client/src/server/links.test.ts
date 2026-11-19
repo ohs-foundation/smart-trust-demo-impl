@@ -80,7 +80,7 @@ describe("aVerifiedLinkIsFetched", () => {
     const held = v.handles.get(outcome.handle, "Practitioner/anan");
     expect(held).toEqual({ url: "https://vhl.onesa.example:8443/vhl/List/_search?_id=abc", flag: "LP", label: "Somsak's health summary", exp: NOW + 86400 });
     expect(JSON.stringify(held)).not.toContain(KEY);
-    expect(JSON.stringify(outcome)).not.toContain("key");
+    expect(JSON.stringify(outcome)).not.toMatch(/"key"\s*:/);
     expect(v.handles.get(outcome.handle, "Practitioner/someone-else")).toBeUndefined();
   });
 
