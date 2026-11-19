@@ -17,6 +17,7 @@ package dev.ohs.trustdemo.onesa.feature.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.ohs.trustdemo.onesa.auth.SessionStore
 import dev.ohs.trustdemo.onesa.data.sharing.FamilyMember
 import dev.ohs.trustdemo.onesa.data.sharing.IssuedLink
 import dev.ohs.trustdemo.onesa.data.sharing.Person
@@ -26,8 +27,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** S7's links: the ones just issued, read back from the encrypted store by Consent id. */
-internal class IssuedLinksViewModel(consentIds: List<String>, service: ShareService) : ViewModel() {
+/**
+ * S7's links: the ones just issued, read back from the encrypted store by Consent id, and the
+ * holder's place in the family, whose passcode it is.
+ */
+internal class IssuedLinksViewModel(
+  consentIds: List<String>,
+  service: ShareService,
+  store: SessionStore,
+) : ViewModel() {
   private val _links = MutableStateFlow<List<IssuedLink>?>(null)
   val links: StateFlow<List<IssuedLink>?> = _links.asStateFlow()
 
@@ -41,12 +49,20 @@ internal class IssuedLinksViewModel(consentIds: List<String>, service: ShareServ
   /** Who each link is for: relation and age, for the header. */
   val family: StateFlow<List<FamilyMember>> = _family.asStateFlow()
 
+  private val _holder = MutableStateFlow<String?>(null)
+
+  /** The signed-in holder's relation in the household (`FTH`, `MTH`), when the records say. */
+  val holder: StateFlow<String?> = _holder.asStateFlow()
+
   init {
     viewModelScope.launch {
       val (found, loose) = service.issued(consentIds)
       _unsaved.value = loose
       _links.value = found
       _family.value = service.family(found.map { Person(it.personId, it.name) })
+      val self = store.session.value?.context?.patientId
+      _holder.value =
+        service.family(service.household(self)).firstOrNull { it.id == self }?.relation
     }
   }
 }

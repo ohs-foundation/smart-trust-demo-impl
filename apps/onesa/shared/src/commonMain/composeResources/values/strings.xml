@@ -523,8 +523,14 @@
     <string name="issued_qr_title">IHE ITI Verifiable Health Link (VHL)</string>
     <string name="issued_badge">Signed VHL • Onesa National Portal</string>
     <string name="issued_qr_caption">QR holds a signed link and its key only. Patient data stays in Onesa.</string>
-    <string name="issued_passcode_title">Passcode Protection (Required at PoC)</string>
-    <string name="issued_passcode_text">Say the passcode you chose to the clinician. It is not in the QR, and this phone does not keep it.</string>
+    <string name="issued_passcode_title">Passcode Protection (Required at PoC) — Verbal Passcode</string>
+    <string name="issued_passcode_father">Passcode Protection (Required at PoC) — Father's Verbal Passcode</string>
+    <string name="issued_passcode_mother">Passcode Protection (Required at PoC) — Mother's Verbal Passcode</string>
+    <string name="issued_passcode_show">Show passcode</string>
+    <string name="issued_passcode_hide">Hide passcode</string>
+    <string name="issued_passcode_hidden_note">ACTIVE • Reveal to read it out to the clinician</string>
+    <string name="issued_passcode_shown_note">ACTIVE • Read it out to the clinician; never printed in the QR</string>
+    <string name="issued_passcode_not_kept">Not kept for links made before this update</string>
     <string name="issued_validity">Link validity</string>
     <string name="issued_validity_value">%1$d Days (%2$s)</string>
     <string name="issued_rate_limit">Rate Limit</string>

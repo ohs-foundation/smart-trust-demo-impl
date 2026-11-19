@@ -88,7 +88,7 @@ import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
-private const val PASSCODE_DIGITS = 4
+internal const val PASSCODE_DIGITS = 4
 
 /**
  * 1-18, share and consent: who travels, the purpose, how long, the passcode said aloud (typed
@@ -100,6 +100,7 @@ fun ShareScreen(onBack: () -> Unit, onIssued: (List<String>) -> Unit) {
   val viewModel: ShareViewModel = koinViewModel()
   val state by viewModel.state.collectAsStateWithLifecycle()
   var picking by remember { mutableStateOf(false) }
+  KeepOffScreenshots()
 
   LaunchedEffect(state.issued) { state.issued?.let(onIssued) }
 

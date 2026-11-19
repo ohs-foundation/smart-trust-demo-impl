@@ -56,8 +56,14 @@ import dev.ohs.trustdemo.onesa.generated.resources.issued_cycle
 import dev.ohs.trustdemo.onesa.generated.resources.issued_expires
 import dev.ohs.trustdemo.onesa.generated.resources.issued_next
 import dev.ohs.trustdemo.onesa.generated.resources.issued_not_saved
+import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_father
+import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_hidden_note
+import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_hide
 import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_hint
-import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_text
+import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_mother
+import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_not_kept
+import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_show
+import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_shown_note
 import dev.ohs.trustdemo.onesa.generated.resources.issued_passcode_title
 import dev.ohs.trustdemo.onesa.generated.resources.issued_previous
 import dev.ohs.trustdemo.onesa.generated.resources.issued_qr_caption
@@ -81,6 +87,7 @@ import dev.ohs.trustdemo.onesa.ui.OnesaButton
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
 import dev.ohs.trustdemo.onesa.ui.OnesaTopBar
+import dev.ohs.trustdemo.onesa.ui.PasscodeCard
 import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
 import dev.ohs.trustdemo.onesa.ui.QrPanel
 import dev.ohs.trustdemo.onesa.ui.SectionCard
@@ -102,7 +109,8 @@ import org.koin.core.parameter.parametersOf
 
 /**
  * S7: each traveller's link as a QR, one at a time, cycled from the header, and in full screen to
- * show the clinic. The passcode is never on screen: the holder says it.
+ * show the clinic. The share's passcode is masked until the holder reveals it to read it out; it is
+ * never in the QR.
  */
 @Composable
 fun IssuedLinksScreen(consentIds: List<String>, onBack: () -> Unit) {
@@ -110,8 +118,10 @@ fun IssuedLinksScreen(consentIds: List<String>, onBack: () -> Unit) {
   val links by viewModel.links.collectAsStateWithLifecycle()
   val family by viewModel.family.collectAsStateWithLifecycle()
   val unsaved by viewModel.unsaved.collectAsStateWithLifecycle()
+  val holder by viewModel.holder.collectAsStateWithLifecycle()
   var index by remember { mutableIntStateOf(0) }
   var fullScreen by remember { mutableStateOf(false) }
+  var passcodeShown by remember { mutableStateOf(false) }
   val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
   KeepOffScreenshots()
 
@@ -134,6 +144,9 @@ fun IssuedLinksScreen(consentIds: List<String>, onBack: () -> Unit) {
       onIndex = { index = it },
       onBack = onBack,
       onFullScreen = { fullScreen = true },
+      holder = holder,
+      passcodeShown = passcodeShown,
+      onPasscodeShown = { passcodeShown = it },
     )
   }
 }
@@ -148,6 +161,9 @@ internal fun IssuedLinksContent(
   onIndex: (Int) -> Unit,
   onBack: () -> Unit,
   onFullScreen: () -> Unit,
+  holder: String? = null,
+  passcodeShown: Boolean = false,
+  onPasscodeShown: (Boolean) -> Unit = {},
 ) {
   val link = links.getOrNull(index)
   val member = family.firstOrNull { it.id == link?.personId }
@@ -198,16 +214,31 @@ internal fun IssuedLinksContent(
           Status(stringResource(Res.string.issued_badge), Tone.Success, OnesaIcons.ShieldCheck),
         caption = stringResource(Res.string.issued_qr_caption),
       )
-      SectionCard(
-        title = stringResource(Res.string.issued_passcode_title),
-        icon = OnesaIcons.Lock,
-      ) {
-        Text(
-          stringResource(Res.string.issued_passcode_text),
-          style = MaterialTheme.typography.bodySmall,
-          color = OnesaColors.Slate500,
-        )
-      }
+      val passcode = it.passcode
+      PasscodeCard(
+        title =
+          stringResource(
+            when (holder) {
+              "FTH" -> Res.string.issued_passcode_father
+              "MTH" -> Res.string.issued_passcode_mother
+              else -> Res.string.issued_passcode_title
+            }
+          ),
+        value = passcode.orEmpty(),
+        shown = passcodeShown,
+        onShownChange = onPasscodeShown,
+        shownLabel = stringResource(Res.string.issued_passcode_hide),
+        hiddenLabel = stringResource(Res.string.issued_passcode_show),
+        length = passcode?.length ?: PASSCODE_DIGITS,
+        note =
+          stringResource(
+            when {
+              passcode == null -> Res.string.issued_passcode_not_kept
+              passcodeShown -> Res.string.issued_passcode_shown_note
+              else -> Res.string.issued_passcode_hidden_note
+            }
+          ),
+      )
       SectionCard {
         val until = expiresOn(it)
         FieldGrid(

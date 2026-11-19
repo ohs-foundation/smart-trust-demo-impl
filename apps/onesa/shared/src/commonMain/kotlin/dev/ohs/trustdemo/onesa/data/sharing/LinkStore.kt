@@ -22,7 +22,8 @@ import kotlinx.serialization.Serializable
 
 /**
  * A Verifiable Health Link the wallet issued for one person. The [link] text holds the key that
- * decrypts the shared summary, so it is kept only in the encrypted store and never logged.
+ * decrypts the shared summary, and [passcode] is what the holder says to the clinician, so both are
+ * kept only in the encrypted store and never logged.
  */
 @Serializable
 data class IssuedLink(
@@ -32,11 +33,13 @@ data class IssuedLink(
   val link: String,
   /** When the link stops working, in epoch seconds, as the link itself says. */
   val exp: Long = 0,
+  /** The share's passcode; null for a link kept before the wallet kept passcodes. */
+  val passcode: String? = null,
 ) {
   override fun toString(): String = "IssuedLink(consent=$consentId, person=$personId)"
 }
 
-/** Where issued links are kept, by the id of the Consent behind each. */
+/** Where issued links and their passcodes are kept, by the id of the Consent behind each. */
 interface LinkStore {
   suspend fun keep(links: List<IssuedLink>)
 

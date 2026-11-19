@@ -58,7 +58,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The family wallet's screens, drawn from the IG's J4 records. The QRs hold a TEST link only, and
- * no passcode is ever drawn.
+ * the passcode is the IG's example.
  */
 class FamilyScreensRenderTest {
   private fun ig(name: String): Resource =
@@ -147,6 +147,7 @@ class FamilyScreensRenderTest {
         name = it.name!!,
         link = "HC1:TEST-ONLY-RENDER-LINK-${it.id}",
         exp = end.atStartOfDayIn(TimeZone.UTC).epochSeconds + 24 * 60 * 60,
+        passcode = "4829",
       )
     }
 
@@ -206,8 +207,11 @@ class FamilyScreensRenderTest {
 
   @Test
   fun linkAndFullScreenQr() {
-    wallet("0-06-s7-link", 980) {
-      IssuedLinksContent(links, family, 0, false, shareDay, {}, {}, {})
+    wallet("0-06-s7-link", 1060) {
+      IssuedLinksContent(links, family, 0, false, shareDay, {}, {}, {}, holder = "FTH")
+    }
+    wallet("0-06-s7-passcode-shown", 1060) {
+      IssuedLinksContent(links, family, 0, false, shareDay, {}, {}, {}, "FTH", passcodeShown = true)
     }
     wallet("0-06-s7-full-screen", 720) { FullScreenQr(links, 0, {}, {}) }
     render("0-06-s7-full-screen-one", 411.dp to 846.dp, OnesaColors.BrandFamily) {

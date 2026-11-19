@@ -74,7 +74,7 @@ sealed interface ShareOutcome {
 
 /**
  * The family wallet's share: asks the Onesa VHL service for one signed link per person and keeps
- * each in [links]. The passcode goes to the service and nowhere else. A share carries an
+ * each in [links]. The passcode is kept with them and sent to the service only. A share carries an
  * Idempotency-Key, so a lost reply is asked for again and never creates a second set of Consents.
  * The share's Consents are read back from the gateway at [fhirBaseUrl] and kept as server copies,
  * so Shared Links lists them at once and the sync never uploads them. [expiry] reads when a link
@@ -276,6 +276,7 @@ class ShareService(
           exp =
             expiry(hc1)
               ?: entry.end.plus(1, DateTimeUnit.DAY).atStartOfDayIn(TimeZone.UTC).epochSeconds,
+          passcode = entry.passcode,
         )
       }
 
