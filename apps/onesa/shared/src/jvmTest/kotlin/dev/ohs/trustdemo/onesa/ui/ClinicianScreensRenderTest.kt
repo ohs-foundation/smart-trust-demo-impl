@@ -331,13 +331,23 @@ class ClinicianScreensRenderTest {
         .failure
     check(failure.step == VerifyStep.SIGNATURE && failure.reason == FailureReason.SIGNATURE_INVALID)
     val kid = (runBlocking { hcert.read(forged) } as ReadResult.Decoded).hcert.kid
+    val refused =
+      state.copy(
+        scanned = forged,
+        results = listOf(ScanOutcome.Failed(failure.step, failure.reason, kid)),
+      )
     clinic("1-12-verification-failed", 1024.dp to 760.dp) {
       VerifyCardsContent(
-        state =
-          state.copy(
-            scanned = forged,
-            results = listOf(ScanOutcome.Failed(failure.step, failure.reason, kid)),
-          ),
+        state = refused,
+        today = visitDay,
+        topBar = { ClinicTopBar() },
+        showOutcome = true,
+        actions = noActions,
+      )
+    }
+    clinic("1-12-verification-failed-phone", 360.dp to 1500.dp) {
+      VerifyCardsContent(
+        state = refused,
         today = visitDay,
         topBar = { ClinicTopBar() },
         showOutcome = true,

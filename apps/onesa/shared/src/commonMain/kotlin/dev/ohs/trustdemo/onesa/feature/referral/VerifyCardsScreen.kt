@@ -35,6 +35,7 @@ import dev.ohs.trustdemo.onesa.data.repository.displayAge
 import dev.ohs.trustdemo.onesa.data.verification.ScanOutcome
 import dev.ohs.trustdemo.onesa.feature.home.RoleTopBar
 import dev.ohs.trustdemo.onesa.feature.scan.CardCameraPanel
+import dev.ohs.trustdemo.onesa.feature.scan.CardFailure
 import dev.ohs.trustdemo.onesa.feature.scan.QrScan
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.list_stale
@@ -51,13 +52,13 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm_anyway
 import dev.ohs.trustdemo.onesa.generated.resources.verify_could_not_save
 import dev.ohs.trustdemo.onesa.generated.resources.verify_decline
 import dev.ohs.trustdemo.onesa.generated.resources.verify_decoded
+import dev.ohs.trustdemo.onesa.generated.resources.verify_diagnostic_code
 import dev.ohs.trustdemo.onesa.generated.resources.verify_dose
 import dev.ohs.trustdemo.onesa.generated.resources.verify_dose_code
 import dev.ohs.trustdemo.onesa.generated.resources.verify_elsewhere_title
 import dev.ohs.trustdemo.onesa.generated.resources.verify_fail
-import dev.ohs.trustdemo.onesa.generated.resources.verify_fail_detail
-import dev.ohs.trustdemo.onesa.generated.resources.verify_fail_title
-import dev.ohs.trustdemo.onesa.generated.resources.verify_failed_step
+import dev.ohs.trustdemo.onesa.generated.resources.verify_fail_caption
+import dev.ohs.trustdemo.onesa.generated.resources.verify_fail_stays
 import dev.ohs.trustdemo.onesa.generated.resources.verify_holder_title
 import dev.ohs.trustdemo.onesa.generated.resources.verify_imported_detail
 import dev.ohs.trustdemo.onesa.generated.resources.verify_imported_title
@@ -81,7 +82,6 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_primary_source_false
 import dev.ohs.trustdemo.onesa.generated.resources.verify_primary_source_true
 import dev.ohs.trustdemo.onesa.generated.resources.verify_proceed
 import dev.ohs.trustdemo.onesa.generated.resources.verify_reason
-import dev.ohs.trustdemo.onesa.generated.resources.verify_reason_label
 import dev.ohs.trustdemo.onesa.generated.resources.verify_referred_by
 import dev.ohs.trustdemo.onesa.generated.resources.verify_refused
 import dev.ohs.trustdemo.onesa.generated.resources.verify_replaced
@@ -90,6 +90,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_service_request
 import dev.ohs.trustdemo.onesa.generated.resources.verify_status_gdhcn
 import dev.ohs.trustdemo.onesa.generated.resources.verify_status_local
 import dev.ohs.trustdemo.onesa.generated.resources.verify_trust_authority
+import dev.ohs.trustdemo.onesa.generated.resources.verify_trust_resolution
 import dev.ohs.trustdemo.onesa.generated.resources.verify_unverified_title
 import dev.ohs.trustdemo.onesa.generated.resources.verify_use_text
 import dev.ohs.trustdemo.onesa.generated.resources.verify_verified_count
@@ -197,6 +198,7 @@ fun VerifyCardsContent(
       outcome is ScanOutcome.ImportedForAnotherChild
   val childName = state.child?.name ?: state.referral?.patientName.orEmpty()
   val signer = pending?.card?.hcert?.dsc ?: (outcome as? ScanOutcome.Imported)?.signer
+  val failure = (outcome as? ScanOutcome.Failed)?.let { CardFailure.of(it.reason) }
   var pasted by remember { mutableStateOf("") }
 
   OnesaScaffold(
@@ -224,10 +226,12 @@ fun VerifyCardsContent(
         frame = state.scanned,
         badge =
           state.scanned?.let {
-            Status(
-              stringResource(Res.string.verify_decoded, it.take(10)),
-              if (refused) Tone.Warning else Tone.Success,
-            )
+            if (failure != null) Status(stringResource(failure.badge), Tone.Danger)
+            else
+              Status(
+                stringResource(Res.string.verify_decoded, it.take(10)),
+                if (refused) Tone.Warning else Tone.Success,
+              )
           },
       )
       if (cameraFailed) {
@@ -353,7 +357,11 @@ fun VerifyCardsContent(
                 )
               )
           },
-        caption = signer?.let { statusCaption(it) },
+        caption =
+          signer?.let { statusCaption(it) }
+            ?: failure?.let {
+              stringResource(Res.string.verify_fail_caption, stringResource(it.status))
+            },
       )
     },
   ) {
@@ -466,19 +474,23 @@ private fun OutcomeCard(outcome: ScanOutcome) {
         fields = listOf(Field(stringResource(Res.string.verify_dose), outcome.dose)),
         detail = nothing,
       )
-    is ScanOutcome.Failed ->
+    is ScanOutcome.Failed -> {
+      val failure = CardFailure.of(outcome.reason)
       VerificationResultCard(
-        title = stringResource(Res.string.verify_fail_title, outcome.step.name),
+        title = stringResource(failure.title),
         tone = Tone.Danger,
         verdict = stringResource(Res.string.verify_fail),
         fields =
-          listOfNotNull(
-            Field(stringResource(Res.string.verify_failed_step), outcome.step.name, mono = true),
-            Field(stringResource(Res.string.verify_reason_label), outcome.reason.name, mono = true),
-            outcome.kid?.let { Field(stringResource(Res.string.verify_kid), it, mono = true) },
+          listOf(
+            Field(
+              stringResource(Res.string.verify_trust_resolution),
+              stringResource(failure.resolution),
+            ),
+            Field(stringResource(Res.string.verify_diagnostic_code), failure.code, mono = true),
           ),
-        detail = stringResource(Res.string.verify_fail_detail),
+        detail = "${stringResource(failure.detail)} ${stringResource(Res.string.verify_fail_stays)}",
       )
+    }
     is ScanOutcome.HolderMismatch ->
       VerificationResultCard(
         title = stringResource(Res.string.verify_holder_title),
