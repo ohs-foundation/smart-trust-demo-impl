@@ -1,4 +1,4 @@
-import { Shield, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Shield, ShieldCheck, ShieldX, TriangleAlert } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ const NOTICE = {
   warning: { icon: TriangleAlert, frame: "border-warn-line bg-warn-soft text-warn" },
   info: { icon: Shield, frame: "border-info-line bg-info-soft text-info-ink" },
   success: { icon: ShieldCheck, frame: "border-ok-line bg-ok-soft text-ok-ink" },
+  danger: { icon: ShieldX, frame: "border-bad-line bg-bad-soft text-bad-ink" },
 };
 
 type NoticeProps = Omit<ComponentProps<typeof Alert>, "title"> & { tone?: keyof typeof NOTICE; title?: ReactNode };

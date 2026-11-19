@@ -165,10 +165,63 @@ describe("theSummaryScreen", () => {
     vi.mocked(fetchSummary).mockResolvedValue({ kind: "refused", message: "Wrong passcode.", status: 403, reason: "wrong-passcode", attemptsLeft: 2 });
     mount();
     await openSummary();
-    expect((await screen.findByRole("alert")).textContent).toBe("Wrong passcode.");
-    expect(screen.getByText("2 of 3")).toBeTruthy();
+    expect((await screen.findByRole("alert")).textContent).toContain("Invalid passcode: 2 attempt(s) remaining");
+    expect(screen.getByText("2 LEFT")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Enter Passcode Again" }));
     expect(screen.getByRole("button", { name: "Open Records" })).toBeTruthy();
+  });
+
+  it.each([
+    [2, "Passcode Lock Active • Awaiting Clinician Unlock", "2 LEFT", "Invalid passcode: 2 attempt(s) remaining before link revocation. Live AuditEvent: the failed attempt is logged at the Onesan OHS Info Gateway."],
+    [1, "Passcode Lock Active • Awaiting Clinician Unlock", "1 LEFT", "Invalid passcode: 1 attempt(s) remaining before link revocation. Live AuditEvent: the failed attempt is logged at the Onesan OHS Info Gateway."],
+  ])("shows a wrong passcode with %i left as the IG does, with the digits typed", async (attemptsLeft, title, verdict, detail) => {
+    vi.mocked(fetchSummary).mockResolvedValue({ kind: "refused", message: "Wrong passcode.", status: 403, reason: "wrong-passcode", attemptsLeft });
+    mount();
+    await openSummary();
+    expect((await screen.findByRole("alert")).textContent).toBe(detail);
+    expect(screen.getByText(title)).toBeTruthy();
+    expect(screen.getByText(verdict)).toBeTruthy();
+    expect(screen.getByText("Entered")).toBeTruthy();
+    expect(screen.getByText("0482").className).toContain("font-mono");
+    fireEvent.click(screen.getByRole("button", { name: "Enter Passcode Again" }));
+    expect(screen.queryByText("0482")).toBeNull();
+  });
+
+  it("shows the revoked link, says nothing was shared, and clears the digits on Scan Again", async () => {
+    vi.mocked(fetchSummary).mockResolvedValue({ kind: "refused", message: "x", status: 403, reason: "attempts-exhausted", attemptsLeft: 0 });
+    mount();
+    await openSummary();
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "The VHL no longer opens anywhere. Onesa saw all three attempts as AuditEvents and the family can issue a new link from the wallet.",
+    );
+    expect(screen.getByText("Link Revoked • 3 Failed Attempts")).toBeTruthy();
+    expect(screen.getByText("REVOKED")).toBeTruthy();
+    expect(screen.getByText("Nothing was shared")).toBeTruthy();
+    expect(screen.getByText("The IPS never left Onesa: the clinic fetched no data, and there is nothing to delete.")).toBeTruthy();
+    expect(screen.queryByText("0482")).toBeNull();
+  });
+
+  it("clears the digits typed when a wrong passcode is followed by Scan Again", async () => {
+    vi.mocked(fetchSummary).mockResolvedValue({ kind: "refused", message: "Wrong passcode.", status: 403, reason: "wrong-passcode", attemptsLeft: 2 });
+    mount();
+    await openSummary();
+    await screen.findByText("0482");
+    fireEvent.click(screen.getByRole("button", { name: "Enter Passcode Again" }));
+    fireEvent.click(screen.getByRole("button", { name: "Scan Again" }));
+    expect(document.body.textContent).not.toContain("0482");
+  });
+
+  it.each([
+    ["withdrawn", "Consent Withdrawn • Records Not Released", "WITHDRAWN"],
+    ["expired", "Link Expired • Records Not Released", "EXPIRED"],
+  ])("shows %s in the same badge without the digits", async (reason, title, verdict) => {
+    vi.mocked(fetchSummary).mockResolvedValue({ kind: "refused", message: "x", status: 403, reason });
+    mount();
+    await openSummary();
+    expect(await screen.findByText(title)).toBeTruthy();
+    expect(screen.getByText(verdict)).toBeTruthy();
+    expect(screen.queryByText("Entered")).toBeNull();
+    expect(document.body.textContent).not.toContain("0482");
   });
 
   it("keeps the summary open and says so when the receipt cannot be written", async () => {

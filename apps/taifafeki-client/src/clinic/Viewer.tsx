@@ -34,17 +34,16 @@ import { openSummary, readSummary, type SummaryView } from "./summary";
 const when = fullTime;
 
 const LIST_NAMES: Record<ListStatus["name"], string> = { local: "Local test list", dev: "GDHCN DEV" };
-const PASSCODE_TRIES = 3;
 
-type Refusal = Omit<Extract<SummaryOutcome, { kind: "refused" }>, "kind">;
+type Refusal = Omit<Extract<SummaryOutcome, { kind: "refused" }>, "kind"> & { entered?: string };
 type Unverified = Exclude<LinkOutcome, { kind: "fetch" }>;
 
 const REFUSALS = [
-  { reason: "wrong-passcode", title: "Wrong Passcode", label: "Wrong passcode", status: 403, detail: "The passcode does not match", code: "wrong-passcode" },
-  { reason: "expired", title: "Link Expired", label: "Link expired", status: 403, detail: "Consent period ended", code: "expired" },
-  { reason: "withdrawn", title: "Consent Withdrawn", label: "Consent withdrawn", status: 403, detail: "The family withdrew the link", code: "withdrawn" },
-  { reason: "attempts-exhausted", title: "Link Locked", label: "Third wrong passcode", status: 403, detail: "The link is locked", code: "attempts-exhausted" },
-  { reason: undefined, title: "", label: "Request signature not recognised", status: 401, detail: "Onesa doesn't know this clinic's key", code: "no IG code" },
+  { reason: "wrong-passcode", label: "Wrong passcode", status: 403, detail: "The passcode does not match", code: "wrong-passcode" },
+  { reason: "expired", label: "Link expired", status: 403, detail: "Consent period ended", code: "expired" },
+  { reason: "withdrawn", label: "Consent withdrawn", status: 403, detail: "The family withdrew the link", code: "withdrawn" },
+  { reason: "attempts-exhausted", label: "Third wrong passcode", status: 403, detail: "The link is locked", code: "attempts-exhausted" },
+  { reason: undefined, label: "Request signature not recognised", status: 401, detail: "Onesa doesn't know this clinic's key", code: "no IG code" },
 ];
 
 interface Opened {
@@ -102,7 +101,7 @@ function ViewerFor({ organization }: { organization: string }) {
     setNotice(undefined);
     try {
       const outcome = await fetchSummary({ data: { token: token(), handle, passcode } });
-      if (outcome.kind === "refused") return setNotice(outcome);
+      if (outcome.kind === "refused") return setNotice(outcome.reason === "wrong-passcode" ? { ...outcome, entered: passcode } : outcome);
       const bundle = await (key ? openSummary(outcome.documents, key) : Promise.reject(new Error("no key"))).catch(() => undefined);
       if (!bundle) return setNotice({ message: "The summary could not be opened" });
       const view = readSummary(bundle);
@@ -309,26 +308,63 @@ function PaperNote({ result }: { result: Unverified }) {
   );
 }
 
+function refusedBadge({ reason, attemptsLeft }: Refusal) {
+  if (reason === "attempts-exhausted" || (reason === "wrong-passcode" && attemptsLeft === 0)) {
+    return {
+      title: "Link Revoked • 3 Failed Attempts",
+      verdict: "REVOKED",
+      detail: "The VHL no longer opens anywhere. Onesa saw all three attempts as AuditEvents and the family can issue a new link from the wallet.",
+    };
+  }
+  if (reason === "wrong-passcode") {
+    return {
+      title: "Passcode Lock Active • Awaiting Clinician Unlock",
+      verdict: attemptsLeft === undefined ? undefined : `${attemptsLeft} LEFT`,
+      detail: `Invalid passcode: ${attemptsLeft ?? "some"} attempt(s) remaining before link revocation. Live AuditEvent: the failed attempt is logged at the Onesan OHS Info Gateway.`,
+    };
+  }
+  if (reason === "withdrawn") {
+    return { title: "Consent Withdrawn • Records Not Released", verdict: "WITHDRAWN", detail: "The family withdrew this share. Nothing was fetched, and the link no longer opens." };
+  }
+  if (reason === "expired") {
+    return { title: "Link Expired • Records Not Released", verdict: "EXPIRED", detail: "The consent period ended. Nothing was fetched; the family can issue a new link from the wallet." };
+  }
+  return undefined;
+}
+
 function Refused({ refusal }: { refusal: Refusal }) {
-  const kind = REFUSALS.find((it) => it.reason && it.reason === refusal.reason);
+  const badge = refusedBadge(refusal);
+  if (badge) {
+    return (
+      <>
+        <ResultPanel
+          tone="fail"
+          title={badge.title}
+          verdict={badge.verdict}
+          facts={refusal.entered ? <Facts items={[{ label: "Entered", value: refusal.entered, mono: true }]} /> : undefined}
+        >
+          <span role="alert">{badge.detail}</span>
+        </ResultPanel>
+        {badge.verdict === "REVOKED" && (
+          <Notice tone="danger" title="Nothing was shared">
+            The IPS never left Onesa: the clinic fetched no data, and there is nothing to delete.
+          </Notice>
+        )}
+      </>
+    );
+  }
   const fromOnesa = refusal.status !== undefined;
-  const facts = [
-    { label: fromOnesa ? "Onesa says" : "Reason", value: <span role="alert">{refusal.message}</span> },
-    ...(refusal.attemptsLeft !== undefined ? [{ label: "Attempts left", value: `${refusal.attemptsLeft} of ${PASSCODE_TRIES}` }] : []),
-  ];
   return (
     <>
       <ResultPanel
         tone="refused"
-        title={kind ? `${kind.title} — Records Not Released` : "Records Not Opened"}
+        title="Records Not Opened"
         verdict={fromOnesa ? String(refusal.status) : undefined}
-        facts={<Facts items={facts} />}
-      >
-        {kind?.reason === "wrong-passcode" && (refusal.attemptsLeft === 0 ? "That was the third wrong try; the link is now locked." : "Ask the family to repeat it. Three wrong tries lock the link.")}
-      </ResultPanel>
+        facts={<Facts items={[{ label: fromOnesa ? "Onesa says" : "Reason", value: <span role="alert">{refusal.message}</span> }]} />}
+      />
       {fromOnesa && (
         <RecordCard title="Other refusals" icon={ShieldX}>
-          {REFUSALS.filter((it) => it !== kind).map((it) => (
+          {REFUSALS.map((it) => (
             <RecordRow key={it.label} label={it.label} code={it.status} detail={it.detail} status={<StatusChip tone={it.reason ? "neutral" : "warning"}>{it.code}</StatusChip>} />
           ))}
         </RecordCard>
