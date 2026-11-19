@@ -149,6 +149,35 @@ class NewbornRegistrationTest {
   }
 
   @Test
+  fun anUrgentReferralIsWrittenUrgentAndTheDefaultIsRoutine() {
+    fun priority(transaction: JsonObject) =
+      transaction
+        .getValue("entry")
+        .jsonArray
+        .map { it.jsonObject.resource() }
+        .single { it.type() == "ServiceRequest" }
+        .getValue("priority")
+        .jsonPrimitive
+        .content
+    val request =
+      RegistrationRequest(
+        response = response,
+        household = household,
+        mother = parents[1],
+        father = parents[0],
+        cards = cards,
+        practitionerId = "TrustDemoVilay",
+        organizationId = organization,
+        now = now,
+      )
+
+    assertEquals("routine", priority(NewbornRegistration.transaction(request)))
+    val urgent = NewbornRegistration.transaction(request.copy(urgent = true))
+    assertEquals("urgent", priority(urgent))
+    assertEquals("urgent", NewbornRegistration.review(urgent).referral?.priority)
+  }
+
+  @Test
   fun registrationExtractsTheJ2Records() {
     for (expectation in expectations.getValue(Step.J2)) {
       val found =

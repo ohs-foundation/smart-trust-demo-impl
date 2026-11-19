@@ -95,18 +95,25 @@ class RegistrationService(
     NewbornRegistration.parentOptions(members(household(groupId)))
 
   /** The transaction [register] would send for [response]; it checks the same things first. */
-  suspend fun preview(groupId: String, response: QuestionnaireResponse, key: String): JsonObject {
+  suspend fun preview(
+    groupId: String,
+    response: QuestionnaireResponse,
+    key: String,
+    urgent: Boolean = false,
+  ): JsonObject {
     val current = session() ?: error("Sign in again to register a newborn.")
-    return NewbornRegistration.transaction(request(groupId, response, key, current))
+    return NewbornRegistration.transaction(request(groupId, response, key, current, urgent))
   }
 
+  /** Registers [response]'s newborn; [urgent] is the referral's priority. */
   suspend fun register(
     groupId: String,
     response: QuestionnaireResponse,
     key: String,
+    urgent: Boolean = false,
   ): RegistrationSummary {
     val current = session() ?: error("Sign in again to register a newborn.")
-    val request = request(groupId, response, key, current)
+    val request = request(groupId, response, key, current, urgent)
     val cards = request.cards
     val transaction = NewbornRegistration.transaction(request)
 
@@ -143,6 +150,7 @@ class RegistrationService(
     response: QuestionnaireResponse,
     key: String,
     current: RegistrationSession,
+    urgent: Boolean,
   ): RegistrationRequest {
     val household = household(groupId)
     val (motherId, fatherId) = NewbornRegistration.parentIds(response)
@@ -168,6 +176,7 @@ class RegistrationService(
       organizationId = current.organizationId,
       now = clock(),
       newId = NewbornRegistration.idsFor(key),
+      urgent = urgent,
     )
   }
 

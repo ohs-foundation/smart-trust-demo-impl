@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.verification.Referral
 import dev.ohs.trustdemo.onesa.data.verification.ReferralInbox
 import dev.ohs.trustdemo.onesa.generated.resources.Res
@@ -35,6 +36,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.inbox_snomed
 import dev.ohs.trustdemo.onesa.generated.resources.inbox_title
 import dev.ohs.trustdemo.onesa.generated.resources.inbox_title_no_place
 import dev.ohs.trustdemo.onesa.generated.resources.inbox_today
+import dev.ohs.trustdemo.onesa.generated.resources.inbox_urgent
 import dev.ohs.trustdemo.onesa.generated.resources.referral_inbox_empty
 import dev.ohs.trustdemo.onesa.ui.Field
 import dev.ohs.trustdemo.onesa.ui.FieldGrid
@@ -64,8 +66,8 @@ fun InboxToday(today: LocalDate, network: String) {
 }
 
 /**
- * The clinician's referral inbox: each child referred to this clinic, with the one [selected] for
- * "Open Referral" outlined when there is more than one.
+ * The clinician's referral inbox: each child referred to this clinic, urgent ones first and marked,
+ * with the one [selected] for "Open Referral" outlined when there is more than one.
  */
 @Composable
 fun ReferralInboxContent(
@@ -107,7 +109,12 @@ fun ReferralInboxContent(
               )
               .joinToString(" • ")
               .ifEmpty { null },
-          status = referral.priority?.let { Status(it.replaceFirstChar(Char::uppercaseChar)) },
+          status =
+            referral.priority?.let {
+              if (it == NewbornRegistration.URGENT) {
+                Status(stringResource(Res.string.inbox_urgent), Tone.Danger)
+              } else Status(it.replaceFirstChar(Char::uppercaseChar))
+            },
           selected = referral.id == selected && referrals.size > 1,
           onClick = { onSelect(referral.id) },
         )

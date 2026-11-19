@@ -100,6 +100,7 @@ fun QuestionnaireHostScreen(
         topBar = { roleBar(viewModel::edit) },
         saving = false,
         onSave = viewModel::confirm,
+        onUrgent = viewModel::priority,
       )
       return
     }

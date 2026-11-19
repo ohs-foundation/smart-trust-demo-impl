@@ -16,6 +16,7 @@
 package dev.ohs.trustdemo.onesa.feature.questionnaire
 
 import dev.ohs.fhir.model.r4.QuestionnaireResponse
+import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 
 sealed interface QuestionnaireHostUiState {
   data object Loading : QuestionnaireHostUiState
@@ -27,7 +28,10 @@ sealed interface QuestionnaireHostUiState {
     val title: String?,
     val response: QuestionnaireResponse,
     val review: NewbornReview,
-  ) : QuestionnaireHostUiState
+  ) : QuestionnaireHostUiState {
+    val urgent: Boolean
+      get() = review.review.referral?.priority == NewbornRegistration.URGENT
+  }
 
   data class Submitting(val questionnaireJson: String, val title: String?) :
     QuestionnaireHostUiState

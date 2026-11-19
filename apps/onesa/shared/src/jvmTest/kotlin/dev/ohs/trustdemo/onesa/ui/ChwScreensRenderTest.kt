@@ -17,6 +17,13 @@ package dev.ohs.trustdemo.onesa.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
@@ -48,10 +55,12 @@ import dev.ohs.trustdemo.onesa.feature.referral.SentReferralsContent
 import dev.ohs.trustdemo.onesa.feature.scan.ScanCardContent
 import dev.ohs.trustdemo.onesa.feature.scan.ScanCardUiState
 import dev.ohs.trustdemo.onesa.ui.ScreenshotHarness.render
+import dev.ohs.trustdemo.onesa.ui.theme.OnesaTheme
 import dev.ohs.trustdemo.onesa.ui.theme.Tone
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
 
@@ -238,6 +247,7 @@ class ChwScreensRenderTest {
     }
   }
 
+  @OptIn(ExperimentalTestApi::class)
   @Test
   fun registrationReview() {
     val household = seededHousehold
@@ -257,27 +267,53 @@ class ChwScreensRenderTest {
         {"linkId":"father","answer":[{"valueCoding":{"code":"TrustDemoBounmyPatient"}}]},
         {"linkId":"relationship","answer":[{"valueCoding":{"code":"FTH"}}]}]}""",
       )
-    val transaction =
-      NewbornRegistration.transaction(
-        RegistrationRequest(
-          response = response,
-          household = household,
-          mother = members[1],
-          father = members[0],
-          cards = cards,
-          practitionerId = "TrustDemoVilay",
-          organizationId = "TrustDemoLomaruDhc",
-          now = Instant.parse("2025-11-18T03:20:00Z"),
-        )
+    val request =
+      RegistrationRequest(
+        response = response,
+        household = household,
+        mother = members[1],
+        father = members[0],
+        cards = cards,
+        practitionerId = "TrustDemoVilay",
+        organizationId = "TrustDemoLomaruDhc",
+        now = Instant.parse("2025-11-18T03:20:00Z"),
       )
-    val review =
+    fun review(urgent: Boolean) =
       NewbornReview(
-        NewbornRegistration.review(transaction),
+        NewbornRegistration.review(NewbornRegistration.transaction(request.copy(urgent = urgent))),
         runBlocking { GroupRepository(repository).getGroupProfile(household.id!!) },
         "Lomaru District Health Center (demonstrator)",
       )
-    render("0-02-s3-review", 360.dp to 1180.dp) {
-      RegistrationReviewContent(review, topBar = { ChwTopBar() }, saving = false, onSave = {})
+    render("0-02-s3-review", 360.dp to 1240.dp) {
+      RegistrationReviewContent(
+        review(false),
+        topBar = { ChwTopBar() },
+        saving = false,
+        onSave = {},
+      )
+    }
+    render("0-02-s3-review-urgent", 360.dp to 1240.dp) {
+      RegistrationReviewContent(review(true), topBar = { ChwTopBar() }, saving = false, onSave = {})
+    }
+    runComposeUiTest {
+      var urgent by mutableStateOf(false)
+      setContent {
+        OnesaTheme {
+          Registry {
+            RegistrationReviewContent(
+              review(urgent),
+              topBar = {},
+              saving = false,
+              onSave = {},
+              onUrgent = { urgent = it },
+            )
+          }
+        }
+      }
+      onNodeWithText("Routine Checkup").performClick()
+      onNodeWithText("Urgent").performClick()
+      onNodeWithText("Urgent").assertExists()
+      assertTrue(urgent)
     }
   }
 

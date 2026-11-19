@@ -227,6 +227,8 @@
     <string name="registration_referral_target">Target Facility</string>
     <string name="registration_referral_reason">Referral Reason</string>
     <string name="registration_referral_priority">Priority</string>
+    <string name="registration_priority_routine">Routine Checkup</string>
+    <string name="registration_priority_urgent">Urgent</string>
     <string name="registration_save_all">Save Newborn, Reported Doses &amp; Clinic Referral</string>
     <string name="registration_save">Save Newborn</string>
     <string name="registration_writes">%1$s, sent to the national server in one request</string>
@@ -328,6 +330,7 @@
     <string name="inbox_network">Network</string>
     <string name="inbox_network_value">%1$s • verifies from the cached trust list</string>
     <string name="inbox_open">Open Referral</string>
+    <string name="inbox_urgent">Urgent</string>
     <string name="patient_list_title_place">Patients at %1$s</string>
     <string name="visits_title">Booked visits</string>
     <string name="visits_empty">No visits booked.</string>

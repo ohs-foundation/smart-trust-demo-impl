@@ -28,7 +28,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
@@ -69,6 +72,39 @@ class ClinicRecordsTest {
       reported.lot to reported.origin,
     )
     assertEquals(listOf("active"), inbox.about("TrustDemoSomsak").map { it.status })
+  }
+
+  @Test
+  fun urgentReferralsComeFirst() = runTest {
+    val referral =
+      FhirJson.instance
+        .parseToJsonElement(
+          File("../../../ig/resources/ServiceRequest-TrustDemoJ2Referral.json").readText()
+        )
+        .jsonObject
+    fun copy(id: String, authoredOn: String, priority: String) =
+      FhirJson.instance.decodeFromJsonElement(
+        Resource.serializer(),
+        JsonObject(
+          referral +
+            mapOf(
+              "id" to JsonPrimitive(id),
+              "authoredOn" to JsonPrimitive(authoredOn),
+              "priority" to JsonPrimitive(priority),
+            )
+        ),
+      )
+    val repository =
+      repositoryOf("Patient-TrustDemoSomsak").apply {
+        upsert(copy("routine-new", "2025-11-20", "routine"))
+        upsert(copy("urgent-old", "2025-11-01", "urgent"))
+        upsert(copy("routine-old", "2025-11-02", "routine"))
+      }
+
+    val waiting = ReferralInbox(repository).observe().first()
+
+    assertEquals(listOf("urgent-old", "routine-new", "routine-old"), waiting.map { it.id })
+    assertEquals(listOf("urgent", "routine", "routine"), waiting.map { it.priority })
   }
 
   @Test

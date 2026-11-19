@@ -16,6 +16,7 @@
 package dev.ohs.trustdemo.onesa.data.verification
 
 import dev.ohs.fhir.model.r4.Resource
+import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
 import dev.ohs.trustdemo.onesa.data.repository.personName
 import dev.ohs.trustdemo.onesa.util.FhirJson
@@ -57,7 +58,7 @@ data class SentReferral(
 /** A referred child as the synced record names them. */
 data class Child(val name: String, val birthDate: String?, val personName: PersonName)
 
-/** The referrals waiting at this clinic, read from the synced copy. */
+/** The referrals waiting at this clinic, read from the synced copy, urgent ones first. */
 class ReferralInbox(private val repository: FhirRepository) {
   private val json = FhirJson.instance
 
@@ -179,7 +180,10 @@ class ReferralInbox(private val repository: FhirRepository) {
           priority = request["priority"]?.jsonPrimitive?.contentOrNull,
         )
       }
-      .sortedByDescending { it.authoredOn }
+      .sortedWith(
+        compareByDescending<Referral> { it.priority == NewbornRegistration.URGENT }
+          .thenByDescending { it.authoredOn }
+      )
 
   /** The child as the synced record has them: the name to show and the date of birth. */
   suspend fun child(patientId: String): Child {
