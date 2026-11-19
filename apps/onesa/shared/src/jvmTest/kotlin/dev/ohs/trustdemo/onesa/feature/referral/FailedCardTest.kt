@@ -15,7 +15,12 @@
  */
 package dev.ohs.trustdemo.onesa.feature.referral
 
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
 import dev.ohs.trustdemo.hcert.FailureReason
@@ -26,7 +31,10 @@ import dev.ohs.trustdemo.onesa.ui.theme.OnesaTheme
 import kotlin.test.Test
 import kotlinx.datetime.LocalDate
 
-/** S4 says why a card failed, by the step and reason the engine reports. */
+/**
+ * S4 says why a card failed, by the step and reason the engine reports, and offers only Scan Again:
+ * the doses stay reported.
+ */
 @OptIn(ExperimentalTestApi::class)
 class FailedCardTest {
   private fun shows(
@@ -35,6 +43,7 @@ class FailedCardTest {
     title: String,
     resolution: String,
     code: String,
+    status: String,
   ) = runComposeUiTest {
     setContent {
       OnesaTheme(OnesaColors.BrandClinic) {
@@ -57,6 +66,16 @@ class FailedCardTest {
     onNodeWithText(code).assertExists()
     onNodeWithText("The record stays primarySource: false; nothing is upgraded.", substring = true)
       .assertExists()
+    onNodeWithText("Scan Again").assertIsEnabled()
+    onNodeWithText("Confirm Verification & Proceed to Schedule Evaluation")
+      .assertIsNotEnabled()
+      .assert(
+        SemanticsMatcher.expectValue(
+          SemanticsProperties.StateDescription,
+          "Unavailable: $status, so the doses stay as reported",
+        )
+      )
+    onNodeWithText("Keep Doses as Reported").assertDoesNotExist()
   }
 
   @Test
@@ -67,6 +86,7 @@ class FailedCardTest {
       "SIGNATURE VERIFICATION FAILED — INVALID COSE_Sign1",
       "Untrusted / Altered Card",
       "ERR_CRYPTO_SIG_MISMATCH",
+      "Signature rejected",
     )
   }
 
@@ -78,6 +98,7 @@ class FailedCardTest {
       "SIGNER NOT ON THE TRUST LIST — UNKNOWN KEY ID",
       "Untrusted / Unknown Signer",
       "ERR_KID_NOT_FOUND",
+      "Signer rejected",
     )
   }
 
@@ -89,6 +110,7 @@ class FailedCardTest {
       "CERTIFICATE EXPIRED — OUTSIDE ITS VALIDITY",
       "Untrusted / Expired Card",
       "ERR_CERT_EXPIRED",
+      "Certificate expired",
     )
   }
 
@@ -100,6 +122,7 @@ class FailedCardTest {
       "CERTIFICATE NOT YET VALID — OUTSIDE ITS VALIDITY",
       "Untrusted / Not Yet Valid",
       "ERR_CERT_NOT_YET_VALID",
+      "Certificate not yet valid",
     )
   }
 
@@ -111,6 +134,7 @@ class FailedCardTest {
       "SIGNER NOT AUTHORISED — WRONG KEY USAGE",
       "Untrusted / Signer Not Authorised",
       "ERR_KEY_USAGE",
+      "Signer rejected",
     )
   }
 
@@ -122,6 +146,7 @@ class FailedCardTest {
       "INVALID COSE_Sign1 HEADER — SIGNATURE NOT CHECKED",
       "Unreadable / Bad Header",
       "ERR_COSE_HEADER",
+      "Header rejected",
     )
   }
 
@@ -133,6 +158,7 @@ class FailedCardTest {
       "CARD NOT DECODED — NOT A VALID HC1 CERTIFICATE",
       "Unreadable / Not a Vaccination Certificate",
       "ERR_DECODE",
+      "Card unreadable",
     )
   }
 }

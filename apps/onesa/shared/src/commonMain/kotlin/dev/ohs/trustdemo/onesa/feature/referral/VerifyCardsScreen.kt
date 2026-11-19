@@ -49,6 +49,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_child_born
 import dev.ohs.trustdemo.onesa.generated.resources.verify_child_name
 import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm
 import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm_anyway
+import dev.ohs.trustdemo.onesa.generated.resources.verify_confirm_proceed
 import dev.ohs.trustdemo.onesa.generated.resources.verify_could_not_save
 import dev.ohs.trustdemo.onesa.generated.resources.verify_decline
 import dev.ohs.trustdemo.onesa.generated.resources.verify_decoded
@@ -81,6 +82,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.verify_pending_count
 import dev.ohs.trustdemo.onesa.generated.resources.verify_primary_source_false
 import dev.ohs.trustdemo.onesa.generated.resources.verify_primary_source_true
 import dev.ohs.trustdemo.onesa.generated.resources.verify_proceed
+import dev.ohs.trustdemo.onesa.generated.resources.verify_proceed_blocked
 import dev.ohs.trustdemo.onesa.generated.resources.verify_reason
 import dev.ohs.trustdemo.onesa.generated.resources.verify_referred_by
 import dev.ohs.trustdemo.onesa.generated.resources.verify_refused
@@ -332,6 +334,26 @@ fun VerifyCardsContent(
                   onClick = actions.confirm,
                   busy = busy,
                   enabled = state.canConfirm,
+                ),
+              )
+            failure != null ->
+              listOf(
+                Action(
+                  stringResource(Res.string.verify_scan_again),
+                  onClick = actions.scanAgain,
+                  primary = false,
+                ),
+                Action(
+                  stringResource(Res.string.verify_confirm_proceed),
+                  onClick = {},
+                  primary = false,
+                  icon = OnesaIcons.Lock,
+                  enabled = false,
+                  reason =
+                    stringResource(
+                      Res.string.verify_proceed_blocked,
+                      stringResource(failure.status),
+                    ),
                 ),
               )
             refused ->

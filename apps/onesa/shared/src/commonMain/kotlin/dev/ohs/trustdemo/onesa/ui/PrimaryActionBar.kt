@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextAlign
@@ -54,7 +55,7 @@ import dev.ohs.trustdemo.onesa.ui.theme.OnesaTheme
 /**
  * A button in a [PrimaryActionBar]. [primary] fills it with the brand; [busyLabel] names the
  * spinner shown while [busy], which leaves the button tappable unless [enabled] is false. A toggle
- * says whether it is [pressed].
+ * says whether it is [pressed]; a disabled button tells a screen reader why in [reason].
  */
 @Immutable
 data class Action(
@@ -66,6 +67,7 @@ data class Action(
   val busy: Boolean = false,
   val busyLabel: String? = null,
   val pressed: Boolean? = null,
+  val reason: String? = null,
 )
 
 /**
@@ -123,10 +125,19 @@ fun PrimaryActionBar(
 fun OnesaButton(action: Action, modifier: Modifier = Modifier) {
   val brand = MaterialTheme.colorScheme.primary
   val fill = if (action.primary) brand else Color.White
-  val ink = if (action.primary) Color.White else OnesaColors.Slate700
+  val ink =
+    when {
+      action.primary -> Color.White
+      action.enabled -> OnesaColors.Slate700
+      else -> OnesaColors.Slate700.copy(alpha = 0.38f)
+    }
   Surface(
     onClick = action.onClick,
-    modifier = modifier.semantics { action.pressed?.let { toggleableState = ToggleableState(it) } },
+    modifier =
+      modifier.semantics {
+        action.pressed?.let { toggleableState = ToggleableState(it) }
+        if (!action.enabled) action.reason?.let { stateDescription = it }
+      },
     enabled = action.enabled,
     shape = MaterialTheme.shapes.small,
     color = if (action.enabled) fill else fill.copy(alpha = 0.45f),

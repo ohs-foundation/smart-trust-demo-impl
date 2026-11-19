@@ -413,6 +413,8 @@
     <string name="verify_scan_again">Scan Again</string>
     <string name="verify_keep_reported">Keep Doses as Reported</string>
     <string name="verify_proceed">Continue to Schedule Evaluation</string>
+    <string name="verify_confirm_proceed">Confirm Verification &amp; Proceed to Schedule Evaluation</string>
+    <string name="verify_proceed_blocked">Unavailable: %1$s, so the doses stay as reported</string>
     <string name="verify_status_local">Status: Cryptographic trust verified via GDHCN (%1$s)</string>
     <string name="verify_status_gdhcn">Status: signature verified against the GDHCN DEV trust list</string>
     <string name="match_mapped">Mapped Automatically</string>
