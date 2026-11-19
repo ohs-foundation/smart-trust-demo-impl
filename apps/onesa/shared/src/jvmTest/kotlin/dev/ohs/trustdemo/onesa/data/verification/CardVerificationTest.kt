@@ -26,6 +26,7 @@ import dev.ohs.trustdemo.hcert.InMemoryTrustListStorage
 import dev.ohs.trustdemo.hcert.TrustListCache
 import dev.ohs.trustdemo.hcert.VerifyStep
 import dev.ohs.trustdemo.onesa.data.hcert.BundledTrustLists
+import dev.ohs.trustdemo.onesa.data.hcert.DvcHolder
 import dev.ohs.trustdemo.onesa.data.hcert.HcertService
 import dev.ohs.trustdemo.onesa.data.hcert.PinnedTrustList
 import dev.ohs.trustdemo.onesa.data.hcert.SignedCards
@@ -126,11 +127,17 @@ class CardVerificationTest {
       clock = { Instant.fromEpochSeconds(nowSeconds) },
     )
 
-  private val hepB = SignedCards.dvc(StandIn.XXR_CARD, nowSeconds, "vp-hepb-peds-monovalent")
+  private val hepB =
+    SignedCards.dvc(
+      StandIn.XXR_CARD,
+      nowSeconds,
+      "vp-hepb-peds-monovalent",
+      holder = DvcHolder(given = "2026-01-01"),
+    )
   private val bcg = SignedCards.dvc(StandIn.XXR_CARD, nowSeconds, "vp-bcg-freeze-dried")
 
   private suspend fun withReportedDoses() {
-    reportDose("reported-hepb", "vp-hepb-peds-monovalent", hepB, "2026-03-01")
+    reportDose("reported-hepb", "vp-hepb-peds-monovalent", hepB, "2026-01-01")
     reportDose("reported-bcg", "vp-bcg-freeze-dried", bcg, "2026-03-01")
     repository.upsert(
       decode(

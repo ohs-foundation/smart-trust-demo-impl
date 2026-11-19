@@ -186,17 +186,23 @@ class ScheduleViewModel(
     val unmatched =
       attempt { matching.unmatched(referral.patientId) }.orEmpty().filter { it.id !in leftUnmapped }
     val choices = if (unmatched.isEmpty()) emptyList() else attempt { matching.choices() }.orEmpty()
+    val schedule = attempt { service.evaluate(referral.patientId) }
+    val dose = unmatched.firstOrNull()
+    val proposal =
+      if (dose == null || schedule == null) null
+      else attempt { matching.proposal(dose, choices, schedule) }
     _uiState.update {
       it.copy(
         child = child,
         doses = doses,
         unmatched = unmatched,
         choices = choices,
-        choice = unmatched.firstOrNull()?.let { dose -> matching.proposal(dose, choices) },
+        choice = proposal,
+        schedule = schedule,
+        busy = false,
+        failed = schedule == null,
       )
     }
-    val schedule = attempt { service.evaluate(referral.patientId) }
-    _uiState.update { it.copy(schedule = schedule, busy = false, failed = schedule == null) }
   }
 
   private suspend fun <T> attempt(block: suspend () -> T): T? =

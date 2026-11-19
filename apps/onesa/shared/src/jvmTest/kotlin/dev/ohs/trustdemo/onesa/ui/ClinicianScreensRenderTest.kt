@@ -371,18 +371,20 @@ class ClinicianScreensRenderTest {
       DoseMatchService(repository, { null }, HttpClient(MockEngine { error("") }), "", { true })
     val unmatched = runBlocking { matching.unmatched(somsak) }
     val choices = runBlocking { matching.choices() }
+    val schedule = runBlocking {
+      ScheduleService(repository, { plans() }) { visitDay }.evaluate(somsak)
+    }
     val state =
       ScheduleUiState(
         referral = runBlocking { ReferralInbox(repository).get("TrustDemoJ2Referral") },
         child = runBlocking { PatientContexts(repository).of(somsak) },
         doses = runBlocking { ForeignDoses(repository).of(somsak) },
-        schedule =
-          runBlocking { ScheduleService(repository, { plans() }) { visitDay }.evaluate(somsak) },
+        schedule = schedule,
         busy = false,
         open = OpenReferral("TrustDemoJ2Referral", "active", "W/\"1\"", JsonObject(emptyMap())),
         unmatched = unmatched,
         choices = choices,
-        choice = matching.proposal(unmatched.single(), choices),
+        choice = runBlocking { matching.proposal(unmatched.single(), choices, schedule) },
       )
     assertEquals(listOf(HEPB), unmatched.map { it.product })
     assertFalse(state.canBook)

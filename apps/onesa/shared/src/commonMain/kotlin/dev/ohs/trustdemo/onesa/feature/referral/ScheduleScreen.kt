@@ -74,6 +74,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.match_birth_day
 import dev.ohs.trustdemo.onesa.generated.resources.match_changed
 import dev.ohs.trustdemo.onesa.generated.resources.match_given
 import dev.ohs.trustdemo.onesa.generated.resources.match_mapped
+import dev.ohs.trustdemo.onesa.generated.resources.match_no_proposal
 import dev.ohs.trustdemo.onesa.generated.resources.match_not_counted
 import dev.ohs.trustdemo.onesa.generated.resources.match_question
 import dev.ohs.trustdemo.onesa.generated.resources.not_counted_title
@@ -312,7 +313,7 @@ private fun Unconfirmed(dose: UnmatchedDose, state: ScheduleUiState, onChoose: (
         Field(
           stringResource(Res.string.adjudication_match),
           when (choice) {
-            null -> "-"
+            null -> stringResource(Res.string.match_no_proposal)
             NotCounted -> stringResource(Res.string.match_not_counted)
             else -> stringResource(Res.string.adjudication_epi, choice.display)
           },

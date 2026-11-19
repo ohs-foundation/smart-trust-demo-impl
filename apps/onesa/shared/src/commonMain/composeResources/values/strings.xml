@@ -420,6 +420,7 @@
     <string name="match_given">Given %1$s at %2$s • Lot %3$s</string>
     <string name="match_birth_day">on the day of birth</string>
     <string name="match_not_counted">Not counted on the Onesan schedule</string>
+    <string name="match_no_proposal">No national dose matches this antigen at this age</string>
     <string name="layers_title">3-Layer Terminology &amp; ConceptMap Adjudication</string>
     <string name="layer1">Layer 1: Certificate product code (issued %1$s)</string>
     <string name="layer1_detail">Stored exactly as issued, from the card's DVCMin PreQual product.</string>

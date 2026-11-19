@@ -19,6 +19,8 @@ import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSession
 import dev.ohs.trustdemo.onesa.data.repository.FhirRepository
+import dev.ohs.trustdemo.onesa.data.schedule.Antigens
+import dev.ohs.trustdemo.onesa.data.schedule.Schedule
 import dev.ohs.trustdemo.onesa.data.sync.succeeded
 import dev.ohs.trustdemo.onesa.generateId
 import dev.ohs.trustdemo.onesa.util.FhirJson
@@ -36,6 +38,7 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlin.time.Clock
 import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -49,12 +52,16 @@ import kotlinx.serialization.json.putJsonObject
 /** A national schedule dose the nurse can say a product counts as. */
 data class EpiDose(val code: String, val display: String)
 
-/** A verified dose whose product the national map does not name: DT.02 asks the nurse. */
+/**
+ * A verified dose whose product the national map does not name: DT.02 asks the nurse. [given] is
+ * its date, when the record gives the day.
+ */
 data class UnmatchedDose(
   val id: String,
   val patientId: String,
   val product: String,
   val label: String,
+  val given: LocalDate?,
 )
 
 /** What the nurse's choice came to. */
@@ -84,9 +91,11 @@ class DoseMatchService(
   private val refresh: suspend () -> Boolean,
   private val clock: () -> Instant = Clock.System::now,
   private val newId: () -> String = ::generateId,
+  private val loadAntigens: suspend () -> Antigens = Antigens::load,
 ) {
   private val json = FhirJson.instance
   private val national = NationalMap(repository)
+  private var antigens: Antigens? = null
 
   /** The verified doses of [patientId] that need the picker. */
   suspend fun unmatched(patientId: String): List<UnmatchedDose> {
@@ -107,7 +116,13 @@ class DoseMatchService(
           return@mapNotNull null
         val date = dose.text("occurrenceDateTime")?.substringBefore('T')
         val name = NewbornRegistration.PRODUCTS[product] ?: product
-        UnmatchedDose(id, patientId, product, listOfNotNull(name, date).joinToString(", "))
+        UnmatchedDose(
+          id,
+          patientId,
+          product,
+          listOfNotNull(name, date).joinToString(", "),
+          date?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+        )
       }
   }
 
@@ -116,18 +131,16 @@ class DoseMatchService(
     national.scheduleDisplays().map { (code, display) -> EpiDose(code, display) }
 
   /**
-   * The choice put to the nurse for [dose]: the one whose name shares the most words with the
-   * product's, when only one does. It is a proposal; nothing is written until she confirms it.
+   * The choice put to the nurse for [dose]: the [schedule] dose of the product's antigens due at
+   * the child's age when it was given, or null when none is. It is a proposal; nothing is written
+   * until she confirms it.
    */
-  fun proposal(dose: UnmatchedDose, choices: List<EpiDose>): EpiDose? {
-    val product = words(NewbornRegistration.PRODUCTS[dose.product] ?: dose.product)
-    val shared = choices.associateWith { (words(it.display) intersect product).size }
-    val most = shared.values.maxOrNull()?.takeIf { it > 0 } ?: return null
-    return shared.filterValues { it == most }.keys.singleOrNull()
+  suspend fun proposal(dose: UnmatchedDose, choices: List<EpiDose>, schedule: Schedule): EpiDose? {
+    val given = dose.given ?: return null
+    val table = antigens ?: loadAntigens().also { antigens = it }
+    val code = table.doseFor(dose.product, given, schedule) ?: return null
+    return choices.firstOrNull { it.code == code }
   }
-
-  private fun words(text: String): Set<String> =
-    text.lowercase().split(Regex("[^a-z0-9]+")).filter { it.isNotEmpty() }.toSet()
 
   /** Records that [dose] counts as [choice], unless the map or the dose has changed meanwhile. */
   suspend fun confirm(dose: UnmatchedDose, choice: EpiDose): MatchOutcome {
