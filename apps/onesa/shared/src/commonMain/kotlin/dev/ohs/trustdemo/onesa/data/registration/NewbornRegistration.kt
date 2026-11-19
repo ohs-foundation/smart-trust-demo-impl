@@ -92,9 +92,9 @@ object RegistrationItems {
 
 /**
  * Everything the registration transaction is built from. [mother] and [father] are the household
- * members the form names as the child's parents; at least one is named. [newId] gives the id of the
- * record made for a purpose; the same answer for the same purpose lets a retry rewrite the records
- * of the attempt before it.
+ * members the form names as the child's parents; at least one is named. [urgent] is the CHW's
+ * priority for the referral. [newId] gives the id of the record made for a purpose; the same answer
+ * for the same purpose lets a retry rewrite the records of the attempt before it.
  */
 data class RegistrationRequest(
   val response: QuestionnaireResponse,
@@ -106,6 +106,7 @@ data class RegistrationRequest(
   val organizationId: String,
   val now: Instant,
   val newId: (purpose: String) -> String = { generateId() },
+  val urgent: Boolean = false,
 )
 
 /**
@@ -123,6 +124,10 @@ object NewbornRegistration {
 
   /** The system of the codes that name a household member as an answer to the form. */
   const val MEMBER_SYSTEM = "http://ohs.dev/fhir/trust-demo/CodeSystem/household-member"
+
+  /** The referral's `ServiceRequest.priority` codes the CHW chooses between. */
+  const val ROUTINE = "routine"
+  const val URGENT = "urgent"
 
   private const val ROLE_CODE = "http://terminology.hl7.org/CodeSystem/v3-RoleCode"
   private const val GENDER = "http://hl7.org/fhir/administrative-gender"
@@ -401,7 +406,7 @@ object NewbornRegistration {
       putProfile("TrustDemoOnesaReferral")
       put("status", "active")
       put("intent", "order")
-      put("priority", "routine")
+      put("priority", if (request.urgent) URGENT else ROUTINE)
       putJsonObject("code") {
         putJsonArray("coding") {
           add(

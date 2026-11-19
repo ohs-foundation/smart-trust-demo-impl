@@ -91,10 +91,33 @@ class QuestionnaireHostViewModel(
     }
   }
 
+  /** The CHW marks the referral urgent or routine; the review is read back again. */
+  fun priority(urgent: Boolean) {
+    val reviewing = _uiState.value as? QuestionnaireHostUiState.Reviewing ?: return
+    if (reviewing.urgent == urgent) return
+    viewModelScope.launch {
+      runCatching {
+          questionnaireService.reviewNewborn(
+            reviewing.response,
+            launchContext,
+            submissionKey,
+            urgent,
+          )
+        }
+        .onSuccess { review -> _uiState.value = reviewing.copy(review = review) }
+        .onFailure { throwable ->
+          _uiState.value =
+            QuestionnaireHostUiState.Error(
+              throwable.message ?: "Failed to review the registration."
+            )
+        }
+    }
+  }
+
   /** Sends the registration under review. */
   fun confirm() {
     val reviewing = _uiState.value as? QuestionnaireHostUiState.Reviewing ?: return
-    submit(reviewing.response, reviewing.questionnaireJson, reviewing.title)
+    submit(reviewing.response, reviewing.questionnaireJson, reviewing.title, reviewing.urgent)
   }
 
   /** Goes back from the review to the form, its answers kept. */
@@ -103,13 +126,18 @@ class QuestionnaireHostViewModel(
     _uiState.value = QuestionnaireHostUiState.Ready(reviewing.questionnaireJson, reviewing.title)
   }
 
-  private fun submit(response: QuestionnaireResponse, questionnaireJson: String, title: String?) {
+  private fun submit(
+    response: QuestionnaireResponse,
+    questionnaireJson: String,
+    title: String?,
+    urgent: Boolean = false,
+  ) {
     val questionnaire = loadedQuestionnaire ?: return
     _uiState.value = QuestionnaireHostUiState.Submitting(questionnaireJson, title)
 
     viewModelScope.launch {
       runCatching {
-          questionnaireService.submit(questionnaire, response, launchContext, submissionKey)
+          questionnaireService.submit(questionnaire, response, launchContext, submissionKey, urgent)
         }
         .onSuccess { result -> _uiState.value = QuestionnaireHostUiState.Submitted(result) }
         .onFailure { throwable ->

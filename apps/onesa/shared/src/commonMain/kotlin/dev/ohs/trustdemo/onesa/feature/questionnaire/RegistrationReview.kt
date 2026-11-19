@@ -43,6 +43,8 @@ import dev.ohs.trustdemo.onesa.generated.resources.registration_member_title
 import dev.ohs.trustdemo.onesa.generated.resources.registration_no_national_id
 import dev.ohs.trustdemo.onesa.generated.resources.registration_parent_father
 import dev.ohs.trustdemo.onesa.generated.resources.registration_parent_mother
+import dev.ohs.trustdemo.onesa.generated.resources.registration_priority_routine
+import dev.ohs.trustdemo.onesa.generated.resources.registration_priority_urgent
 import dev.ohs.trustdemo.onesa.generated.resources.registration_referral_priority
 import dev.ohs.trustdemo.onesa.generated.resources.registration_referral_reason
 import dev.ohs.trustdemo.onesa.generated.resources.registration_referral_target
@@ -62,6 +64,7 @@ import dev.ohs.trustdemo.onesa.ui.Field
 import dev.ohs.trustdemo.onesa.ui.FieldGrid
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.OnesaScaffold
+import dev.ohs.trustdemo.onesa.ui.OnesaSelectField
 import dev.ohs.trustdemo.onesa.ui.PrimaryActionBar
 import dev.ohs.trustdemo.onesa.ui.RecordRow
 import dev.ohs.trustdemo.onesa.ui.SectionCard
@@ -71,7 +74,7 @@ import org.jetbrains.compose.resources.stringResource
 
 /**
  * S3: the household, the newborn and the referral as the registration will write them, read back
- * from the transaction before it is sent.
+ * from the transaction before it is sent. [onUrgent] sets the referral's priority.
  */
 @Composable
 fun RegistrationReviewContent(
@@ -79,6 +82,7 @@ fun RegistrationReviewContent(
   topBar: @Composable () -> Unit,
   saving: Boolean,
   onSave: () -> Unit,
+  onUrgent: (Boolean) -> Unit = {},
 ) {
   val records = review.review
   val country = records.birthCountry?.takeIf { it.isNotBlank() }
@@ -198,13 +202,19 @@ fun RegistrationReviewContent(
             referral.text?.let {
               Field(stringResource(Res.string.registration_referral_reason), it)
             },
-            referral.priority?.let {
-              Field(
-                stringResource(Res.string.registration_referral_priority),
-                it.replaceFirstChar { c -> c.uppercaseChar() },
-              )
-            },
           )
+        )
+        val priorities =
+          listOf(
+            stringResource(Res.string.registration_priority_routine),
+            stringResource(Res.string.registration_priority_urgent),
+          )
+        val urgent = referral.priority == NewbornRegistration.URGENT
+        OnesaSelectField(
+          stringResource(Res.string.registration_referral_priority),
+          priorities[if (urgent) 1 else 0],
+          priorities,
+          onSelect = { onUrgent(it == 1) },
         )
       }
     }

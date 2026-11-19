@@ -281,12 +281,12 @@ internal val viewModelModule = module {
   viewModel { WalletViewModel(get()) { SessionRepository.session.value?.context?.patientId } }
   viewModel { ShareViewModel(get(), get()) }
   viewModel { SharedLinksViewModel(get()) }
-  viewModel { (consentIds: List<String>) -> IssuedLinksViewModel(consentIds, get<ShareService>()) }
-  viewModel { (referralId: String) ->
-    VerifyCardsViewModel(referralId, get(), get(), get(), get(), get())
+  viewModel { (consentIds: List<String>) ->
+    IssuedLinksViewModel(consentIds, get<ShareService>(), get())
   }
+  viewModel { (referralId: String) -> VerifyCardsViewModel(referralId, get(), get(), get(), get()) }
   viewModel { (referralId: String) ->
-    ScheduleViewModel(referralId, get(), get(), get(), get(), get())
+    ScheduleViewModel(referralId, get(), get(), get(), get(), get(), get())
   }
   viewModel { (patientId: String) -> PatientScheduleViewModel(patientId, get()) }
   viewModel { (patientId: String) -> PatientReferralsViewModel(patientId, get()) }

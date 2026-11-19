@@ -17,13 +17,13 @@ package dev.ohs.trustdemo.onesa.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -44,7 +44,7 @@ import dev.ohs.trustdemo.onesa.ui.theme.OnesaTheme
 /**
  * A passcode in digit boxes under a lock [title], hidden as dots unless [shown]. With
  * [onValueChange] it takes digits from the keyboard, up to [length]; without, it only shows
- * [value].
+ * [value], and offers no toggle when there is none.
  */
 @Composable
 fun PasscodeCard(
@@ -60,19 +60,21 @@ fun PasscodeCard(
   onValueChange: ((String) -> Unit)? = null,
 ) {
   SectionCard(modifier, title = title, icon = OnesaIcons.Lock, footnote = note) {
-    Row(
-      Modifier.minimumInteractiveComponentSize()
-        .clickable(role = Role.Switch) { onShownChange(!shown) }
-        .padding(horizontal = 4.dp, vertical = 2.dp),
-      horizontalArrangement = Arrangement.spacedBy(4.dp),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Icon(OnesaIcons.Eye, null, tint = OnesaColors.Slate500, modifier = Modifier.size(14.dp))
-      Text(
-        if (shown) shownLabel else hiddenLabel,
-        style = MaterialTheme.typography.labelSmall,
-        color = OnesaColors.Slate500,
-      )
+    if (onValueChange != null || value.isNotEmpty()) {
+      Row(
+        Modifier.toggleable(value = shown, role = Role.Switch, onValueChange = onShownChange)
+          .minimumInteractiveComponentSize()
+          .padding(horizontal = 4.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Icon(OnesaIcons.Eye, null, tint = OnesaColors.Slate500, modifier = Modifier.size(14.dp))
+        Text(
+          if (shown) shownLabel else hiddenLabel,
+          style = MaterialTheme.typography.labelSmall,
+          color = OnesaColors.Slate500,
+        )
+      }
     }
     val digits: @Composable () -> Unit = {
       Row(

@@ -31,7 +31,8 @@ data class Adjudication(val attester: String, val recorded: String?)
 /**
  * A verified dose imported from a foreign card: the product as issued, the schedule dose it carries
  * ([schedule]), whether the national map names the product ([mapped]), whether a verification
- * Provenance is attached ([verified]) and the nurse's [adjudication], if she made one.
+ * Provenance is attached ([verified]) and the nurse's [adjudication], if she made one. [codings]
+ * are its `vaccineCode.coding` as saved.
  */
 data class ForeignDose(
   val id: String,
@@ -44,6 +45,7 @@ data class ForeignDose(
   val mapped: Boolean,
   val verified: Boolean,
   val adjudication: Adjudication? = null,
+  val codings: List<JsonObject> = emptyList(),
 )
 
 /** Reads a child's verified foreign doses, and their Provenance, from the synced copy. */
@@ -88,6 +90,7 @@ class ForeignDoses(private val repository: FhirRepository) {
                 Adjudication(practitionerName(it), provenance.text("recorded"))
               }
             },
+          codings = codings,
         )
       }
       .sortedBy { it.date }

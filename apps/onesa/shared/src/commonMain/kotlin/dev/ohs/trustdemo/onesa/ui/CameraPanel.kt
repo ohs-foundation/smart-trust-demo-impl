@@ -22,6 +22,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -86,20 +87,21 @@ fun CameraPanel(
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
       Reticle(frame)
-      Row(
+      FlowRow(
         Modifier.fillMaxWidth()
           .background(OnesaColors.Ink.copy(alpha = 0.9f), RoundedCornerShape(8.dp))
           .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
       ) {
-        Icon(OnesaIcons.Scan, null, tint = OnesaColors.Sky400, modifier = Modifier.size(14.dp))
-        Text(
-          label,
-          Modifier.weight(1f),
-          style = OnesaTheme.mono.caption,
-          color = OnesaColors.Slate300,
-        )
+        Row(
+          horizontalArrangement = Arrangement.spacedBy(6.dp),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Icon(OnesaIcons.Scan, null, tint = OnesaColors.Sky400, modifier = Modifier.size(14.dp))
+          Text(label, style = OnesaTheme.mono.caption, color = OnesaColors.Slate300)
+        }
         badge?.let { StatusChip(it) }
       }
       caption?.let {

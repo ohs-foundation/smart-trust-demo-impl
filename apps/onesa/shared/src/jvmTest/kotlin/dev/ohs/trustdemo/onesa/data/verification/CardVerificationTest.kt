@@ -26,11 +26,13 @@ import dev.ohs.trustdemo.hcert.InMemoryTrustListStorage
 import dev.ohs.trustdemo.hcert.TrustListCache
 import dev.ohs.trustdemo.hcert.VerifyStep
 import dev.ohs.trustdemo.onesa.data.hcert.BundledTrustLists
+import dev.ohs.trustdemo.onesa.data.hcert.DvcHolder
 import dev.ohs.trustdemo.onesa.data.hcert.HcertService
 import dev.ohs.trustdemo.onesa.data.hcert.PinnedTrustList
 import dev.ohs.trustdemo.onesa.data.hcert.SignedCards
 import dev.ohs.trustdemo.onesa.data.registration.RegistrationSession
 import dev.ohs.trustdemo.onesa.data.repository.InMemorySampleFhirRepository
+import dev.ohs.trustdemo.onesa.data.repository.PatientContexts
 import dev.ohs.trustdemo.onesa.data.schedule.BookingOutcome
 import dev.ohs.trustdemo.onesa.data.schedule.DisplayOnlyRows
 import dev.ohs.trustdemo.onesa.data.schedule.SchedulePlans
@@ -38,6 +40,7 @@ import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
 import dev.ohs.trustdemo.onesa.data.schedule.VisitBooking
 import dev.ohs.trustdemo.onesa.data.sync.FakeSyncManager
 import dev.ohs.trustdemo.onesa.data.sync.LocalCopy
+import dev.ohs.trustdemo.onesa.feature.referral.ScheduleViewModel
 import dev.ohs.trustdemo.onesa.util.FhirJson
 import dev.ohs.trustdemo.trustkit.StandIn
 import dev.ohs.trustdemo.trustkit.TestKeys
@@ -59,7 +62,13 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Instant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.LocalDate as Day
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -118,11 +127,17 @@ class CardVerificationTest {
       clock = { Instant.fromEpochSeconds(nowSeconds) },
     )
 
-  private val hepB = SignedCards.dvc(StandIn.XXR_CARD, nowSeconds, "vp-hepb-peds-monovalent")
+  private val hepB =
+    SignedCards.dvc(
+      StandIn.XXR_CARD,
+      nowSeconds,
+      "vp-hepb-peds-monovalent",
+      holder = DvcHolder(given = "2026-01-01"),
+    )
   private val bcg = SignedCards.dvc(StandIn.XXR_CARD, nowSeconds, "vp-bcg-freeze-dried")
 
   private suspend fun withReportedDoses() {
-    reportDose("reported-hepb", "vp-hepb-peds-monovalent", hepB, "2026-03-01")
+    reportDose("reported-hepb", "vp-hepb-peds-monovalent", hepB, "2026-01-01")
     reportDose("reported-bcg", "vp-bcg-freeze-dried", bcg, "2026-03-01")
     repository.upsert(
       decode(
@@ -716,6 +731,103 @@ class CardVerificationTest {
     status = SyncJobStatus.Succeeded()
     copy.syncNow()
     assertIs<BookingOutcome.Booked>(lagging.book(open, patientId))
+  }
+
+  @OptIn(ExperimentalCoroutinesApi::class)
+  @Test
+  fun confirmingOnTheScheduleWritesTheAdjudicationBeforeTheBooking() = runTest {
+    Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+    try {
+      importedDoses()
+      repository.upsert(decode(igResource("CodeSystem-TrustDemoOnesaEpiSchedule.json")))
+      val request =
+        FhirJson.instance
+          .parseToJsonElement(
+            """{"resourceType":"ServiceRequest","id":"${referral.id}","status":"active",
+            "intent":"order","code":{"coding":[{"system":"http://snomed.info/sct","code":"3457005"}]},
+            "subject":{"reference":"Patient/$patientId"}}"""
+          )
+          .jsonObject
+      gateway.serviceRequests[referral.id] = request
+      repository.upsert(decode(request))
+      val syncing =
+        DoseMatchService(
+          repository = repository,
+          session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
+          httpClient = HttpClient(gateway.engine),
+          baseUrl = "http://gateway/fhir",
+          refresh = {
+            (gateway.immunizations.values + gateway.conceptMaps.values).forEach {
+              repository.upsert(decode(it))
+            }
+            true
+          },
+          clock = { Instant.fromEpochSeconds(nowSeconds) },
+        )
+      val viewModel =
+        ScheduleViewModel(
+          referral.id,
+          ReferralInbox(repository),
+          ScheduleService(
+            repository,
+            {
+              SchedulePlans.parse(
+                protocol("TrustDemoDT03"),
+                protocol("TrustDemoOnesaInfantSchedule"),
+              )
+            },
+          ) {
+            Day.parse("2026-01-20")
+          },
+          booking,
+          PatientContexts(repository),
+          ForeignDoses(repository),
+          syncing,
+        )
+
+      val before = viewModel.uiState.first { !it.busy }
+      assertEquals(listOf("vp-hepb-peds-monovalent"), before.unmatched.map { it.product })
+      assertEquals(hepBChoice, before.choice)
+      assertFalse(before.canBook)
+      viewModel.confirm()
+      val after = viewModel.uiState.first { !it.busy && it.unmatched.isEmpty() }
+
+      assertTrue(after.canBook)
+      val dose = before.unmatched.single()
+      assertEquals(
+        listOf("ConceptMap/$MAP_ID", "Immunization/${dose.id}", "Provenance"),
+        gateway.transactions.last().map {
+          it.url.takeUnless { url -> it.type == "Provenance" } ?: it.type
+        },
+      )
+      assertEquals(
+        listOf(
+          ScanTransactions.EPI_SYSTEM to "XXK-EPI-HEPB-BD",
+          ScanTransactions.PRODUCT_SYSTEM to "vp-hepb-peds-monovalent",
+        ),
+        codings(gateway.immunizations.getValue(dose.id)).take(2),
+      )
+      val adjudication =
+        gateway.provenances.values.single { "ConceptMap/$MAP_ID" in it.references("target") }
+      assertEquals(
+        setOf("Immunization/${dose.id}", "ConceptMap/$MAP_ID", "Patient/$patientId"),
+        adjudication.references("target").toSet(),
+      )
+      val stored =
+        mapOf(
+          "Provenance" to gateway.provenances.values.toList(),
+          "ConceptMap" to gateway.conceptMaps.values.toList(),
+        )
+      for (expectation in expectations.getValue(Step.J3B).take(2)) {
+        val found = stored.getValue(expectation.query.type).map(::decode)
+        assertTrue(
+          expectation.satisfied(found, Dates(LocalDate.parse("2026-11-14"))),
+          expectation.label,
+        )
+      }
+    } finally {
+      Dispatchers.resetMain()
+    }
   }
 
   @Test

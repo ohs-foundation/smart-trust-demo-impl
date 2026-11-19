@@ -17,10 +17,19 @@ package dev.ohs.trustdemo.onesa.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -54,6 +63,7 @@ import dev.ohs.trustdemo.onesa.data.schedule.BookedVisits
 import dev.ohs.trustdemo.onesa.data.schedule.BookingOutcome
 import dev.ohs.trustdemo.onesa.data.schedule.DisplayOnlyRows
 import dev.ohs.trustdemo.onesa.data.schedule.DoseRecording
+import dev.ohs.trustdemo.onesa.data.schedule.OpenReferral
 import dev.ohs.trustdemo.onesa.data.schedule.SchedulePlans
 import dev.ohs.trustdemo.onesa.data.schedule.ScheduleService
 import dev.ohs.trustdemo.onesa.data.schedule.Standing
@@ -75,7 +85,6 @@ import dev.ohs.trustdemo.onesa.feature.patient.profile.ProfileTab
 import dev.ohs.trustdemo.onesa.feature.patient.profile.RecordDoseContent
 import dev.ohs.trustdemo.onesa.feature.patient.profile.RecordDoseForm
 import dev.ohs.trustdemo.onesa.feature.referral.ClinicScheduleContent
-import dev.ohs.trustdemo.onesa.feature.referral.DoseMatchContent
 import dev.ohs.trustdemo.onesa.feature.referral.InboxToday
 import dev.ohs.trustdemo.onesa.feature.referral.ReferralInboxContent
 import dev.ohs.trustdemo.onesa.feature.referral.ScheduleContent
@@ -107,6 +116,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import org.koin.core.context.startKoin
@@ -221,7 +231,7 @@ class ClinicianScreensRenderTest {
 
   private val clinicTabs = listOf("Referrals (1)", "Patients", "Schedule", "Trust list", "Sync")
 
-  private val noActions = VerifyActions({}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {})
+  private val noActions = VerifyActions({}, {}, {}, {}, {}, {}, {})
 
   @Composable
   private fun ClinicTopBar() =
@@ -329,13 +339,23 @@ class ClinicianScreensRenderTest {
         .failure
     check(failure.step == VerifyStep.SIGNATURE && failure.reason == FailureReason.SIGNATURE_INVALID)
     val kid = (runBlocking { hcert.read(forged) } as ReadResult.Decoded).hcert.kid
+    val refused =
+      state.copy(
+        scanned = forged,
+        results = listOf(ScanOutcome.Failed(failure.step, failure.reason, kid)),
+      )
     clinic("1-12-verification-failed", 1024.dp to 760.dp) {
       VerifyCardsContent(
-        state =
-          state.copy(
-            scanned = forged,
-            results = listOf(ScanOutcome.Failed(failure.step, failure.reason, kid)),
-          ),
+        state = refused,
+        today = visitDay,
+        topBar = { ClinicTopBar() },
+        showOutcome = true,
+        actions = noActions,
+      )
+    }
+    clinic("1-12-verification-failed-phone", 360.dp to 1500.dp) {
+      VerifyCardsContent(
+        state = refused,
         today = visitDay,
         topBar = { ClinicTopBar() },
         showOutcome = true,
@@ -344,8 +364,9 @@ class ClinicianScreensRenderTest {
     }
   }
 
+  /** S5 at J3b before the nurse confirms: the Hep B dose has no national code; BCG maps itself. */
   @Test
-  fun doseMatchPicker() {
+  fun scheduleBeforeTheEquivalence() {
     val repository =
       repositoryOf(
         referred.filterNot { it.contains("Reported") },
@@ -358,21 +379,44 @@ class ClinicianScreensRenderTest {
       DoseMatchService(repository, { null }, HttpClient(MockEngine { error("") }), "", { true })
     val unmatched = runBlocking { matching.unmatched(somsak) }
     val choices = runBlocking { matching.choices() }
+    val schedule = runBlocking {
+      ScheduleService(repository, { plans() }) { visitDay }.evaluate(somsak)
+    }
     val state =
-      VerifyCardsUiState(
+      ScheduleUiState(
         referral = runBlocking { ReferralInbox(repository).get("TrustDemoJ2Referral") },
         child = runBlocking { PatientContexts(repository).of(somsak) },
         doses = runBlocking { ForeignDoses(repository).of(somsak) },
+        schedule = schedule,
+        busy = false,
+        open = OpenReferral("TrustDemoJ2Referral", "active", "W/\"1\"", JsonObject(emptyMap())),
         unmatched = unmatched,
         choices = choices,
+        choice = runBlocking { matching.proposal(unmatched.single(), choices, schedule) },
       )
-    clinic("1-13-dose-match", 1024.dp to 700.dp) {
-      DoseMatchContent(
-        state = state,
-        today = visitDay,
-        choice = choices.first { it.code == "XXK-EPI-HEPB-BD" },
-        onChoose = {},
-        actions = noActions,
+    assertEquals(listOf(HEPB), unmatched.map { it.product })
+    assertFalse(state.canBook)
+    val upcoming = DisplayOnlyRows.parse(File("$SCHEDULE/s5-display-only-rows.json").readText())
+    clinic("0-04-s5-before", 1024.dp to 1100.dp) {
+      ScheduleContent(state, visitDay, upcoming, onBack = {}, onBook = {})
+    }
+    clinic("0-04-s5-before-phone", 360.dp to 2700.dp) {
+      ScheduleContent(state, visitDay, upcoming, onBack = {}, onBook = {})
+    }
+    runComposeUiTest {
+      setContent {
+        OnesaTheme(OnesaColors.BrandClinic) {
+          Registry { ScheduleContent(state, visitDay, upcoming, onBack = {}, onBook = {}) }
+        }
+      }
+      onNodeWithText("Clinician Adjudication & Equivalence Confirmation").assertExists()
+      onNodeWithText("Onesan EPI: Hepatitis B birth dose").assertExists()
+      onNodeWithText("Not confirmed yet: press Confirm Equivalence & Add Second Coding")
+        .assertExists()
+      onNodeWithText("Not booked: Confirm Date").assertExists()
+      onNodeWithText("Confirm Equivalence & Add Second Coding").assertIsEnabled()
+      assertTrue(
+        onAllNodesWithText("Complete Referral", substring = true).fetchSemanticsNodes().isEmpty()
       )
     }
   }
@@ -428,6 +472,57 @@ class ClinicianScreensRenderTest {
         }
       }
       assertScheduleCard()
+    }
+    val confirmed =
+      state.copy(
+        booked = null,
+        open = OpenReferral("TrustDemoJ2Referral", "active", "W/\"1\"", JsonObject(emptyMap())),
+      )
+    assertTrue(confirmed.canBook)
+    clinic("0-04-s5-confirmed-phone", 360.dp to 2500.dp) {
+      ScheduleContent(confirmed, visitDay, upcoming, onBack = {}, onBook = {})
+    }
+    clinic("0-04-s5-dual-coding-phone", 360.dp to 2700.dp) {
+      ScheduleContent(
+        confirmed.copy(dualCodingShown = true),
+        visitDay,
+        upcoming,
+        onBack = {},
+        onBook = {},
+      )
+    }
+    runComposeUiTest {
+      setContent {
+        var shown by remember { mutableStateOf(confirmed) }
+        OnesaTheme(OnesaColors.BrandClinic) {
+          Registry {
+            ScheduleContent(
+              shown,
+              visitDay,
+              upcoming,
+              onBack = {},
+              onBook = {},
+              onInspect = { shown = shown.copy(dualCodingShown = !shown.dualCodingShown) },
+            )
+          }
+        }
+      }
+      val dualCoding =
+        "Immunization.vaccineCode.coding[] = [" +
+          """{"system":"${ScanTransactions.PRODUCT_SYSTEM}","code":"$HEPB",""" +
+          """"display":"Hepatitis B vaccine, paediatric, monovalent"},""" +
+          """{"system":"${ScanTransactions.EPI_SYSTEM}","code":"XXK-EPI-HEPB-BD",""" +
+          """"display":"Hepatitis B birth dose"}]"""
+      onNodeWithText("CONFIRMED").assertExists()
+      onNodeWithText(dualCoding).assertDoesNotExist()
+      onNodeWithText("Inspect Dual Coding Array")
+        .assertIsOff()
+        .assertHeightIsAtLeast(48.dp)
+        .performClick()
+      onNodeWithText(dualCoding).assertExists()
+      onNodeWithText("Inspect Dual Coding Array").assertIsOn().performClick()
+      onNodeWithText(dualCoding).assertDoesNotExist()
+      onNodeWithText("Complete Referral", substring = true).assertIsEnabled()
     }
   }
 

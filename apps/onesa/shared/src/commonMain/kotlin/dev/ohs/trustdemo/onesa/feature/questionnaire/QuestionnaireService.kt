@@ -188,12 +188,16 @@ class QuestionnaireService(
     }
   }
 
-  /** Submits [response]; [submissionKey] stays the same across retries of one registration. */
+  /**
+   * Submits [response]; [submissionKey] stays the same across retries of one registration, and
+   * [urgent] is a newborn referral's priority.
+   */
   suspend fun submit(
     questionnaire: QuestionnaireR4,
     response: QuestionnaireResponse,
     launchContext: QuestionnaireLaunchContext,
     submissionKey: String = generateId(),
+    urgent: Boolean = false,
   ): QuestionnaireSubmissionResult =
     when (questionnaire.id) {
       QuestionnaireIds.HOUSEHOLD_REGISTRATION ->
@@ -206,7 +210,7 @@ class QuestionnaireService(
         submitClinicalData(questionnaire, response, launchContext)
 
       QuestionnaireIds.NEWBORN_REGISTRATION ->
-        submitNewbornRegistration(response, launchContext, submissionKey)
+        submitNewbornRegistration(response, launchContext, submissionKey, urgent)
 
       else -> error("No submission handling is defined for questionnaire '${questionnaire.id}'.")
     }
@@ -244,9 +248,11 @@ class QuestionnaireService(
     response: QuestionnaireResponse,
     launchContext: QuestionnaireLaunchContext,
     submissionKey: String,
+    urgent: Boolean = false,
   ): NewbornReview {
     val groupId = launchContext.groupId ?: error("A household is required to register a newborn.")
-    val review = NewbornRegistration.review(registration.preview(groupId, response, submissionKey))
+    val review =
+      NewbornRegistration.review(registration.preview(groupId, response, submissionKey, urgent))
     val clinic =
       review.referral
         ?.performer
@@ -263,9 +269,10 @@ class QuestionnaireService(
     response: QuestionnaireResponse,
     launchContext: QuestionnaireLaunchContext,
     submissionKey: String,
+    urgent: Boolean,
   ): QuestionnaireSubmissionResult {
     val groupId = launchContext.groupId ?: error("A household is required to register a newborn.")
-    val summary = registration.register(groupId, response, submissionKey)
+    val summary = registration.register(groupId, response, submissionKey, urgent)
     return QuestionnaireSubmissionResult(
       savedResourceCount = 1,
       bundleJson = "",

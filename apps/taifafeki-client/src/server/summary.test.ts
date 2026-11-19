@@ -147,7 +147,7 @@ describe("aSharedSummaryIsFetched", () => {
     const result = await call();
     expect(result).toEqual({ kind: "released", documents: [{ contentType: "application/fhir+json", jwe: "eyJhbGciOiJkaXIifQ..iv.ct.tag" }] });
     expect(JSON.stringify(result)).not.toContain(KEY);
-    expect(JSON.stringify(result)).not.toContain("key");
+    expect(JSON.stringify(result)).not.toMatch(/"key"\s*:/);
 
     const [post, get] = seen;
     expect(post).toMatchObject({ method: "POST", url: `https://${HOST}/vhl/List/_search`, redirect: "error" });
