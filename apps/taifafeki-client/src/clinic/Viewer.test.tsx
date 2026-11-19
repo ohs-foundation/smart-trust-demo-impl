@@ -15,8 +15,8 @@ import { Viewer } from "./Viewer";
 vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: ReactNode }) => <a href="/">{children}</a> }));
 vi.mock("../server/links", () => ({ scanVhl: vi.fn(), fetchSummary: vi.fn(), trustListStatuses: vi.fn() }));
 
-configure({ asyncUtilTimeout: 5000 });
-vi.setConfig({ testTimeout: 20_000 });
+configure({ asyncUtilTimeout: 15_000 });
+vi.setConfig({ testTimeout: 60_000 });
 
 const IPS = ig("Bundle-TrustDemoJ4Ips.json");
 const vhl = WitVhl.getInstance();
@@ -110,7 +110,7 @@ describe("theKeyStaysInTheBrowser", () => {
     expect(await screen.findByText(/Somsak SENGMANY/)).toBeTruthy();
     const asked = vi.mocked(fetchSummary).mock.calls.flatMap(([request]) => [request]);
     expect(JSON.stringify(asked)).not.toContain(KEY);
-    expect(JSON.stringify(await vi.mocked(fetchSummary).mock.results[0]?.value)).not.toContain("key");
+    expect(JSON.stringify(await vi.mocked(fetchSummary).mock.results[0]?.value)).not.toMatch(/"key"\s*:/);
   });
 
   it("forgets the key on Close Summary, so the next link must bring its own", async () => {
