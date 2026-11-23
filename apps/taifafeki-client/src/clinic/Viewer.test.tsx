@@ -109,7 +109,10 @@ describe("theKeyStaysInTheBrowser", () => {
     expect(await screen.findByText(/Somsak SENGMANY/)).toBeTruthy();
     const asked = vi.mocked(fetchSummary).mock.calls.flatMap(([request]) => [request]);
     expect(JSON.stringify(asked)).not.toContain(KEY);
-    expect(JSON.stringify(await vi.mocked(fetchSummary).mock.results[0]?.value)).not.toContain("key");
+    // Without the ciphertext: its random text contains "key" in about one run in 18.
+    const reply = JSON.stringify(await vi.mocked(fetchSummary).mock.results[0]?.value, (name, value) => (name === "jwe" ? undefined : value));
+    expect(reply).not.toContain("key");
+    expect(reply).not.toContain(KEY);
   });
 
   it("forgets the key on Close Summary, so the next link must bring its own", async () => {

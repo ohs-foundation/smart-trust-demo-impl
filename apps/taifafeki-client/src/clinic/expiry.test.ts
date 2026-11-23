@@ -10,7 +10,8 @@ describe("link expiry", () => {
   });
 
   it("keeps the full date-time for any other instant", () => {
-    expect(expiryUntil(MIDNIGHT + 3600)).toMatch(/^1 Dec 2026, \d\d:\d\d GMT/);
+    // The full form is in the viewer's own time zone, where 01:00 UTC is still 30 Nov west of UTC-1.
+    expect(expiryUntil(MIDNIGHT + 3600)).toMatch(/^(30 Nov|1 Dec) 2026, \d\d:\d\d GMT/);
     expect(expiryAt(MIDNIGHT + 3600)).toBe(expiryUntil(MIDNIGHT + 3600));
   });
 });
