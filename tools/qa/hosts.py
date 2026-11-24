@@ -34,6 +34,7 @@ ALLOWED = {
     "loinc.org": "terminology system URL, an identifier",
     "snomed.info": "terminology system URL, an identifier",
     "unitsofmeasure.org": "terminology system URL, an identifier",
+    "www.whocc.no": "terminology system URL (WHO ATC), an identifier",
     "sql-on-fhir.org": "SQL-on-FHIR ViewDefinition canonical, an identifier",
     "profiles.ihe.net": "IHE profile canonical URLs (MHD, IPS), identifiers",
     "dicom.nema.org": "DICOM code system URL in the IG's AuditEvents, an identifier",
