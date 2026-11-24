@@ -4,7 +4,7 @@
   "patient": {
     "reference": "Patient/TrustDemoSomsak"
   },
-  "date": "2025-11-25T10:22:00+07:00",
+  "date": "2026-01-06T10:22:00+07:00",
   "authority": {
     "reference": "Organization/TrustDemoLomaruDhc"
   },
@@ -14,7 +14,7 @@
         {
           "coding": [
             {
-              "code": "XXK-EPI-PENTA-1",
+              "code": "XXU-EPI-PENTA-1",
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
               "display": "Pentavalent (DTP-HepB-Hib), dose 1"
             }
@@ -24,9 +24,9 @@
       "forecastStatus": {
         "coding": [
           {
-            "code": "due",
+            "code": "overdue",
             "system": "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status",
-            "display": "Due"
+            "display": "Overdue"
           }
         ]
       },
@@ -55,7 +55,7 @@
         {
           "coding": [
             {
-              "code": "XXK-EPI-OPV-1",
+              "code": "XXU-EPI-OPV-1",
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
               "display": "bOPV, dose 1"
             }
@@ -65,9 +65,9 @@
       "forecastStatus": {
         "coding": [
           {
-            "code": "due",
+            "code": "overdue",
             "system": "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status",
-            "display": "Due"
+            "display": "Overdue"
           }
         ]
       },
@@ -91,7 +91,7 @@
         {
           "coding": [
             {
-              "code": "XXK-EPI-PCV-1",
+              "code": "XXU-EPI-PCV-1",
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
               "display": "PCV, dose 1"
             }
@@ -101,9 +101,9 @@
       "forecastStatus": {
         "coding": [
           {
-            "code": "due",
+            "code": "overdue",
             "system": "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status",
-            "display": "Due"
+            "display": "Overdue"
           }
         ]
       },

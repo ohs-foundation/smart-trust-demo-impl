@@ -16,7 +16,7 @@
       }
     ]
   },
-  "guidance": "A definition only: it states no target and no value. Data elements: TD.J2B.DE02 Referred by; TD.J2B.DE03 Referred to; TD.J2B.DE04 Referred at; TD.J2B.DE06 Doses to verify; TD.J2B.DE07 Referral status. Decision tables: TD.DT.01. Requirements: STT-VER-011. The populations are described, not computable: this guide carries no CQL.",
+  "guidance": "A definition only: it states no target and no value. Data elements: IMMZC4.uniqueIdentifier Unique identifier; IMMZImmunization.primarySource Primary source. Decision tables: TD.DT.01. Requirements: STT-VER-011. The populations are described, not computable: this guide carries no CQL.",
   "group": [
     {
       "population": [
@@ -33,7 +33,7 @@
           "description": "Referrals for verification made by community health workers in the reporting period.",
           "criteria": {
             "language": "text/plain",
-            "expression": "COUNT of referrals (TD.J2B) WHERE \"Referred at\" is in the reporting period"
+            "expression": "COUNT of referral ServiceRequest (TrustDemoOnesaReferral) WHERE ServiceRequest.authoredOn is in the reporting period"
           }
         },
         {
@@ -49,7 +49,7 @@
           "description": "Referrals made in the reporting period for which the clinic has recorded an outcome for every dose the referral lists.",
           "criteria": {
             "language": "text/plain",
-            "expression": "COUNT of referrals (TD.J2B) WHERE \"Referred at\" is in the reporting period AND \"Referral status\" = completed"
+            "expression": "COUNT of referral ServiceRequest (TrustDemoOnesaReferral) WHERE ServiceRequest.authoredOn is in the reporting period AND ServiceRequest.status = completed"
           }
         }
       ],

@@ -29,7 +29,7 @@
         "date": "2026-10-26T09:00:00+07:00",
         "author": [
           {
-            "display": "Onesa national health portal (Country B, XXK)"
+            "display": "Onesa national health portal (Country B, XXU)"
           }
         ],
         "title": "Patient summary: Somsak SENGMANY",
@@ -166,7 +166,7 @@
         "identifier": [
           {
             "system": "http://smart.who.int/trust-demo/sid/onesa-temporary-id",
-            "value": "XXK-TMP-2025-00918"
+            "value": "XXU-TMP-2025-00918"
           }
         ],
         "active": true,
@@ -238,13 +238,13 @@
           "coding": [
             {
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
-              "code": "XXK-EPI-HEPB-BD",
+              "code": "XXU-EPI-HEPB-BD",
               "display": "Hepatitis B birth dose"
             },
             {
-              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-              "code": "vp-hepb-peds-monovalent",
-              "display": "Hepatitis B vaccine, paediatric, monovalent"
+              "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+              "code": "a3K3X000006MiiXUAS",
+              "display": "Hepatitis B Vaccine (rDNA) (Paediatric) (HepB), Serum Institute of India, Vial, 10 doses [FVP-P-132]"
             },
             {
               "system": "http://hl7.org/fhir/sid/cvx",
@@ -292,13 +292,13 @@
           "coding": [
             {
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
-              "code": "XXK-EPI-BCG",
+              "code": "XXU-EPI-BCG",
               "display": "BCG"
             },
             {
-              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-              "code": "vp-bcg-freeze-dried",
-              "display": "BCG vaccine, freeze-dried"
+              "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+              "code": "a3K3X000006MiisUAC",
+              "display": "BCG Vaccine (BCG), Serum Institute of India, Vial, 20 doses [FVP-P-117]"
             },
             {
               "system": "http://hl7.org/fhir/sid/cvx",
@@ -346,13 +346,13 @@
           "coding": [
             {
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
-              "code": "XXK-EPI-PENTA-1",
+              "code": "XXU-EPI-PENTA-1",
               "display": "Pentavalent (DTP-HepB-Hib), dose 1"
             },
             {
-              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-              "code": "vp-pentavalent-liquid",
-              "display": "DTP-HepB-Hib (pentavalent), liquid"
+              "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+              "code": "a3K3X000006MijGUAS",
+              "display": "Eupenta (DTwP-HepB-Hib), LG Chem Ltd (LGC), Vial, 10 doses [FVP-P-305]"
             }
           ]
         },
@@ -360,7 +360,7 @@
         "patient": {
           "reference": "Patient/TrustDemoSomsak"
         },
-        "occurrenceDateTime": "2025-12-10",
+        "occurrenceDateTime": "2026-01-06",
         "performer": [
           {
             "actor": {
@@ -368,7 +368,7 @@
             }
           }
         ],
-        "lotNumber": "XXK-2201",
+        "lotNumber": "XXU-2201",
         "location": {
           "display": "Lomaru District Health Center, Onesa"
         },
@@ -394,13 +394,13 @@
           "coding": [
             {
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
-              "code": "XXK-EPI-OPV-1",
+              "code": "XXU-EPI-OPV-1",
               "display": "bOPV, dose 1"
             },
             {
-              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-              "code": "vp-bopv-drops",
-              "display": "Bivalent oral polio vaccine (bOPV), drops"
+              "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+              "code": "a3K3X000006MijBUAS",
+              "display": "Poliomyelitis Vaccine (Oral) Bivalent types 1 and 3 (bOPV), Serum Institute of India, Vial, 10 doses [FVP-P-281]"
             }
           ]
         },
@@ -408,7 +408,7 @@
         "patient": {
           "reference": "Patient/TrustDemoSomsak"
         },
-        "occurrenceDateTime": "2025-12-10",
+        "occurrenceDateTime": "2026-01-06",
         "performer": [
           {
             "actor": {
@@ -416,7 +416,7 @@
             }
           }
         ],
-        "lotNumber": "XXK-5531",
+        "lotNumber": "XXU-5531",
         "location": {
           "display": "Lomaru District Health Center, Onesa"
         },
@@ -442,13 +442,13 @@
           "coding": [
             {
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
-              "code": "XXK-EPI-PCV-1",
+              "code": "XXU-EPI-PCV-1",
               "display": "PCV, dose 1"
             },
             {
-              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-              "code": "vp-pcv-13-dose",
-              "display": "Pneumococcal conjugate vaccine (PCV)"
+              "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+              "code": "a3K3X000006MijJUAS",
+              "display": "PNEUMOSIL® (PCV), Serum Institute of India, Vial, 5 doses [FVP-P-385]"
             }
           ]
         },
@@ -456,7 +456,7 @@
         "patient": {
           "reference": "Patient/TrustDemoSomsak"
         },
-        "occurrenceDateTime": "2025-12-10",
+        "occurrenceDateTime": "2026-01-06",
         "performer": [
           {
             "actor": {
@@ -464,7 +464,7 @@
             }
           }
         ],
-        "lotNumber": "XXK-8819",
+        "lotNumber": "XXU-8819",
         "location": {
           "display": "Lomaru District Health Center, Onesa"
         },
@@ -490,13 +490,13 @@
           "coding": [
             {
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
-              "code": "XXK-EPI-MR-1",
+              "code": "XXU-EPI-MR-1",
               "display": "Measles-rubella, dose 1"
             },
             {
-              "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-              "code": "vp-mr-freeze-dried",
-              "display": "Measles-rubella vaccine, freeze-dried"
+              "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+              "code": "a3K3X000006MiimUAC",
+              "display": "Measles and Rubella Vaccine Live Attenuated (MR), Serum Institute of India, Vial, 10 doses [FVP-P-140]"
             }
           ]
         },
@@ -512,7 +512,7 @@
             }
           }
         ],
-        "lotNumber": "XXK-9923",
+        "lotNumber": "XXU-9923",
         "location": {
           "display": "Lomaru District Health Center, Onesa"
         },

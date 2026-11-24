@@ -16,7 +16,7 @@
       }
     ]
   },
-  "guidance": "A definition only: it states no target and no value. Data elements: TD.J3B.DE01 Issuer's product code; TD.J3B.DE02 National schedule code; TD.J3B.DE03 Mapping basis; TD.J3B.DE05 Counts toward the schedule. Decision tables: TD.DT.02, TD.DT.03. Requirements: STD-SEM-001, STD-SCH-001. The populations are described, not computable: this guide carries no CQL.",
+  "guidance": "A definition only: it states no target and no value. Data elements: DVCMinPreQual.vx.vp Vaccine product id; IMMZImmunization.primarySource Primary source; IMMZImmunization.vaccineCode Vaccine code. Decision tables: TD.DT.02, TD.DT.03. Requirements: STD-SEM-001, STD-SCH-001. The populations are described, not computable: this guide carries no CQL.",
   "group": [
     {
       "population": [
@@ -33,7 +33,7 @@
           "description": "Doses imported as verified in the reporting period.",
           "criteria": {
             "language": "text/plain",
-            "expression": "COUNT of imported doses (TD.J3B) WHERE imported in the reporting period AND \"Mapping basis\" != not-imported"
+            "expression": "COUNT of Immunization (IMMZImmunization) WHERE primarySource = true AND imported in the reporting period"
           }
         },
         {
@@ -49,7 +49,7 @@
           "description": "Doses imported as verified in the reporting period that carry a national schedule code.",
           "criteria": {
             "language": "text/plain",
-            "expression": "COUNT of imported doses (TD.J3B) WHERE imported in the reporting period AND \"Mapping basis\" in (concept-map, clinician-confirmed)"
+            "expression": "COUNT of Immunization (IMMZImmunization) WHERE primarySource = true AND imported in the reporting period AND vaccineCode has a coding from TrustDemoOnesaEpiScheduleCodes"
           }
         }
       ],

@@ -4,13 +4,39 @@
   "name": "TrustDemoVaccineProducts",
   "id": "TrustDemoVaccineProducts",
   "title": "Vaccine products of the journeys",
-  "description": "Every product code of TrustDemoVaccineProduct: the source of the national ConceptMap.",
+  "description": "The WHO PreQual product ids (PreQualProductIds, smart.who.int/pcmt-vaxprequal) of the doses given in the journeys: the issuer's coding of each dose, as signed in its DVC, and the source of the national ConceptMap.",
   "url": "http://smart.who.int/trust-demo/ValueSet/TrustDemoVaccineProducts",
   "experimental": true,
   "compose": {
     "include": [
       {
-        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
+        "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+        "concept": [
+          {
+            "code": "a3K3X000006MiiXUAS",
+            "display": "Hepatitis B Vaccine (rDNA) (Paediatric) (HepB), Serum Institute of India, Vial, 10 doses [FVP-P-132]"
+          },
+          {
+            "code": "a3K3X000006MiisUAC",
+            "display": "BCG Vaccine (BCG), Serum Institute of India, Vial, 20 doses [FVP-P-117]"
+          },
+          {
+            "code": "a3K3X000006MijGUAS",
+            "display": "Eupenta (DTwP-HepB-Hib), LG Chem Ltd (LGC), Vial, 10 doses [FVP-P-305]"
+          },
+          {
+            "code": "a3K3X000006MijBUAS",
+            "display": "Poliomyelitis Vaccine (Oral) Bivalent types 1 and 3 (bOPV), Serum Institute of India, Vial, 10 doses [FVP-P-281]"
+          },
+          {
+            "code": "a3K3X000006MijJUAS",
+            "display": "PNEUMOSIL® (PCV), Serum Institute of India, Vial, 5 doses [FVP-P-385]"
+          },
+          {
+            "code": "a3K3X000006MiimUAC",
+            "display": "Measles and Rubella Vaccine Live Attenuated (MR), Serum Institute of India, Vial, 10 doses [FVP-P-140]"
+          }
+        ]
       }
     ]
   }

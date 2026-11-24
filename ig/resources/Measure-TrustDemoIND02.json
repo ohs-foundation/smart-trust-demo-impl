@@ -16,7 +16,7 @@
       }
     ]
   },
-  "guidance": "A definition only: it states no target and no value. Data elements: TD.J41.DE01 Requested at; TD.J41.DE02 Requester; TD.J41.DE06 Released; TD.J41.DE08 Refusal reason. Decision tables: TD.DT.05. Requirements: STD-ACC-001. The populations are described, not computable: this guide carries no CQL.",
+  "guidance": "A definition only: it states no target and no value. Data elements: VHLPayload.exp Expires at; VHLPayload.flag Flags; VHLPayload.url Manifest URL. Decision tables: TD.DT.05. Requirements: STD-ACC-001. The populations are described, not computable: this guide carries no CQL.",
   "group": [
     {
       "population": [
@@ -33,7 +33,7 @@
           "description": "Manifest requests in the reporting period, released or refused.",
           "criteria": {
             "language": "text/plain",
-            "expression": "COUNT of access records (TD.J41) WHERE \"Requested at\" is in the reporting period"
+            "expression": "COUNT of manifest-request AuditEvent (TrustDemoOnesaVhlAccess) WHERE AuditEvent.recorded is in the reporting period"
           }
         },
         {
@@ -49,7 +49,7 @@
           "description": "Manifest requests in the reporting period that were released.",
           "criteria": {
             "language": "text/plain",
-            "expression": "COUNT of access records (TD.J41) WHERE \"Requested at\" is in the reporting period AND \"Released\" = true"
+            "expression": "COUNT of manifest-request AuditEvent (TrustDemoOnesaVhlAccess) WHERE AuditEvent.recorded is in the reporting period AND AuditEvent.outcome is success"
           }
         }
       ],

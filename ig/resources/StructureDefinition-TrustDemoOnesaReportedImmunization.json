@@ -5,7 +5,7 @@
   "name": "TrustDemoOnesaReportedImmunization",
   "title": "Onesa: foreign dose as reported (not yet verified)",
   "status": "draft",
-  "description": "How it is used: J2b. The CHW app reads each Taifafeki paper DVC offline without checking its signature, and saves the dose like this.\n\nWhy: a CHW phone may have no trust list and no signal, but the doses should not be lost. Recording them with primarySource false, the paper card as the report origin and the family named in the note keeps them visibly \"reported, not verified\". The schedule will not count them until a clinic verifies them (J3). Only the issuer's product code is present, because mapping to the Onesan schedule is a clinical step for later.",
+  "description": "How it is used: J2b. The CHW app reads each Taifafeki paper DVC offline without checking its signature, and saves the dose like this.\n\nWhy: a CHW phone may have no trust list and no signal, but the doses should not be lost. Recording them with primarySource false, the paper card as the report origin and the family named in the note keeps them visibly \"reported, not verified\". The schedule will not count them until a clinic verifies them (J3). Only the issuer's product code is present, because mapping to the schedule of Onesa is a clinical step for later.",
   "fhirVersion": "4.0.1",
   "kind": "resource",
   "abstract": false,

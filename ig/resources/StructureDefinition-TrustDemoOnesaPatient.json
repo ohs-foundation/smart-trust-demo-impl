@@ -5,7 +5,7 @@
   "name": "TrustDemoOnesaPatient",
   "title": "Onesa: child registered by the community health worker",
   "status": "draft",
-  "description": "How it is used: J2 onwards. Vilay registers Somsak on a home visit, and the same patient carries every Onesan record that follows: the verified Taifafeki doses, the Onesan doses and the summary shared in J4.\n\nWhy: a child born abroad is not in the Onesan civil registry yet. A temporary id lets the CHW, the district clinic and the national portal all refer to the same child until civil registration catches up. The parents are recorded as contacts, because they hold the paper cards and later the family's VHLs.",
+  "description": "How it is used: J2 onwards. Vilay registers Somsak on a home visit, and the same patient carries every record in Onesa that follows: the verified Taifafeki doses, the doses given in Onesa and the summary shared in J4.\n\nWhy: a child born abroad is not in the civil registry of Onesa yet. A temporary id lets the CHW, the district clinic and the national portal all refer to the same child until civil registration catches up. The parents are recorded as contacts, because they hold the paper cards and later the family's VHLs.",
   "fhirVersion": "4.0.1",
   "kind": "resource",
   "abstract": false,

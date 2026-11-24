@@ -4,7 +4,7 @@
   "status": "requested",
   "intent": "plan",
   "code": {
-    "text": "Immunization appointment reminder: 6-week doses"
+    "text": "Immunization appointment reminder: pentavalent 2, bOPV 2 and PCV 2"
   },
   "focus": {
     "reference": "ImmunizationRecommendation/TrustDemoJ3Recommendation"
@@ -12,14 +12,14 @@
   "for": {
     "reference": "Patient/TrustDemoSomsak"
   },
-  "authoredOn": "2025-11-25T10:22:00+07:00",
+  "authoredOn": "2026-01-06T10:22:00+07:00",
   "requester": {
     "reference": "Organization/TrustDemoLomaruDhc"
   },
   "restriction": {
     "period": {
-      "start": "2025-12-09",
-      "end": "2025-12-16"
+      "start": "2026-02-03",
+      "end": "2026-02-10"
     }
   }
 }

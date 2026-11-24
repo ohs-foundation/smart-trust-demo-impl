@@ -5,7 +5,7 @@
   "name": "TrustDemoTaifafekiPatient",
   "title": "Taifafeki: newborn at the birth hospital",
   "status": "draft",
-  "description": "How it is used: J1. Kesaro Provincial Hospital registers Somsak under its own hospital number on the day he is born.\n\nWhy: a baby born to Onesan parents in Taifafeki has no Taifafeki citizen id, so the hospital number is the only identifier the hospital can put behind the dose records it signs. The DVCs it prints carry the name and date of birth, not this number. The family's home country therefore cannot rely on any Taifafeki identifier, and links the doses to its own patient (see the Onesan patient profile).",
+  "description": "How it is used: J1. Kesaro Provincial Hospital registers Somsak under its own hospital number on the day he is born.\n\nWhy: a baby born in Taifafeki to parents from Onesa has no Taifafeki citizen id, so the hospital number is the only identifier the hospital can put behind the dose records it signs. The DVCs it prints carry the name and date of birth, not this number. The family's home country therefore cannot rely on any Taifafeki identifier, and links the doses to its own patient (see the patient profile of Onesa).",
   "fhirVersion": "4.0.1",
   "kind": "resource",
   "abstract": false,

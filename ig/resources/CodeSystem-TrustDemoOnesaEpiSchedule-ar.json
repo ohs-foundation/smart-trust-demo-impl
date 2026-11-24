@@ -4,12 +4,12 @@
   "content": "supplement",
   "name": "TrustDemoOnesaEpiScheduleAr",
   "id": "TrustDemoOnesaEpiSchedule-ar",
-  "title": "رموز المستضدات والجرعات في جدول التطعيم الوطني (توضيحية، أونيسا (Onesa))",
+  "title": "رموز المستضدات والجرعات في جدول التطعيم الوطني (توضيحية، Onesa)",
   "description": "ملحق باللغة العربية (ar) لنظام الرموز TrustDemoOnesaEpiSchedule: تسميات كل مفهوم. ترجمة غير رسمية أعدّها وكيل آلي، دون مراجعة بشرية.",
   "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule-ar",
   "concept": [
     {
-      "code": "XXK-EPI-HEPB-BD",
+      "code": "XXU-EPI-HEPB-BD",
       "display": "جرعة الولادة من لقاح التهاب الكبد B",
       "designation": [
         {
@@ -19,7 +19,7 @@
       ]
     },
     {
-      "code": "XXK-EPI-BCG",
+      "code": "XXU-EPI-BCG",
       "display": "BCG",
       "designation": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     {
-      "code": "XXK-EPI-PENTA-1",
+      "code": "XXU-EPI-PENTA-1",
       "display": "خماسي التكافؤ (DTP-HepB-Hib)، الجرعة 1",
       "designation": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     {
-      "code": "XXK-EPI-OPV-1",
+      "code": "XXU-EPI-OPV-1",
       "display": "bOPV، الجرعة 1",
       "designation": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     {
-      "code": "XXK-EPI-PCV-1",
+      "code": "XXU-EPI-PCV-1",
       "display": "PCV، الجرعة 1",
       "designation": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     {
-      "code": "XXK-EPI-MR-1",
+      "code": "XXU-EPI-MR-1",
       "display": "الحصبة والحصبة الألمانية، الجرعة 1",
       "designation": [
         {

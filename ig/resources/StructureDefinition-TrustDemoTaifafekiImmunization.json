@@ -5,7 +5,7 @@
   "name": "TrustDemoTaifafekiImmunization",
   "title": "Taifafeki: dose given at the birth hospital (DVC source)",
   "status": "draft",
-  "description": "How it is used: J1. Each birth dose (Hep B, BCG) that Dr Anan gives is recorded here first. The hospital then packs it into a Digital Vaccination Certificate (HCERT, signed with XXR's key) and prints it as a QR card.\n\nWhy: the DVC can only carry what this record holds. The vaccine product, date, lot, dose number and the administering organization are exactly the fields the HCERT certificate needs. They are required here so every printed card is complete. The product is coded from the WHO PreQual-style product list, because that is the code Onesa will later map to its own schedule (J3).",
+  "description": "How it is used: J1. Each birth dose (Hep B, BCG) that Dr Anan gives is recorded here first. The hospital then packs it into a Digital Vaccination Certificate (HCERT, signed with XXR's key) and prints it as a QR card.\n\nWhy: the DVC can only carry what this record holds. The vaccine product, date, lot, dose number and the administering organization are exactly the fields the HCERT certificate needs. They are required here so every printed card is complete. The product is coded with its WHO PreQual product id, because that is the code Onesa will later map to its own schedule (J3).",
   "fhirVersion": "4.0.1",
   "kind": "resource",
   "abstract": false,
@@ -49,7 +49,7 @@
         "id": "Immunization.vaccineCode.coding:product.system",
         "path": "Immunization.vaccineCode.coding.system",
         "min": 1,
-        "patternUri": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
+        "patternUri": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds"
       },
       {
         "id": "Immunization.vaccineCode.coding:cvx",

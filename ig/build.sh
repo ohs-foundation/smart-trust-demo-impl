@@ -2,7 +2,7 @@
 set -euo pipefail
 
 IG_REPO=https://github.com/litlfred/smart-trust-demo.git
-IG_COMMIT=6512c3b17a510b6e7c8c0fd33fd58a6822930c39
+IG_COMMIT=c355acba3153379f6fc3eb75a04d544427f64b01
 
 for tool in git node npm python3; do
   command -v "$tool" >/dev/null || { echo "ig/build.sh: $tool is required" >&2; exit 1; }

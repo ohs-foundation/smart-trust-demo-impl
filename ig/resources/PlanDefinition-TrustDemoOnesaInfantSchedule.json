@@ -22,7 +22,7 @@
         {
           "coding": [
             {
-              "code": "XXK-EPI-HEPB-BD",
+              "code": "XXU-EPI-HEPB-BD",
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
               "display": "Hepatitis B birth dose"
             }
@@ -42,7 +42,7 @@
         {
           "coding": [
             {
-              "code": "XXK-EPI-BCG",
+              "code": "XXU-EPI-BCG",
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
               "display": "BCG"
             }
@@ -62,7 +62,7 @@
         {
           "coding": [
             {
-              "code": "XXK-EPI-PENTA-1",
+              "code": "XXU-EPI-PENTA-1",
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
               "display": "Pentavalent (DTP-HepB-Hib), dose 1"
             }
@@ -82,7 +82,7 @@
         {
           "coding": [
             {
-              "code": "XXK-EPI-OPV-1",
+              "code": "XXU-EPI-OPV-1",
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
               "display": "bOPV, dose 1"
             }
@@ -102,7 +102,7 @@
         {
           "coding": [
             {
-              "code": "XXK-EPI-PCV-1",
+              "code": "XXU-EPI-PCV-1",
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
               "display": "PCV, dose 1"
             }
@@ -122,7 +122,7 @@
         {
           "coding": [
             {
-              "code": "XXK-EPI-MR-1",
+              "code": "XXU-EPI-MR-1",
               "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
               "display": "Measles-rubella, dose 1"
             }

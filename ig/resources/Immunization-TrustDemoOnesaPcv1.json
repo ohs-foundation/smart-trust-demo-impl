@@ -11,13 +11,13 @@
     "coding": [
       {
         "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
-        "code": "XXK-EPI-PCV-1",
+        "code": "XXU-EPI-PCV-1",
         "display": "PCV, dose 1"
       },
       {
-        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-        "code": "vp-pcv-13-dose",
-        "display": "Pneumococcal conjugate vaccine (PCV)"
+        "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+        "code": "a3K3X000006MijJUAS",
+        "display": "PNEUMOSIL® (PCV), Serum Institute of India, Vial, 5 doses [FVP-P-385]"
       }
     ]
   },
@@ -25,7 +25,7 @@
   "patient": {
     "reference": "Patient/TrustDemoSomsak"
   },
-  "occurrenceDateTime": "2025-12-10",
+  "occurrenceDateTime": "2026-01-06",
   "performer": [
     {
       "actor": {
@@ -33,7 +33,7 @@
       }
     }
   ],
-  "lotNumber": "XXK-8819",
+  "lotNumber": "XXU-8819",
   "location": {
     "display": "Lomaru District Health Center, Onesa"
   },

@@ -11,13 +11,13 @@
     "coding": [
       {
         "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
-        "code": "XXK-EPI-MR-1",
+        "code": "XXU-EPI-MR-1",
         "display": "Measles-rubella, dose 1"
       },
       {
-        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-        "code": "vp-mr-freeze-dried",
-        "display": "Measles-rubella vaccine, freeze-dried"
+        "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+        "code": "a3K3X000006MiimUAC",
+        "display": "Measles and Rubella Vaccine Live Attenuated (MR), Serum Institute of India, Vial, 10 doses [FVP-P-140]"
       }
     ]
   },
@@ -33,7 +33,7 @@
       }
     }
   ],
-  "lotNumber": "XXK-9923",
+  "lotNumber": "XXU-9923",
   "location": {
     "display": "Lomaru District Health Center, Onesa"
   },

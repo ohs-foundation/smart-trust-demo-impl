@@ -1,11 +1,11 @@
 {
   "resourceType": "Organization",
   "id": "TrustDemoOnesaPortalOrg",
-  "name": "Onesa national health portal (demonstrator, GDHCN DEV participant XXK)",
+  "name": "Onesa national health portal (demonstrator, GDHCN DEV participant XXU)",
   "contact": [
     {
       "address": {
-        "country": "XXK"
+        "country": "XXU"
       }
     }
   ]

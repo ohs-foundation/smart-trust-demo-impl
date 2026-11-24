@@ -16,7 +16,7 @@
       }
     ]
   },
-  "guidance": "A definition only: it states no target and no value. Data elements: TD.J3A.DE02 Issuing country; TD.J3A.DE03 Verified at; TD.J3A.DE05 Verification result; TD.J3A.DE07 Failure reason; TD.J3A.DE09 Record outcome. Decision tables: TD.DT.01. Requirements: STT-VER-001, STT-VER-006, STT-VER-008. The populations are described, not computable: this guide carries no CQL.",
+  "guidance": "A definition only: it states no target and no value. Data elements: CWT.header.4 Key identifier (kid); CWT.payload.1 Issuer (iss); IMMZImmunization.primarySource Primary source. Decision tables: TD.DT.01. Requirements: STT-VER-001, STT-VER-006, STT-VER-008. The populations are described, not computable: this guide carries no CQL.",
   "group": [
     {
       "population": [
@@ -33,7 +33,7 @@
           "description": "Foreign DVCs scanned for verification in the reporting period.",
           "criteria": {
             "language": "text/plain",
-            "expression": "COUNT of verification records (TD.J3A) WHERE \"Verified at\" is in the reporting period"
+            "expression": "COUNT of foreign DVCs the clinic's HCERT library is asked to verify in the reporting period, verified or not"
           }
         },
         {
@@ -49,7 +49,7 @@
           "description": "Foreign DVCs scanned for verification in the reporting period whose dose was recorded as verified.",
           "criteria": {
             "language": "text/plain",
-            "expression": "COUNT of verification records (TD.J3A) WHERE \"Verified at\" is in the reporting period AND \"Record outcome\" = verified"
+            "expression": "COUNT of foreign DVCs the clinic's HCERT library verifies in the reporting period (CWT.header.4 found on the trust list) WHERE the dose is imported as an Immunization (IMMZImmunization) with primarySource = true"
           }
         }
       ],

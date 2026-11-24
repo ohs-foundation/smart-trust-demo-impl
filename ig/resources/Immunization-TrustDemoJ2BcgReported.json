@@ -11,9 +11,9 @@
   "vaccineCode": {
     "coding": [
       {
-        "code": "vp-bcg-freeze-dried",
-        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-        "display": "BCG vaccine, freeze-dried"
+        "code": "a3K3X000006MiisUAC",
+        "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+        "display": "BCG Vaccine (BCG), Serum Institute of India, Vial, 20 doses [FVP-P-117]"
       }
     ]
   },

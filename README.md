@@ -237,7 +237,7 @@ The same CLI, apps and check run against a server brought up from `infra/` (`BAS
 | | |
 | --- | --- |
 | [WHO SMART Trust Demonstrator IG](https://litlfred.github.io/smart-trust-demo/) | the IG this builds: [business processes](https://litlfred.github.io/smart-trust-demo/business-processes.html), [personas](https://litlfred.github.io/smart-trust-demo/personas.html), [scenarios](https://litlfred.github.io/smart-trust-demo/scenarios.html), [functional requirements](https://litlfred.github.io/smart-trust-demo/functional-requirements.html) |
-| [IG source](https://github.com/litlfred/smart-trust-demo/tree/6512c3b17a510b6e7c8c0fd33fd58a6822930c39) | the pinned commit `6512c3b` behind `ig/resources/` |
+| [IG source](https://github.com/litlfred/smart-trust-demo/tree/c355acba3153379f6fc3eb75a04d544427f64b01) | the pinned commit `c355acb` behind `ig/resources/` |
 | [WHO SMART Trust](https://smart.who.int/trust) | the trust framework |
 | [GDHCN](https://www.who.int/initiatives/global-digital-health-certification-network) | the Global Digital Health Certification Network |
 | [smart-trust-tools](https://litlfred.github.io/smart-trust-tools/) ([source at `d94e21d`](https://github.com/litlfred/smart-trust-tools/tree/d94e21d)) | `hcert-core` and the trust tooling |

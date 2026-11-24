@@ -3,7 +3,7 @@
   "id": "TrustDemoProductToOnesaEpi",
   "url": "http://smart.who.int/trust-demo/ConceptMap/TrustDemoProductToOnesaEpi",
   "title": "J3 map: vaccine product to national schedule dose",
-  "description": "The national map the clinic EHR uses in J3 to add the schedule code beside the issuer's product code, which it never replaces. The Hep B product had no entry until Nurse Chanthason confirmed its equivalence on 2025-11-25 (see TrustDemoJ3Adjudication); her decision is recorded here so the next clinic need not make it again.",
+  "description": "The national map the clinic EHR uses in J3 to add the schedule code beside the issuer's product code, which it never replaces. The Hep B product had no entry until Nurse Chanthason confirmed its equivalence on 2026-01-06 (see TrustDemoJ3Adjudication); her decision is recorded here so the next clinic need not make it again.",
   "name": "TrustDemoProductToOnesaEpi",
   "status": "draft",
   "experimental": true,
@@ -11,60 +11,66 @@
   "targetCanonical": "http://smart.who.int/trust-demo/ValueSet/TrustDemoOnesaEpiScheduleCodes",
   "group": [
     {
-      "source": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
+      "source": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
       "target": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
       "element": [
         {
-          "code": "vp-hepb-peds-monovalent",
+          "code": "a3K3X000006MiiXUAS",
+          "display": "Hepatitis B Vaccine (rDNA) (Paediatric) (HepB), Serum Institute of India, Vial, 10 doses [FVP-P-132]",
           "target": [
             {
-              "code": "XXK-EPI-HEPB-BD",
+              "code": "XXU-EPI-HEPB-BD",
               "equivalence": "equivalent",
-              "comment": "Added from the nurse's adjudication at Lomaru District Health Center, 2025-11-25: a monovalent paediatric Hep B dose given within 24 hours of birth counts as the schedule's birth dose."
+              "comment": "Added from the nurse's adjudication at Lomaru District Health Center, 2026-01-06: a monovalent paediatric Hep B dose given within 24 hours of birth counts as the schedule's birth dose."
             }
           ]
         },
         {
-          "code": "vp-bcg-freeze-dried",
+          "code": "a3K3X000006MiisUAC",
+          "display": "BCG Vaccine (BCG), Serum Institute of India, Vial, 20 doses [FVP-P-117]",
           "target": [
             {
-              "code": "XXK-EPI-BCG",
+              "code": "XXU-EPI-BCG",
               "equivalence": "equivalent"
             }
           ]
         },
         {
-          "code": "vp-pentavalent-liquid",
+          "code": "a3K3X000006MijGUAS",
+          "display": "Eupenta (DTwP-HepB-Hib), LG Chem Ltd (LGC), Vial, 10 doses [FVP-P-305]",
           "target": [
             {
-              "code": "XXK-EPI-PENTA-1",
+              "code": "XXU-EPI-PENTA-1",
               "equivalence": "equivalent"
             }
           ]
         },
         {
-          "code": "vp-bopv-drops",
+          "code": "a3K3X000006MijBUAS",
+          "display": "Poliomyelitis Vaccine (Oral) Bivalent types 1 and 3 (bOPV), Serum Institute of India, Vial, 10 doses [FVP-P-281]",
           "target": [
             {
-              "code": "XXK-EPI-OPV-1",
+              "code": "XXU-EPI-OPV-1",
               "equivalence": "equivalent"
             }
           ]
         },
         {
-          "code": "vp-pcv-13-dose",
+          "code": "a3K3X000006MijJUAS",
+          "display": "PNEUMOSIL® (PCV), Serum Institute of India, Vial, 5 doses [FVP-P-385]",
           "target": [
             {
-              "code": "XXK-EPI-PCV-1",
+              "code": "XXU-EPI-PCV-1",
               "equivalence": "equivalent"
             }
           ]
         },
         {
-          "code": "vp-mr-freeze-dried",
+          "code": "a3K3X000006MiimUAC",
+          "display": "Measles and Rubella Vaccine Live Attenuated (MR), Serum Institute of India, Vial, 10 doses [FVP-P-140]",
           "target": [
             {
-              "code": "XXK-EPI-MR-1",
+              "code": "XXU-EPI-MR-1",
               "equivalence": "equivalent"
             }
           ]

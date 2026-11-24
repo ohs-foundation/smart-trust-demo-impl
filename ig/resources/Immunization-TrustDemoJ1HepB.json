@@ -10,9 +10,9 @@
   "vaccineCode": {
     "coding": [
       {
-        "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-        "code": "vp-hepb-peds-monovalent",
-        "display": "Hepatitis B vaccine, paediatric, monovalent"
+        "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+        "code": "a3K3X000006MiiXUAS",
+        "display": "Hepatitis B Vaccine (rDNA) (Paediatric) (HepB), Serum Institute of India, Vial, 10 doses [FVP-P-132]"
       },
       {
         "system": "http://hl7.org/fhir/sid/cvx",

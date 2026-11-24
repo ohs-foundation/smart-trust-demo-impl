@@ -5,7 +5,7 @@
   "name": "TrustDemoOnesaHousehold",
   "title": "Onesa: household on the CHW's roster",
   "status": "draft",
-  "description": "How it is used: J2a. The CHW finds that a newborn is missing from the household roster and adds Somsak as a member.\n\nWhy: Onesan community health work is organized by household. The roster is how a CHW notices that a child is missing, and it is the unit the family phone shares under in J4 (one phone, three profiles).",
+  "description": "How it is used: J2a. The CHW finds that a newborn is missing from the household roster and adds Somsak as a member.\n\nWhy: community health work in Onesa is organized by household. The roster is how a CHW notices that a child is missing, and it is the unit the family phone shares under in J4 (one phone, three profiles).",
   "fhirVersion": "4.0.1",
   "kind": "resource",
   "abstract": false,

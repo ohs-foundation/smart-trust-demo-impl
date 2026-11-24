@@ -9,7 +9,7 @@
   "url": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule-zh",
   "concept": [
     {
-      "code": "XXK-EPI-HEPB-BD",
+      "code": "XXU-EPI-HEPB-BD",
       "designation": [
         {
           "language": "zh",
@@ -18,7 +18,7 @@
       ]
     },
     {
-      "code": "XXK-EPI-BCG",
+      "code": "XXU-EPI-BCG",
       "designation": [
         {
           "language": "zh",
@@ -27,7 +27,7 @@
       ]
     },
     {
-      "code": "XXK-EPI-PENTA-1",
+      "code": "XXU-EPI-PENTA-1",
       "designation": [
         {
           "language": "zh",
@@ -36,7 +36,7 @@
       ]
     },
     {
-      "code": "XXK-EPI-OPV-1",
+      "code": "XXU-EPI-OPV-1",
       "designation": [
         {
           "language": "zh",
@@ -45,7 +45,7 @@
       ]
     },
     {
-      "code": "XXK-EPI-PCV-1",
+      "code": "XXU-EPI-PCV-1",
       "designation": [
         {
           "language": "zh",
@@ -54,7 +54,7 @@
       ]
     },
     {
-      "code": "XXK-EPI-MR-1",
+      "code": "XXU-EPI-MR-1",
       "designation": [
         {
           "language": "zh",

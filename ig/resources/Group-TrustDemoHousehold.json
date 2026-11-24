@@ -11,7 +11,7 @@
   "identifier": [
     {
       "system": "http://smart.who.int/trust-demo/sid/onesa-household-id",
-      "value": "HH-XXK-204"
+      "value": "HH-XXU-204"
     }
   ],
   "code": {
@@ -45,7 +45,7 @@
         "reference": "Patient/TrustDemoSomsak"
       },
       "period": {
-        "start": "2025-11-18"
+        "start": "2025-12-16"
       }
     }
   ]
