@@ -316,8 +316,8 @@ class ScheduleTest {
 
   @Test
   fun aYearOfDosesGivenAfterTheBookedVisitIsAllVerified() = runTest {
-    val service = ScheduleService(repository, { plans }) { LocalDate.parse("2026-11-18") }
-    child("2025-11-18")
+    val service = ScheduleService(repository, { plans }) { LocalDate.parse("2026-10-26") }
+    child()
     yearOfDoses().forEach { (id, code, date) ->
       dose(id, true, ScanTransactions.EPI_SYSTEM to code, date = date)
     }

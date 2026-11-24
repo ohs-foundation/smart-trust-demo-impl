@@ -33,7 +33,7 @@ class BookedVisitsTest {
   }
 
   private suspend fun bookedFor(vararg given: Triple<String, String, String>) {
-    upsert("""{"resourceType":"Patient","id":"somsak","birthDate":"2025-11-18"}""")
+    upsert("""{"resourceType":"Patient","id":"somsak","birthDate":"2025-10-28"}""")
     upsert(bookedVisitRecommendation)
     upsert(bookedVisitReminder)
     given.forEach { (id, code, date) ->

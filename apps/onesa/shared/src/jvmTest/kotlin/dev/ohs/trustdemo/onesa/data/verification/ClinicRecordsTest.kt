@@ -130,7 +130,7 @@ class ClinicRecordsTest {
     val hepB = doses.getValue("a3K3X000006MiiXUAS")
     assertEquals(EpiDose("XXU-EPI-HEPB-BD", "Hepatitis B birth dose"), hepB.schedule)
     assertTrue(hepB.mapped && hepB.verified)
-    assertEquals(Adjudication("Nurse Chanthason", "2025-11-25T10:21:00+07:00"), hepB.adjudication)
+    assertEquals(Adjudication("Nurse Chanthason", "2026-01-06T10:21:00+07:00"), hepB.adjudication)
     assertEquals("Kesaro Provincial Hospital, Taifafeki" to "XXR-4821", hepB.origin to hepB.lot)
     val bcg = doses.getValue("a3K3X000006MiisUAC")
     assertTrue(bcg.verified)
@@ -172,7 +172,7 @@ class ClinicRecordsTest {
         "TrustDemoSomsak",
         "TrustDemoChanthason",
         "TrustDemoLomaruDhc",
-        Instant.parse("2025-11-25T03:14:22Z"),
+        Instant.parse("2026-01-06T03:14:22Z"),
         newId = { "scan-audit" },
       )
     val audit =
@@ -210,7 +210,7 @@ class ClinicRecordsTest {
 
     assertEquals("Somsak Sengmany", visit.patientName)
     assertEquals("TrustDemoJ3Reminder", visit.visit.reminderId)
-    assertEquals("2025-12-09" to "2025-12-16", visit.visit.reminderFrom to visit.visit.reminderTo)
+    assertEquals("2026-02-03" to "2026-02-10", visit.visit.reminderFrom to visit.visit.reminderTo)
     assertEquals(
       listOf("XXU-EPI-PENTA-1", "XXU-EPI-OPV-1", "XXU-EPI-PCV-1"),
       visit.visit.doses.map { it.code },

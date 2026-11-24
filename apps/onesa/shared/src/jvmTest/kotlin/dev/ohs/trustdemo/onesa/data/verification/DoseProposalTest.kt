@@ -41,7 +41,7 @@ class DoseProposalTest {
   private val matching =
     DoseMatchService(repository, { null }, HttpClient(MockEngine { error("") }), "", { true })
   private val schedule = runBlocking {
-    ScheduleService(repository, { plans() }) { LocalDate.parse("2025-11-25") }
+    ScheduleService(repository, { plans() }) { LocalDate.parse("2026-01-06") }
       .evaluate("TrustDemoSomsak")
   }
   private val choices = runBlocking { matching.choices() }
@@ -60,17 +60,17 @@ class DoseProposalTest {
   @Test
   fun eachProductGivenAtItsAgeIsItsScheduleDose() {
     assertEquals("XXU-EPI-BCG", proposed("a3K3X000006MiisUAC", "2025-10-28"))
-    assertEquals("XXU-EPI-PENTA-1", proposed("a3K3X000006MijGUAS", "2025-12-10"))
-    assertEquals("XXU-EPI-OPV-1", proposed("a3K3X000006MijBUAS", "2025-12-10"))
-    assertEquals("XXU-EPI-PCV-1", proposed("a3K3X000006MijJUAS", "2025-12-10"))
+    assertEquals("XXU-EPI-PENTA-1", proposed("a3K3X000006MijGUAS", "2026-01-06"))
+    assertEquals("XXU-EPI-OPV-1", proposed("a3K3X000006MijBUAS", "2026-01-06"))
+    assertEquals("XXU-EPI-PCV-1", proposed("a3K3X000006MijJUAS", "2026-01-06"))
     assertEquals("XXU-EPI-MR-1", proposed("a3K3X000006MiimUAC", "2026-07-28"))
   }
 
   @Test
   fun aDoseGivenAtTheWrongAgeIsNoScheduleDose() {
-    assertNull(proposed("a3K3X000006MiiXUAS", "2025-12-10"))
+    assertNull(proposed("a3K3X000006MiiXUAS", "2026-01-06"))
     assertNull(proposed("a3K3X000006MijGUAS", "2025-10-28"))
-    assertNull(proposed("a3K3X000006MiimUAC", "2025-12-10"))
+    assertNull(proposed("a3K3X000006MiimUAC", "2026-01-06"))
   }
 
   @Test

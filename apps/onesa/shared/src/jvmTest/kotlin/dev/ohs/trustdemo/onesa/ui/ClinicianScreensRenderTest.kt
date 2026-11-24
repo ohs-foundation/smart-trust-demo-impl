@@ -134,7 +134,7 @@ class ClinicianScreensRenderTest {
     )
 
   private val somsak = "TrustDemoSomsak"
-  private val visitDay = LocalDate.parse("2025-11-25")
+  private val visitDay = LocalDate.parse("2026-01-06")
   private val now = Instant.fromEpochSeconds(Clock.System.now().epochSeconds)
   private val listFetched = now.epochSeconds - 2 * 60 * 60
 
@@ -646,7 +646,7 @@ class ClinicianScreensRenderTest {
     val doses = runBlocking { recording.doses() }
     val penta = doses.first { it.code == "XXU-EPI-PENTA-1" }
     val products = runBlocking { recording.products(penta) }
-    val day = LocalDate.parse("2025-12-10")
+    val day = LocalDate.parse("2026-01-06")
     clinic("1-16-record-dose", 1024.dp to 600.dp) {
       RecordDoseContent(
         form =

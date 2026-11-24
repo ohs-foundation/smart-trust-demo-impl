@@ -121,7 +121,7 @@ class OnesaScreensRenderTest {
           pending,
           Instant.parse("2025-10-21T03:00:00Z"),
           AppRole.CHW,
-          now = Instant.parse("2025-11-18T03:00:00Z"),
+          now = Instant.parse("2025-12-16T03:00:00Z"),
         )
       }
     }

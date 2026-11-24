@@ -53,7 +53,7 @@ class FailedCardTest {
               scanned = "HC1:6BFOXN",
               results = listOf(ScanOutcome.Failed(step, reason, "916ffa567c0f44a2")),
             ),
-          today = LocalDate.parse("2025-11-25"),
+          today = LocalDate.parse("2026-01-06"),
           topBar = {},
           showOutcome = true,
           actions = VerifyActions({}, {}, {}, {}, {}, {}, {}),

@@ -36,7 +36,7 @@ import kotlinx.datetime.LocalDate
 
 @OptIn(ExperimentalTestApi::class)
 class BookingNavigationTest {
-  private val today = LocalDate.parse("2025-11-25")
+  private val today = LocalDate.parse("2026-01-06")
 
   @Test
   fun booking_endsOnHomeWithHomeOnTop() = runComposeUiTest {
@@ -67,7 +67,7 @@ class BookingNavigationTest {
     }
     runOnIdle {
       assertEquals("schedule/{referralId}", navController.currentDestination?.route)
-      state = state.copy(booked = BookingOutcome.Booked(LocalDate.parse("2025-12-09"), 3))
+      state = state.copy(booked = BookingOutcome.Booked(LocalDate.parse("2026-01-06"), 3))
     }
 
     waitUntil(timeoutMillis = 5_000L) { navController.currentDestination?.route == "home" }

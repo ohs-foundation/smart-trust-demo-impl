@@ -276,7 +276,7 @@ class ChwScreensRenderTest {
         cards = cards,
         practitionerId = "TrustDemoVilay",
         organizationId = "TrustDemoLomaruDhc",
-        now = Instant.parse("2025-11-18T03:20:00Z"),
+        now = Instant.parse("2025-12-16T03:20:00Z"),
       )
     fun review(urgent: Boolean) =
       NewbornReview(
@@ -328,7 +328,7 @@ class ChwScreensRenderTest {
               patientName = "Somsak Sengmany",
               status = "active",
               performer = "Lomaru District Health Center (demonstrator)",
-              authoredOn = "2025-11-18T10:20:00+07:00",
+              authoredOn = "2025-12-16T10:20:00+07:00",
               reason =
                 "Unverified foreign vaccination cards presented on a home visit (primarySource false)",
             )
