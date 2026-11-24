@@ -3,6 +3,7 @@ import type { MedplumClient } from "@medplum/core";
 import type { DocumentReference, Immunization, Patient } from "@medplum/fhirtypes";
 import { MedplumProvider } from "@medplum/react-hooks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import jsQR from "jsqr";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -87,6 +88,7 @@ describe("aPatientsStoredCardsAreListed", () => {
     await waitFor(() => expect(screen.getAllByRole("img", { hidden: true })).toHaveLength(2));
     fireEvent.click(within(row).getByRole("button", { name: "Show QR" }));
     await waitFor(() => expect(screen.getAllByRole("img", { name: `Vaccination card QR for ${hepb.product}`, hidden: true })).toHaveLength(2));
+    expect(screen.getByText(`Card 1 of 2 · Hep B vaccine · lot ${hepb.lot}`)).toBeTruthy();
     expect(issueCard).not.toHaveBeenCalled();
   });
 
@@ -98,6 +100,68 @@ describe("aPatientsStoredCardsAreListed", () => {
     await waitFor(() => expect(screen.getAllByRole("img", { hidden: true })).toHaveLength(2));
     fireEvent.click(screen.getByRole("button", { name: "Inspect Raw DVCMinPreQual & CBOR" }));
     expect(screen.getAllByRole("heading", { name: /^Card \d of 2 • DVCMinPreQual CBOR/ })).toHaveLength(2);
+  });
+});
+
+function decode(svg: Element): string | undefined {
+  const [, , width = 0] = (svg.getAttribute("viewBox") ?? "").split(" ").map(Number);
+  const scale = 8;
+  const side = width * scale;
+  const pixels = new Uint8ClampedArray(side * side * 4).fill(255);
+  for (const [, x, y] of (svg.querySelector("path")?.getAttribute("d") ?? "").matchAll(/M(\d+) (\d+)h1v1h-1z/g)) {
+    for (let dy = 0; dy < scale; dy++) {
+      for (let dx = 0; dx < scale; dx++) {
+        const at = ((Number(y) * scale + dy) * side + Number(x) * scale + dx) * 4;
+        pixels.fill(0, at, at + 3);
+      }
+    }
+  }
+  return jsQR(pixels, side, side)?.data;
+}
+
+describe("theQrIsScannable", () => {
+  it("is a square on white with a quiet zone of 4 modules, and decodes to the card", async () => {
+    mount([stored("r1", "d-hepb", HEPB), stored("r2", "d-bcg", BCG)]);
+    const row = (await screen.findByText("Hep B vaccine")).closest("li") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "Show QR" }));
+    const svg = (await screen.findByRole("figure")).querySelector("svg") as SVGSVGElement;
+    const [x, y, width, height] = (svg.getAttribute("viewBox") ?? "").split(" ").map(Number);
+    expect([x, y]).toEqual([0, 0]);
+    expect(width).toBe(height);
+    expect(svg.querySelector("rect")?.getAttribute("fill")).toBe("#fff");
+    const cells = Array.from(svg.querySelector("path")?.getAttribute("d")?.matchAll(/M(\d+) (\d+)h/g) ?? []).map((it) => [Number(it[1]), Number(it[2])]);
+    expect(Math.min(...cells.flat())).toBe(4);
+    expect(Math.max(...cells.flat())).toBe((width ?? 0) - 5);
+    expect(svg.classList.contains("min-w-70")).toBe(true);
+    expect(decode(svg)).toBe(HEPB);
+  });
+
+  it("goes full screen, cycles between the cards and closes on Close and on Esc", async () => {
+    mount([stored("r1", "d-hepb", HEPB), stored("r2", "d-bcg", BCG)]);
+    const row = (await screen.findByText("Hep B vaccine")).closest("li") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "Show QR" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Full screen" }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).toMatch(/fixed inset-0.*items-center justify-center/);
+    expect(decode(dialog.querySelector("svg") as Element)).toBe(HEPB);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Next" }));
+    expect(decode(dialog.querySelector("svg") as Element)).toBe(BCG);
+    expect(within(dialog).getByText(/^Card 2 of 2 · BCG vaccine/)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Previous" }));
+    expect(decode(dialog.querySelector("svg") as Element)).toBe(HEPB);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Full screen" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("hides Previous and Next for a single card", async () => {
+    mount([stored("r1", "d-hepb", HEPB)]);
+    fireEvent.click(await screen.findByRole("button", { name: "Show QR" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Full screen" }));
+    expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
   });
 });
 
