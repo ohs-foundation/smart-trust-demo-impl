@@ -167,7 +167,7 @@ private const val REFERRAL_CODE = "http://snomed.info/sct|3457005"
 private const val HEPB_PRODUCT = "vp-hepb-peds-monovalent"
 private const val BCG_PRODUCT = "vp-bcg-freeze-dried"
 private val ONESAN_DOSES =
-  listOf("XXK-EPI-PENTA-1", "XXK-EPI-OPV-1", "XXK-EPI-PCV-1", "XXK-EPI-MR-1")
+  listOf("XXU-EPI-PENTA-1", "XXU-EPI-OPV-1", "XXU-EPI-PCV-1", "XXU-EPI-MR-1")
 
 /**
  * The child whose story is followed. [onesaIds] are the child's Patient ids on Onesa, found through

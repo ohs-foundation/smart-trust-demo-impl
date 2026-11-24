@@ -32,24 +32,24 @@
             }
         },
         {
-            "id": "did:web:trust.gdhcn.example:v2:trustlist:DEMO-VHL:XXK:DSC#p+0sgULYTlY=",
+            "id": "did:web:trust.gdhcn.example:v2:trustlist:DEMO-VHL:XXU:DSC#11Lw6ewT+S0=",
             "type": "JsonWebKey2020",
             "controller": "did:web:trust.gdhcn.example:v2:trustlist",
             "publicKeyJwk": {
                 "kty": "EC",
-                "kid": "p+0sgULYTlY=",
+                "kid": "11Lw6ewT+S0=",
                 "x5c": [
-                    "MIIBoDCCAUagAwIBAgIGAaHXeYijMAoGCCqGSM49BAMCMEYxCzAJBgNVBAYTAlhLMR0wGwYDVQQKDBRUcnVzdCBEZW1vIFRlc3QgT25seTEYMBYGA1UEAwwPWFhLIExpbmsgSXNzdWVyMB4XDTI2MDEwMTAwMDAwMFoXDTQ1MTIyNzAwMDAwMFowRjELMAkGA1UEBhMCWEsxHTAbBgNVBAoMFFRydXN0IERlbW8gVGVzdCBPbmx5MRgwFgYDVQQDDA9YWEsgTGluayBJc3N1ZXIwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASpIq1VErK96Riec1+7EV34Q8KCfOKH1vg798HHbY0DTT63Nw7jYlUB01o8QN1OI9g00eyWm2KX2/Yh+icG5M5ToyAwHjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAKBggqhkjOPQQDAgNIADBFAiAAkKj4q2csoH2gLxqd1qSOPb0u08ji3TOnrIrGO8ZPAgIhAJHY0Ug821pP2V3RZYUGupyzT5kB/6/JaWLgCAej1Z6I"
+                    "MIIBoDCCAUagAwIBAgIGAaIL+e7SMAoGCCqGSM49BAMCMEYxCzAJBgNVBAYTAlhVMR0wGwYDVQQKDBRUcnVzdCBEZW1vIFRlc3QgT25seTEYMBYGA1UEAwwPWFhVIExpbmsgSXNzdWVyMB4XDTI2MDEwMTAwMDAwMFoXDTQ1MTIyNzAwMDAwMFowRjELMAkGA1UEBhMCWFUxHTAbBgNVBAoMFFRydXN0IERlbW8gVGVzdCBPbmx5MRgwFgYDVQQDDA9YWFUgTGluayBJc3N1ZXIwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARfmNUF/RUTxo1AWQ/ZYC7pXW0Vtu7cItiu1xY93sjXjBtKJE7ZKc5QSni7QOOef/v0mIhC84ojRYTOL4+WJYO+oyAwHjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAKBggqhkjOPQQDAgNIADBFAiBNuFjRGnNn4IDS6dTNBHYopl3YXEy5A30AqzL6lr1nFgIhALPAKu5ZEk1EB8/KgCPWrc7ITQpgIwikp2PxPkojbA9W"
                 ],
                 "crv": "P-256",
-                "x": "qSKtVRKyvekYnnNfuxFd-EPCgnzih9b4O_fBx22NA00",
-                "y": "Prc3DuNiVQHTWjxA3U4j2DTR7JabYpfb9iH6JwbkzlM"
+                "x": "X5jVBf0VE8aNQFkP2WAu6V1tFbbu3CLYrtcWPd7I14w",
+                "y": "G0okTtkpzlBKeLtA455_-_SYiELziiNFhM4vj5Ylg74"
             },
             "domain": {
                 "code": "#DEMO-VHL"
             },
             "participant": {
-                "code": "#XXK"
+                "code": "#XXU"
             },
             "keyusage": {
                 "code": "#DSC"
@@ -86,6 +86,6 @@
         "nonce": "tRuStDeMoLoCaLtEsTlIsTnOnCe00001",
         "proofPurpose": "assertionMethod",
         "verificationMethod": "did:web:trust.gdhcn.example:signing",
-        "jws": "eyJiNjQiOmZhbHNlLCJjcml0IjpbImI2NCJdLCJhbGciOiJFUzI1NiJ9..gG0YsGCW78FMruooJiXWsx_nMUAe0DC-hFwqooq59IexyBPBSF8YBG5IdEbf_IULVGcKv8-buMTEfbm9h8hogQ"
+        "jws": "eyJiNjQiOmZhbHNlLCJjcml0IjpbImI2NCJdLCJhbGciOiJFUzI1NiJ9..sX4ayaYQOUpfrJ0yAkhRoEE5tVOAmtrzPgBAOi3djZfQYwFF34X18mbt5YVhqSpAh2AgqjVIkvtXNr00hwhxSA"
     }
 }

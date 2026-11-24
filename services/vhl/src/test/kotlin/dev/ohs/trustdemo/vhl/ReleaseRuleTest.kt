@@ -112,9 +112,9 @@ class ReleaseRuleTest {
             ),
           signer =
             LinkSigner.fromPem(
-              File("../../testkit/XXK_LINK.key.pem").readText(),
-              File("../../testkit/XXK_LINK.crt.pem").readText(),
-              "XK",
+              File("../../testkit/XXU_LINK.key.pem").readText(),
+              File("../../testkit/XXU_LINK.crt.pem").readText(),
+              "XU",
             ),
           passcodes = passcodes,
           clock = clock,

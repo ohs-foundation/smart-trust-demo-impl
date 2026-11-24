@@ -26,7 +26,7 @@ import java.time.Clock
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.launch
 
-private const val LINK_ISSUER_COUNTRY = "XK"
+private const val LINK_ISSUER_COUNTRY = "XU"
 private const val PORT = 8080
 private const val TRUST_DOMAINS_RESOURCE = "/CodeSystem-TrustDemoTrustDomain.json"
 

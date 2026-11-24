@@ -228,7 +228,7 @@ class Records(private val publicUrl: String, private val now: Instant) {
     put("subject", reference("Patient/${patient.id()}"))
     put("date", now.toString())
     putJsonArray("author") {
-      add(buildJsonObject { put("display", "Onesa national health portal (Country B, XXK)") })
+      add(buildJsonObject { put("display", "Onesa national health portal (Country B, XXU)") })
     }
     put("title", "Patient summary: ${displayName(patient)}")
     putJsonArray("section") {

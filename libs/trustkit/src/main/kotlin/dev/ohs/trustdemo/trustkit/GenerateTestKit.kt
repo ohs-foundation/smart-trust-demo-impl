@@ -33,9 +33,9 @@ private const val NONCE = "tRuStDeMoLoCaLtEsTlIsTnOnCe00001"
 private val SUBJECTS =
   mapOf(
     "XXR_CARD" to "C=XR,O=Trust Demo Test Only,CN=XXR Card Issuer",
-    "XXK_LINK" to "C=XK,O=Trust Demo Test Only,CN=XXK Link Issuer",
+    "XXU_LINK" to "C=XU,O=Trust Demo Test Only,CN=XXU Link Issuer",
     "XXR_CLINIC_ANCHOR" to "C=XR,O=Trust Demo Test Only,CN=XXR Clinic Anchor",
-    "UNKNOWN_LINK" to "C=XK,O=Trust Demo Test Only,CN=Unlisted Link Issuer",
+    "UNKNOWN_LINK" to "C=XU,O=Trust Demo Test Only,CN=Unlisted Link Issuer",
     TestKeys.GDHCN_SIGNER to "C=XX,O=Trust Demo Test Only,CN=GDHCN Stand-in Signer",
   )
 

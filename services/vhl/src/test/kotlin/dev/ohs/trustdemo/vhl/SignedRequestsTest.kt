@@ -87,9 +87,9 @@ class SignedRequestsTest {
             ),
           signer =
             LinkSigner.fromPem(
-              File("../../testkit/XXK_LINK.key.pem").readText(),
-              File("../../testkit/XXK_LINK.crt.pem").readText(),
-              "XK",
+              File("../../testkit/XXU_LINK.key.pem").readText(),
+              File("../../testkit/XXU_LINK.crt.pem").readText(),
+              "XU",
             ),
           passcodes = H2PasscodeStore("jdbc:h2:mem:${UUID.randomUUID()};DB_CLOSE_DELAY=-1"),
           clock = Clock.fixed(now, ZoneOffset.UTC),
@@ -140,8 +140,8 @@ class SignedRequestsTest {
   @Test
   fun aCertificateChainedToADscEntryIsRefused() = withService {
     trustList.refresh()
-    val underDsc = ClinicCertificates.issueClinicViewer(issuer = StandIn.XXK_LINK)
-    val dsc = TestKeys.certificate(StandIn.XXK_LINK)
+    val underDsc = ClinicCertificates.issueClinicViewer(issuer = StandIn.XXU_LINK)
+    val dsc = TestKeys.certificate(StandIn.XXU_LINK)
     assertEquals(dsc.subjectX500Principal, underDsc.second.issuerX500Principal)
 
     assertRefused(post(sign("POST", MANIFEST_PATH, FORM_BODY.toByteArray(), identity = underDsc)))
@@ -219,7 +219,7 @@ class SignedRequestsTest {
   @Test
   fun aFailedRefreshKeepsTheLastGoodList() = withService {
     trustList.refresh()
-    list = list.replace(ANCHOR_ENTRY, ANCHOR_ENTRY.replace("XXR", "XXK"))
+    list = list.replace(ANCHOR_ENTRY, ANCHOR_ENTRY.replace("XXR", "XXU"))
     trustList.refresh()
 
     assertEquals(
@@ -230,7 +230,7 @@ class SignedRequestsTest {
 
   @Test
   fun aListWhoseProofDoesNotVerifyIsNeverLoaded() {
-    list = list.replace(ANCHOR_ENTRY, ANCHOR_ENTRY.replace("XXR", "XXK"))
+    list = list.replace(ANCHOR_ENTRY, ANCHOR_ENTRY.replace("XXR", "XXU"))
     runBlocking { trustList.refresh() }
 
     assertNull(trustList.current())

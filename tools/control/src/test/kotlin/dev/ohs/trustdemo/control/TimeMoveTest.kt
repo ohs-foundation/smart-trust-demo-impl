@@ -162,7 +162,7 @@ class TimeMoveTest {
           """{"resourceType":"ImmunizationRecommendation","id":"Booked","date":"2026-12-16",
           "patient":{"reference":"Patient/Somsak"},"recommendation":[""" +
             listOf("PENTA-1", "OPV-1", "PCV-1").joinToString(",") {
-              """{"vaccineCode":[{"coding":[{"code":"XXK-EPI-$it"}]}],
+              """{"vaccineCode":[{"coding":[{"code":"XXU-EPI-$it"}]}],
               "forecastStatus":{"coding":[{"code":"due"}]}}"""
             } +
             "]}"

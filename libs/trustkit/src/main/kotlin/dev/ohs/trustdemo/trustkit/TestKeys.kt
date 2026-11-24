@@ -30,9 +30,9 @@ import java.util.Base64
  */
 enum class StandIn(val domain: String, val participant: String) {
   XXR_CARD("DEMO-DVC", "XXR"),
-  XXK_LINK("DEMO-VHL", "XXK"),
+  XXU_LINK("DEMO-VHL", "XXU"),
   XXR_CLINIC_ANCHOR("DEMO-VHL", "XXR"),
-  UNKNOWN_LINK("DEMO-VHL", "XXK"),
+  UNKNOWN_LINK("DEMO-VHL", "XXU"),
 }
 
 /** The committed test keys under `testkit/`; test only, never production material. */

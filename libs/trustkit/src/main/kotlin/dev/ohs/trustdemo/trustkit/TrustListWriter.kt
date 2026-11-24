@@ -37,7 +37,7 @@ object TrustListWriter {
   private val published =
     listOf(
       StandIn.XXR_CARD to "DSC",
-      StandIn.XXK_LINK to "DSC",
+      StandIn.XXU_LINK to "DSC",
       StandIn.XXR_CLINIC_ANCHOR to "CSCA",
     )
 

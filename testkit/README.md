@@ -4,10 +4,10 @@ TEST ONLY. Fictional stand-in keys and certificates for the trust demo, never pr
 
 | File | What it is |
 | --- | --- |
-| `XXR_CARD`, `XXK_LINK`, `XXR_CLINIC_ANCHOR`, `UNKNOWN_LINK` `.key.pem` / `.crt.pem` | EC P-256 key (PKCS#8) and self-signed certificate per stand-in; the anchor is a CA; `UNKNOWN_LINK` is never listed |
+| `XXR_CARD`, `XXU_LINK`, `XXR_CLINIC_ANCHOR`, `UNKNOWN_LINK` `.key.pem` / `.crt.pem` | EC P-256 key (PKCS#8) and self-signed certificate per stand-in; the anchor is a CA; `UNKNOWN_LINK` is never listed |
 | `GDHCN_SIGNER.key.pem` / `.crt.pem` | the stand-in GDHCN list signer |
 | `gdhcn-signer-did.json` | the signer's did:web document (`did:web:trust.gdhcn.example:signing`), the `signer` argument of `addVerifiedDidDocument` |
-| `local-test-list.json` | the signed trust list: XXR card (`DEMO-DVC`), XXK link and XXR clinic anchor (`DEMO-VHL`) |
+| `local-test-list.json` | the signed trust list: XXR card (`DEMO-DVC`), XXU link and XXR clinic anchor (`DEMO-VHL`) |
 
 Regenerate with `./gradlew :libs:trustkit:generateTestKit`. Existing keys and certificates are kept, so the list is re-signed from the same keys; delete a key and certificate pair to rotate it. The proof's `created` and `nonce` are fixed, but ECDSA signatures are randomised, so a re-signed list differs in its `jws`.
 

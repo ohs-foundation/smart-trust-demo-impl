@@ -43,7 +43,7 @@ import who.smart.trust.payloads.Payload
 import who.smart.trust.types.CoseAlgorithm
 import who.smart.trust.vhl.VhlPayload
 
-private const val LINK_ISSUER = "XK"
+private const val LINK_ISSUER = "XU"
 private const val LINK_DAYS = 14L
 private const val MANIFEST =
   "https://portal.onesa.example/fhir/List/_search?_id=TrustDemoManifest&code=folder&status=current"

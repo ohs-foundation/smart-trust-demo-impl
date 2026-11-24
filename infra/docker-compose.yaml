@@ -162,15 +162,15 @@ services:
       TOKEN_ISSUER: https://${KEYCLOAK_HOST}/realms/${KEYCLOAK_REALM:-onesa}
       VHL_PUBLIC_URL: https://${VHL_HOST:?set VHL_HOST in .env to the public VHL hostname}
       VHL_ALLOWED_CLIENTS: ${APP_CLIENT_ID:-onesa-health-app},${CLI_CLIENT_ID:-trust-demo-cli}
-      LINK_KEY_FILE: /run/keys/XXK_LINK.key.pem
-      LINK_CERT_FILE: /run/keys/XXK_LINK.crt.pem
+      LINK_KEY_FILE: /run/keys/XXU_LINK.key.pem
+      LINK_CERT_FILE: /run/keys/XXU_LINK.crt.pem
       VHL_DB_PATH: /data/vhl
       TRUST_LIST_URL: http://trust-list/local-test-list.json
       TRUST_LIST_SIGNER_PATH: /run/trust/gdhcn-signer-did.json
       JAVA_OPTS: -Xmx200m
     volumes:
-      - ../testkit/XXK_LINK.key.pem:/run/keys/XXK_LINK.key.pem:ro
-      - ../testkit/XXK_LINK.crt.pem:/run/keys/XXK_LINK.crt.pem:ro
+      - ../testkit/XXU_LINK.key.pem:/run/keys/XXU_LINK.key.pem:ro
+      - ../testkit/XXU_LINK.crt.pem:/run/keys/XXU_LINK.crt.pem:ro
       - ../testkit/gdhcn-signer-did.json:/run/trust/gdhcn-signer-did.json:ro
       - onesa_vhl:/data
     ports:

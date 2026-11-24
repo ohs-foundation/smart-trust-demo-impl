@@ -57,7 +57,7 @@ class TrustKitTest {
   fun listedKidsMatchHcertsIndexing() {
     val store = Hcert.trust.newTrustStore()
     store.addVerifiedDidDocument(TrustListWriter.localTestList(), TestKeys.gdhcnSignerDidDocument())
-    listOf(StandIn.XXR_CARD, StandIn.XXK_LINK, StandIn.XXR_CLINIC_ANCHOR).forEach {
+    listOf(StandIn.XXR_CARD, StandIn.XXU_LINK, StandIn.XXR_CLINIC_ANCHOR).forEach {
       val kid = Hcert.cose.kidFromDsc(TestKeys.certificate(it).encoded)
       assertEquals(1, store.candidates(kid).size, it.name)
     }
@@ -82,14 +82,14 @@ class TrustKitTest {
     validatePath(cert, anchor)
 
     assertFailsWith<SignatureException> {
-      cert.verify(TestKeys.certificate(StandIn.XXK_LINK).publicKey)
+      cert.verify(TestKeys.certificate(StandIn.XXU_LINK).publicKey)
     }
     val forged =
       ClinicCertificates.certificate(
         issuer = anchor.subjectX500Principal.encoded,
         subject = "CN=clinic-viewer.kesaro.example",
         subjectKey = KeyPair(cert.publicKey, key),
-        signer = TestKeys.privateKey(StandIn.XXK_LINK),
+        signer = TestKeys.privateKey(StandIn.XXU_LINK),
         notBefore = Instant.now().minusSeconds(60),
         notAfter = Instant.now().plusSeconds(3600),
         ca = false,

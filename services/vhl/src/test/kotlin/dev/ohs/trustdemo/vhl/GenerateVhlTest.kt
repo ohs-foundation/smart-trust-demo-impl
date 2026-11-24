@@ -84,9 +84,9 @@ class GenerateVhlTest {
   private val hapi = FakeHapi()
   private var signer =
     LinkSigner.fromPem(
-      File(TESTKIT, "XXK_LINK.key.pem").readText(),
-      File(TESTKIT, "XXK_LINK.crt.pem").readText(),
-      "XK",
+      File(TESTKIT, "XXU_LINK.key.pem").readText(),
+      File(TESTKIT, "XXU_LINK.crt.pem").readText(),
+      "XU",
     )
   private val database = "jdbc:h2:mem:${UUID.randomUUID()};DB_CLOSE_DELAY=-1"
   private var passcodes: PasscodeStore = H2PasscodeStore(database)
@@ -409,7 +409,7 @@ class GenerateVhlTest {
     verified(link.hc1)
     val dsc =
       CertificateFactory.getInstance("X.509")
-        .generateCertificate(File(TESTKIT, "XXK_LINK.crt.pem").inputStream())
+        .generateCertificate(File(TESTKIT, "XXU_LINK.crt.pem").inputStream())
     val candidates = trustStore().candidates(Hcert.cose.kidFromDsc(dsc.encoded))
     assertEquals(listOf("DEMO-VHL"), candidates.map { it.domain })
     assertFalse(candidates.any { it.domain == "DEMO-DVC" })

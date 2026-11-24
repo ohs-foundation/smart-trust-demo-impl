@@ -70,7 +70,7 @@
               "coding": [
                 {
                   "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule",
-                  "code": "XXK-EPI-PENTA-1"
+                  "code": "XXU-EPI-PENTA-1"
                 }
               ]
             }
