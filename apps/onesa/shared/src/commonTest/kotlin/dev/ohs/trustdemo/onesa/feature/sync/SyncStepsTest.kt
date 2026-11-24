@@ -16,8 +16,10 @@
 package dev.ohs.trustdemo.onesa.feature.sync
 
 import dev.ohs.fhir.engine.sync.download.DownloadRequest
+import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.trustdemo.onesa.data.sync.DownloadProgress
 import dev.ohs.trustdemo.onesa.data.sync.DownloadStatus
+import dev.ohs.trustdemo.onesa.util.FhirJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -70,6 +72,23 @@ class SyncStepsTest {
         )
         .map { it.first },
     )
+  }
+
+  @Test
+  fun thePractitionerRowNamesTheSignedInPractitionerOnly() {
+    val directory =
+      listOf("TrustDemoAnan", "TrustDemoVilay", "TrustDemoChanthason").map {
+        FhirJson.instance.decodeFromString(
+          Resource.serializer(),
+          """{"resourceType":"Practitioner","id":"$it"}""",
+        )
+      }
+
+    assertEquals(
+      listOf("Practitioner/TrustDemoVilay"),
+      stepNames(SyncPart.Practitioner, directory, practitionerId = "TrustDemoVilay"),
+    )
+    assertEquals(emptyList(), stepNames(SyncPart.Practitioner, directory, practitionerId = null))
   }
 
   @Test

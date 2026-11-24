@@ -46,7 +46,7 @@ class SyncStepsViewModel(
           syncSteps(order, status).map { (part, state) ->
             if (state == StepState.Waiting) return@map SyncStep(part, state)
             val found = part.types.filter { it in order }.flatMap { repository.all(it) }
-            SyncStep(part, state, found.size, found.mapNotNull(::syncedName))
+            SyncStep(part, state, found.size, stepNames(part, found, user.practitionerId))
           }
         _state.value = SyncStepsState(steps, place(user))
       }

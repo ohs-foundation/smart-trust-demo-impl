@@ -93,6 +93,13 @@ fun syncSteps(order: List<String>, status: DownloadStatus): List<Pair<SyncPart, 
 }
 
 /**
+ * What a [part]'s row names from the records [found] so far. The practitioner download is the whole
+ * shared directory, so its row names only the signed-in [practitionerId].
+ */
+fun stepNames(part: SyncPart, found: List<Resource>, practitionerId: String?): List<String> =
+  found.filter { part != SyncPart.Practitioner || it.id == practitionerId }.mapNotNull(::syncedName)
+
+/**
  * What a downloaded record is called on the first-sync screen, or null when only its count shows.
  */
 fun syncedName(resource: Resource): String? =

@@ -125,6 +125,7 @@ fun App() {
             is UserContextState.Ready ->
               OnesaTheme(brand = state.context.role.brand) {
                 SignedInApp(
+                  subject = session.user.subject,
                   userName = userName,
                   role = state.context.role,
                   onSignOut = { authViewModel.logout() },
@@ -138,7 +139,7 @@ fun App() {
 }
 
 @Composable
-private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) {
+private fun SignedInApp(subject: String, userName: String, role: AppRole, onSignOut: () -> Unit) {
   val initialSyncViewModel: InitialSyncViewModel = koinViewModel()
   val gateState by initialSyncViewModel.state.collectAsStateWithLifecycle()
   LaunchedEffect(Unit) { initialSyncViewModel.start() }
@@ -147,7 +148,7 @@ private fun SignedInApp(userName: String, role: AppRole, onSignOut: () -> Unit) 
     InitialSyncGateState.Checking,
     InitialSyncGateState.Syncing,
     is InitialSyncGateState.Failed -> {
-      val stepsViewModel: SyncStepsViewModel = koinViewModel()
+      val stepsViewModel: SyncStepsViewModel = koinViewModel(key = subject)
       val progress by stepsViewModel.state.collectAsStateWithLifecycle()
       OnesaTheme {
         InitialSyncScreen(
