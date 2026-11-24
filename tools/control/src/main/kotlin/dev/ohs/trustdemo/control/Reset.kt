@@ -40,9 +40,10 @@ internal const val WATCH_CRITERIA =
     "http://hl7.org/fhir/restful-interaction|search-system"
 
 /**
- * Puts both countries into the story's starting state: Somsak registered with his birth doses (J1
- * done), or before J1 when [run] is asked to: Onesa's HAPI server and Taifafeki's Medplum project,
- * and in [secretsDir] the clinic certificate and the facility client's id.
+ * Puts both countries into the story's starting state: Somsak registered with his birth doses and
+ * their printed cards (J1 done), or before J1 when [run] is asked to; his parents' own health
+ * records on Onesa: Onesa's HAPI server and Taifafeki's Medplum project, and in [secretsDir] the
+ * clinic certificate and the facility client's id.
  */
 class Reset(
   private val onesa: FhirServer,
@@ -59,6 +60,7 @@ class Reset(
     onesa.expungeEverything()
     try {
       onesa.transaction(Seed.onesaBase(ig))
+      onesa.transaction(Seed.parentRecords(today))
       onesa.transaction(subscription())
       kesaro.wipeStory()
       kesaro.seedBase(ig)

@@ -24,6 +24,7 @@ import dev.ohs.fhir.model.r4.Practitioner
 import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.fhir.model.r4.StructureDefinition
 import dev.ohs.fhir.model.r4.ValueSet
+import dev.ohs.trustdemo.trustkit.CardSigner
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.request.bearerAuth
@@ -41,6 +42,7 @@ import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
 import io.ktor.http.parameters
 import java.net.URI
+import java.util.Base64
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -251,8 +253,8 @@ class MedplumAdmin(
   }
 
   /**
-   * Writes Somsak's J1 records as the facility client does: his patient record and his two birth
-   * doses, [days] after the IG's dates, filed under the hospital. No card is issued.
+   * Writes Somsak's J1 records as the facility client does: his patient record, his two birth doses
+   * [days] after the IG's dates, and a signed card for each, all filed under the hospital.
    */
   suspend fun seedJ1(ig: List<Resource>, days: Long) {
     val hospital = "Organization/${checkNotNull(findByIgId("Organization", HOSPITAL)).id()}"
@@ -260,26 +262,31 @@ class MedplumAdmin(
     val location = "Location/${checkNotNull(findByIgId("Location", HOSPITAL_LOCATION_ID)).id()}"
     val patient = checkNotNull(ig.filterIsInstance<Patient>().firstOrNull { it.id == J1_PATIENT })
     val patientJson = encode(patient)
-    val patientId =
-      create(
-        "Patient",
-        JsonObject(
-          patientJson - "id" +
-            mapOf(
-              "meta" to filed(patientJson, hospital),
-              "managingOrganization" to reference(hospital),
-              "birthDate" to
-                JsonPrimitive(StoryDates.shift(patientJson.getValue("birthDate").text(), days)),
-            )
-        ),
+    val registered =
+      JsonObject(
+        patientJson - "id" +
+          mapOf(
+            "meta" to filed(patientJson, hospital),
+            "managingOrganization" to reference(hospital),
+            "birthDate" to
+              JsonPrimitive(StoryDates.shift(patientJson.getValue("birthDate").text(), days)),
+          )
       )
+    val patientId = create("Patient", registered)
+    val hospitalNumber =
+      registered
+        .getValue("identifier")
+        .jsonArray
+        .map { it.jsonObject }
+        .first { it["system"]?.text() == HOSPITAL_NUMBER_SYSTEM }
+        .getValue("value")
+        .text()
     ig
       .filterIsInstance<Immunization>()
       .filter { it.id in J1_DOSES }
       .forEach { dose ->
         val json = encode(dose)
-        create(
-          "Immunization",
+        val given =
           JsonObject(
             json - "id" +
               mapOf(
@@ -291,10 +298,50 @@ class MedplumAdmin(
                 "location" to reference(location),
                 "performer" to JsonArray(listOf(buildJsonObject { put("actor", reference(anan)) })),
               )
-          ),
-        )
+          )
+        val doseId = create("Immunization", given)
+        val hc1 =
+          CardSigner.sign(
+            fhirJson.decodeFromJsonElement(Immunization.serializer(), given),
+            fhirJson.decodeFromJsonElement(Patient.serializer(), registered),
+          )
+        create("DocumentReference", card(hospital, hospitalNumber, doseId, hc1))
       }
   }
+
+  /** A printed card as the facility client stores it: its HC1 text, filed by hospital number. */
+  private suspend fun card(account: String, hospitalNumber: String, doseId: String, hc1: String) =
+    buildJsonObject {
+      put("resourceType", "DocumentReference")
+      put("meta", meta(account))
+      put("status", "current")
+      put(
+        "identifier",
+        JsonArray(
+          listOf(
+            identifier(HOSPITAL_NUMBER_SYSTEM, hospitalNumber),
+            identifier(IG_ID_SYSTEM, "$doseId-card"),
+          )
+        ),
+      )
+      put(
+        "content",
+        JsonArray(
+          listOf(
+            buildJsonObject {
+              put(
+                "attachment",
+                buildJsonObject {
+                  put("contentType", "text/plain")
+                  put("title", "$doseId.hc1")
+                  put("data", Base64.getEncoder().encodeToString(hc1.toByteArray()))
+                },
+              )
+            }
+          )
+        ),
+      )
+    }
 
   private suspend fun filed(resource: JsonObject, account: String) =
     JsonObject(resource.getValue("meta").jsonObject + meta(account))
