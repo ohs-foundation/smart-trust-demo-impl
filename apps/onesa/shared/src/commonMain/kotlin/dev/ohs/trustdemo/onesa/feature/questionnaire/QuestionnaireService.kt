@@ -22,7 +22,6 @@ import dev.ohs.fhir.model.r4.Condition
 import dev.ohs.fhir.model.r4.Group
 import dev.ohs.fhir.model.r4.Immunization
 import dev.ohs.fhir.model.r4.MedicationRequest
-import dev.ohs.fhir.model.r4.Observation
 import dev.ohs.fhir.model.r4.Organization
 import dev.ohs.fhir.model.r4.Patient
 import dev.ohs.fhir.model.r4.Questionnaire as QuestionnaireR4
@@ -381,8 +380,6 @@ class QuestionnaireService(
           resource =
             when (val resource = entry.resource) {
               is Group -> normalizeExtractedGroup(resource, resource.id.orGeneratedId())
-
-              is Observation -> resource.copy(id = resource.id.orGeneratedId())
               is Patient -> normalizeExtractedPatient(resource, organization)
               else -> resource
             }
