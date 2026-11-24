@@ -197,7 +197,6 @@ Refusal paths, all at J4.1:
 
 - The VHL service is HTTPS only (hcert-core and the IHE VHL rule require it).
 - Verification and adjudication Provenances also target the Patient, so staff apps can write and sync them through the gateway.
-- Missed doses are caught up at the next visit: every uncounted dose due on or before it is due then.
 - The receipt Provenance names the holder ("VHL for <name>"), as the IG's `TrustDemoJ41Received` example does.
 - The app is named "Taifafeki Facility Client" where the IG's device frame says "OHS Facility Client 2.4.1".
 - SDC's form layout is kept as it is.
