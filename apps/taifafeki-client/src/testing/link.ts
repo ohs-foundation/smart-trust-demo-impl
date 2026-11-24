@@ -17,7 +17,7 @@ interface Link {
   hcertExp?: number;
 }
 
-export function issueLink({ key = KEY, signedBy = "XXK_LINK", exp = NOW + 86400 * 30, flag = "LP", hcertExp = NOW + 86400 }: Link = {}): string {
+export function issueLink({ key = KEY, signedBy = "XXU_LINK", exp = NOW + 86400 * 30, flag = "LP", hcertExp = NOW + 86400 }: Link = {}): string {
   const registry = new WitRegistry();
   const pending = WitIssuer.getInstance().prepare(
     {

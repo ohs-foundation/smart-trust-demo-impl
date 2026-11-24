@@ -85,7 +85,7 @@ describe("aCardSaysWhoSignedIt", () => {
 describe("theHospitalsParticipation", () => {
   it("lists the participants on each trust list", async () => {
     const [local, dev] = (await trustLists()).statuses();
-    expect(local?.participants).toEqual(["XXU", "XXR"]);
+    expect(local?.participants).toEqual(["XXR", "XXU"]);
     expect(dev?.participants).toContain("XXR");
     expect(dev?.participants).not.toContain("trustlist");
   });

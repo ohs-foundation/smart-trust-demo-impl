@@ -19,7 +19,7 @@ const OWNER = "Practitioner/anan";
 const SEARCH = "_id=list-1&code=folder&status=current&patient.identifier=urn%3Aietf%3Arfc%3A3986%7CPatient%2Fp1";
 const LINK_URL = `https://${HOST}/vhl/List/_search?${SEARCH}`;
 const REASONS = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason";
-const identity = loadIdentity(join(TESTKIT, "XXK_LINK.key.pem"), join(TESTKIT, "XXK_LINK.crt.pem"));
+const identity = loadIdentity(join(TESTKIT, "XXU_LINK.key.pem"), join(TESTKIT, "XXU_LINK.crt.pem"));
 
 const manifest = (documentUrl: string) =>
   JSON.stringify({
@@ -217,10 +217,10 @@ describe("theSignatureBaseIsWhatTheServiceVerifies", () => {
     expect(Buffer.from(rebuilt.base).toString()).toBe(expectedBase);
 
     const raw = Buffer.from(headers.Signature?.replace(/^sig1=:|:$/g, "") ?? "", "base64");
-    const publicKey = createPublicKey(new X509Certificate(readFileSync(join(TESTKIT, "XXK_LINK.crt.pem"))).publicKey.export({ type: "spki", format: "pem" }));
+    const publicKey = createPublicKey(new X509Certificate(readFileSync(join(TESTKIT, "XXU_LINK.crt.pem"))).publicKey.export({ type: "spki", format: "pem" }));
     expect(raw).toHaveLength(64);
     expect(verify("sha256", Buffer.from(rebuilt.base), { key: publicKey, dsaEncoding: "ieee-p1363" }, raw)).toBe(true);
-    expect(headers["Client-Cert"]).toBe(`:${new X509Certificate(readFileSync(join(TESTKIT, "XXK_LINK.crt.pem"))).raw.toString("base64")}:`);
+    expect(headers["Client-Cert"]).toBe(`:${new X509Certificate(readFileSync(join(TESTKIT, "XXU_LINK.crt.pem"))).raw.toString("base64")}:`);
   });
 
   it("covers the query in the path and sends no body headers for a GET", () => {
