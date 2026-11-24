@@ -152,7 +152,7 @@ class RegistrationService(
     current: RegistrationSession,
     urgent: Boolean,
   ): RegistrationRequest {
-    val household = household(groupId)
+    val household = downloaded(groupId)
     val (motherId, fatherId) = NewbornRegistration.parentIds(response)
     val members = members(household).associateBy { it.id }
     check(motherId != null || fatherId != null) {
@@ -186,6 +186,16 @@ class RegistrationService(
       .mapNotNull { repository.get("Patient", it) as? Patient }
 
   private fun Resource.versionId(): String? = meta?.versionId?.value
+
+  /** The household, synced first when it or a member was made on this phone and not downloaded. */
+  private suspend fun downloaded(groupId: String): Group {
+    val household = household(groupId)
+    if (household.versionId() != null && members(household).all { it.versionId() != null }) {
+      return household
+    }
+    succeeded(refresh)
+    return household(groupId)
+  }
 
   private suspend fun household(groupId: String): Group =
     repository.get("Group", groupId) as? Group ?: error("Household $groupId was not found.")

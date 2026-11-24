@@ -67,13 +67,17 @@ class RegistrationServiceTest {
       accessToken = { "token" },
     )
 
-  private fun service(repository: FhirRepository, outbox: Outbox) =
+  private fun service(
+    repository: FhirRepository,
+    outbox: Outbox,
+    refresh: suspend () -> Boolean = { true },
+  ) =
     RegistrationService(
       repository = repository,
       scannedCards = ScannedCards(),
       session = { RegistrationSession("token", "vilay", "lomaru-dhc") },
       outbox = outbox,
-      refresh = { true },
+      refresh = refresh,
       clock = { Instant.parse("2026-11-14T03:00:00Z") },
     )
 
@@ -147,6 +151,24 @@ class RegistrationServiceTest {
         .text("reference"),
     )
     assertTrue("Patient/khamla" !in server.attempts.single())
+    assertEquals(4, server.resources.getValue("Group/house").getValue("member").jsonArray.size)
+  }
+
+  @Test
+  fun aHouseholdMadeOnThisPhoneIsSyncedBeforeTheNewborn() = runTest {
+    fun local(json: String) = FhirJson.instance.decodeFromString(Resource.serializer(), json)
+    listOf(group, bounmy, khamla, firstChild).forEach {
+      repository.upsert(local(it.replace(""""meta":{"versionId":"1"},""", "")))
+      server.store(it)
+    }
+    val download: suspend () -> Boolean = {
+      server.resources.values.forEach { repository.upsert(local(it.toString())) }
+      true
+    }
+    val syncing = service(repository, outbox, refresh = download)
+
+    syncing.register("house", form("Noy"), key = "made-here")
+
     assertEquals(4, server.resources.getValue("Group/house").getValue("member").jsonArray.size)
   }
 
