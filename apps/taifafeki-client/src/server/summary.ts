@@ -5,7 +5,7 @@ import type { Viewer } from "./viewer";
 const MAX_DOCUMENTS = 10;
 const MAX_REPLY_BYTES = 5_000_000;
 const TIMEOUT_MILLIS = 15_000;
-const RECIPIENT = "Kesaro primary care clinic";
+const RECIPIENT = "Kesaro paediatric clinic";
 const DEMO_REASONS = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVhlRefusalReason";
 const OHS_REASONS = "http://ohs.dev/fhir/trust-demo/CodeSystem/vhl-refusal-reason";
 const ATTEMPTS_LEFT = "http://ohs.dev/fhir/trust-demo/StructureDefinition/passcode-attempts-left";

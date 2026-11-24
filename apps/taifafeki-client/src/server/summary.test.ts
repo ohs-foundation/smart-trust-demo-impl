@@ -153,7 +153,7 @@ describe("aSharedSummaryIsFetched", () => {
     expect(post).toMatchObject({ method: "POST", url: `https://${HOST}/vhl/List/_search`, redirect: "error" });
     expect(post?.headers["content-type"]).toBe("application/x-www-form-urlencoded");
     expect(new URLSearchParams(post?.body).get("passcode")).toBe(PASSCODE);
-    expect(new URLSearchParams(post?.body).get("recipient")).toBe("Kesaro primary care clinic");
+    expect(new URLSearchParams(post?.body).get("recipient")).toBe("Kesaro paediatric clinic");
     expect(get).toMatchObject({ method: "GET", url: `https://${HOST}/vhl/Binary/doc-1`, redirect: "error" });
     expect(get?.headers["content-type"]).toBeUndefined();
     for (const request of seen) expect(request.headers).toMatchObject({ signature: expect.stringMatching(/^sig1=:/), "signature-input": expect.any(String), "client-cert": expect.stringMatching(/^:.+:$/) });
