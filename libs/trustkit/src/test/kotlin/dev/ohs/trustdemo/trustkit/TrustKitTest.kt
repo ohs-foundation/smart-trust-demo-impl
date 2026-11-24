@@ -124,8 +124,8 @@ class TrustKitTest {
 
   @Test
   fun storyClockMapsJ3ToToday() {
-    val clock = StoryClock(LocalDate.parse("2025-11-25"), LocalDate.parse("2026-11-13"))
-    assertEquals(LocalDate.parse("2026-10-16"), clock.real(LocalDate.parse("2025-10-28")))
-    assertEquals(353, clock.shiftDays())
+    val clock = StoryClock(LocalDate.parse("2026-01-06"), LocalDate.parse("2026-11-13"))
+    assertEquals(LocalDate.parse("2026-09-04"), clock.real(LocalDate.parse("2025-10-28")))
+    assertEquals(311, clock.shiftDays())
   }
 }

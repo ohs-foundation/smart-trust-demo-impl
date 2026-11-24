@@ -26,7 +26,7 @@ Taifafeki · facility client                Onesa · Onesa app
             ┌─────────────────────────┐
             │ J3a Nurse Chanthason,   │  verify the cards
             │ J3b clinic tablet       │  match doses, schedule next
-            │ Year                    │  a year of Onesan doses
+            │ Year                    │  a year of doses in Onesa
             └─────────────────────────┘
             ┌─────────────────────────┐
             │ J4.0 Bounmy, family     │  share records, consent
@@ -41,13 +41,13 @@ Taifafeki · facility client                Onesa · Onesa app
 
 | Step | Who | App | Screens |
 | --- | --- | --- | --- |
-| J1 Discharge and cards | Dr Anan | Facility Client, hospital EMR | newborn entry, S1, print cards |
-| J2 Household registration | Vilay (CHW) | Onesa app, phone, offline | scan card, S2, registration form, S3 |
-| J3a Verify the cards | Nurse Chanthason | Onesa app, tablet | referral inbox, S4 |
-| J3b Map and schedule | Nurse Chanthason | Onesa app, tablet | dose match picker, S5 |
+| J1 Vaccinated and recorded | Dr Anan | Facility Client, hospital EMR | newborn entry, S1, print cards |
+| J2 Found and registered | Vilay (CHW) | Onesa app, phone, offline | scan card, S2, registration form, S3 |
+| J3a A foreign record used for the next vaccine | Nurse Chanthason | Onesa app, tablet | referral inbox, S4 |
+| J3b A foreign record used for the next vaccine | Nurse Chanthason | Onesa app, tablet | dose match picker, S5 |
 | Year | Nurse Chanthason | Onesa app, tablet | record a dose |
-| J4.0 Share health records | Bounmy | Onesa app, family phone | S6, share and consent, S7 |
-| J4.1 View the summary | Dr Anan | Facility Client, clinic viewer | scan link and passcode, S8 |
+| J4.0 Continuity across a border: one family, one phone | Bounmy | Onesa app, family phone | S6, share and consent, S7 |
+| J4.1 Continuity across a border: a paediatrician in Taifafeki sees the full history | Dr Anan | Facility Client, clinic viewer | scan link and passcode, S8 |
 
 ## Repo layout
 
@@ -163,10 +163,10 @@ Start with `make stack-up && trust-demo reset` (or on a server, [docs/deploy.md]
 
 | Step | Do | Test QR | CLI shows |
 | --- | --- | --- | --- |
-| J1 | Dr Anan, Facility Client: enter Somsak's discharge (birth and doses dated 28 days before the reset day), open Print: the issuer signs each dose's card on first print | | `status` moves to J2 once the doses exist; `qr somsak-hepb` and `somsak-bcg` work once the cards are printed (before that: "print the cards in J1 first") |
+| J1 | Dr Anan, Facility Client: enter Somsak's discharge (birth and doses dated 70 days before the reset day: the reset day is the IG's J3, when Somsak is 10 weeks old), open Print: the issuer signs each dose's card on first print | | `status` moves to J2 once the doses exist; `qr somsak-hepb` and `somsak-bcg` work once the cards are printed (before that: "print the cards in J1 first") |
 | J2 | Vilay, Onesa app, phone offline: scan a card, register the household, refer Somsak | `trust-demo qr somsak-hepb`, `somsak-bcg` | `inspect J2`: household, Somsak, referral |
 | J3a | Chanthason, tablet: open the referral, scan the cards, verify | the same two cards | `inspect J3a`: verification Provenances |
-| J3b | Chanthason: match doses to Onesan products, schedule the next | | `inspect J3b`: ConceptMap entry, schedule |
+| J3b | Chanthason: match the doses to the Onesa schedule (the 6-week doses are overdue at 10 weeks), book the next visit | | `inspect J3b`: ConceptMap entry, schedule |
 | Year | Chanthason: record doses, or `trust-demo time move J4.0 --with-year-doses` | | `inspect Year` |
 | J4.0 | Bounmy, family wallet: share Somsak's records, set a passcode, consent | | `inspect J4.0`: shares, links |
 | J4.1 | Dr Anan, Facility Client viewer: paste the link, enter the passcode, view the summary | the link from the wallet | `inspect J4.1`: access AuditEvents |

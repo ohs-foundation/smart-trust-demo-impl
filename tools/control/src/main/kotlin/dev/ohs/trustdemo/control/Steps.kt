@@ -43,7 +43,7 @@ enum class App(val label: String, val driver: String, val description: String) {
   VHL_VIEWER("VHL viewer", "Dr Anan", "Taifafeki facility client, clinic viewer"),
 }
 
-/** The story's steps, in order, worded as the build map's journey tables. */
+/** The story's steps, in order, titled as the IG's user scenarios. */
 enum class Step(
   val code: String,
   val title: String,
@@ -56,7 +56,7 @@ enum class Step(
 ) {
   J1(
     "J1",
-    "Discharge and cards",
+    "Vaccinated and recorded",
     "Dr Anan",
     "Kesaro hospital, facility client",
     "newborn entry, S1, print cards",
@@ -65,7 +65,7 @@ enum class Step(
   ),
   J2(
     "J2",
-    "Household registration",
+    "Found and registered",
     "Vilay (CHW)",
     "phone, offline",
     "scan card, S2, registration form, S3",
@@ -75,7 +75,7 @@ enum class Step(
   ),
   J3A(
     "J3a",
-    "Verify the cards",
+    "A foreign record used for the next vaccine",
     "Nurse Chanthason",
     "tablet",
     "referral inbox, S4",
@@ -85,16 +85,16 @@ enum class Step(
   ),
   J3B(
     "J3b",
-    "Map and schedule",
+    "A foreign record used for the next vaccine",
     "Nurse Chanthason",
     "tablet",
     "dose match picker, then S5",
     App.CLINIC_TABLET,
-    "match the doses to Onesan products and schedule the next",
+    "match the doses to the Onesa schedule and book the next visit",
   ),
   YEAR(
     "Year",
-    "A year of Onesan doses",
+    "A year of doses in Onesa",
     "Nurse Chanthason, or `time move J4.0 --with-year-doses`",
     "tablet",
     "record a dose",
@@ -103,7 +103,7 @@ enum class Step(
   ),
   J40(
     "J4.0",
-    "Share health records",
+    "Continuity across a border: one family, one phone",
     "Bounmy",
     "family phone",
     "S6, share and consent, S7",
@@ -112,7 +112,7 @@ enum class Step(
   ),
   J41(
     "J4.1",
-    "View the summary",
+    "Continuity across a border: a paediatrician in Taifafeki sees the full history",
     "Dr Anan",
     "Kesaro clinic, facility client",
     "scan link and passcode, S8",
@@ -151,8 +151,8 @@ data class Expectation(
 )
 
 internal val IG_BIRTH: LocalDate = LocalDate.parse("2025-10-28")
-internal val IG_J3: LocalDate = LocalDate.parse("2025-11-25")
-private val IG_J40 = LocalDate.parse("2026-10-26")
+internal val IG_J3: LocalDate = LocalDate.parse("2026-01-06")
+internal val IG_J40: LocalDate = LocalDate.parse("2026-10-26")
 internal val MOVE_DAYS = ChronoUnit.DAYS.between(IG_J3, IG_J40)
 internal const val HOSPITAL_NUMBER_SYSTEM = "http://smart.who.int/trust-demo/sid/xxr-kesaro-hn"
 private const val SOMSAK_HOSPITAL_NUMBER = "CRH-HN-68-104377"
@@ -166,7 +166,7 @@ private const val PRODUCT_MAP =
 private const val REFERRAL_CODE = "http://snomed.info/sct|3457005"
 private const val HEPB_PRODUCT = "a3K3X000006MiiXUAS"
 private const val BCG_PRODUCT = "a3K3X000006MiisUAC"
-private val ONESAN_DOSES =
+private val ONESA_DOSES =
   listOf("XXU-EPI-PENTA-1", "XXU-EPI-OPV-1", "XXU-EPI-PCV-1", "XXU-EPI-MR-1")
 
 /**
@@ -443,12 +443,12 @@ fun expectationsFor(newborn: Newborn): Map<Step, List<Expectation>> {
     Step.YEAR to
       listOf(
         Expectation(
-          "Four Onesan doses",
+          "Four doses given in Onesa",
           Server.HAPI,
           Query("Immunization", onesaOwn),
           { found, _ ->
             val coded = found.fields().verified().flatMap { it.codeIn("vaccineCode") }
-            ONESAN_DOSES.all { it in coded }
+            ONESA_DOSES.all { it in coded }
           },
         )
       ),

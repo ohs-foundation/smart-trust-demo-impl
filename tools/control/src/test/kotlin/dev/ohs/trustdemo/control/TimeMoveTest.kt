@@ -87,11 +87,11 @@ class TimeMoveTest {
   }
 
   @Test
-  fun moveShiftsEveryStoryDateByMinus335AndKeepsEveryGap() = runTest {
+  fun moveShiftsEveryStoryDateByMinus293AndKeepsEveryGap() = runTest {
     val (hapi, medplum, move) = world(fixtureState("steps/before-YEAR.json"))
     val plan = move.plan(withYearDoses = false)
-    assertEquals(-335, plan.shiftDays)
-    assertTrue(plan.changes.all { ChronoUnit.DAYS.between(it.from, it.to) == -335L })
+    assertEquals(-293, plan.shiftDays)
+    assertTrue(plan.changes.all { ChronoUnit.DAYS.between(it.from, it.to) == -293L })
     assertTrue(plan.changes.none { it.path.startsWith("meta") })
     assertEquals(
       StoryDates.paths.keys,
@@ -106,9 +106,9 @@ class TimeMoveTest {
       plan.changes.any { it.path == "item[0].item[0].answer[0].item[0].answer[0].valueDate" }
     )
     move.apply(plan)
-    assertEquals("2025-12-14T07:30:00Z", hapi.stored.getValue("List/Share").text("date"))
+    assertEquals("2026-01-25T07:30:00Z", hapi.stored.getValue("List/Share").text("date"))
     assertEquals(
-      "2025-12-14T07:30:00Z",
+      "2026-01-25T07:30:00Z",
       hapi.stored.getValue("DocumentReference/ShareBundle").text("date"),
     )
     assertEquals("2025-11-16", hapi.stored.getValue("Patient/Somsak").text("birthDate"))
@@ -150,7 +150,7 @@ class TimeMoveTest {
     move.apply(plan)
     assertEquals(before + 4, hapi.stored.size)
     assertEquals(
-      listOf("2025-12-28", "2025-12-28", "2025-12-28", "2026-08-15"),
+      listOf("2026-01-24", "2026-01-24", "2026-01-24", "2026-08-15"),
       doses.map { it.occurrenceDate() },
     )
   }
@@ -182,7 +182,7 @@ class TimeMoveTest {
     move.apply(plan)
 
     val visit = hapi.stored.getValue("ImmunizationRecommendation/Booked")
-    assertEquals("2026-01-15", visit.text("date"))
+    assertEquals("2026-02-26", visit.text("date"))
     assertEquals(
       List(3) { "complete" },
       visit.getValue("recommendation").jsonArray.map {

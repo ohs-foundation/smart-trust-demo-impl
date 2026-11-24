@@ -4,7 +4,7 @@
       "resourceType": "Patient",
       "id": "Somsak",
       "name": [{"family": "Sengmany", "given": ["Somsak"]}],
-      "birthDate": "2026-10-16"
+      "birthDate": "2026-09-04"
     }
   ]
 }

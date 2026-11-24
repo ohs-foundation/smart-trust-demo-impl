@@ -46,7 +46,7 @@ class NewbornTest {
     assertEquals(listOf("Patient/NewKid"), recordsOf(state, Step.J2, "record on Onesa"))
     assertEquals(listOf("Immunization/NewDose"), recordsOf(state, Step.J2, "Reported doses"))
     assertEquals(Step.J1, StepEngine.currentStep(state))
-    assertContains(inspect(state, Step.J2), "J2 · Household registration · 1 of 5 written")
+    assertContains(inspect(state, Step.J2), "J2 · Found and registered · 1 of 5 written")
   }
 
   @Test

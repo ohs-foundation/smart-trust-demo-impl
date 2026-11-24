@@ -199,7 +199,7 @@ class TimeCommand : CliktCommand(name = "time") {
 class MoveCommand : StackCommand("move") {
   private val target by argument(help = "The only supported move: J4.0")
   private val withYearDoses by
-    option("--with-year-doses", help = "Also write the year's Onesan doses").flag()
+    option("--with-year-doses", help = "Also write the year's doses in Onesa").flag()
   private val dryRun by option("--dry-run", help = "Print the move and write nothing").flag()
 
   override fun help(context: Context) = "Shift every story date so J4.0 falls today."

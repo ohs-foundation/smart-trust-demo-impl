@@ -74,8 +74,23 @@ class StepsTest {
   @Test
   fun inspectListsMetAndMissingRecordsForTheCurrentStep() {
     val out = inspect(fixtureState("steps/mid-J3B.json"))
-    assertContains(out, "J3b · Map and schedule · 2 of 5 written")
+    assertContains(out, "J3b · A foreign record used for the next vaccine · 2 of 5 written")
     assertContains(out, "status active, expected completed")
+  }
+
+  @Test
+  fun theStoryAnchorsAreTheIgsDates() {
+    fun dateOf(id: String, vararg path: String): String? {
+      val record = ig.single { it.id == id }.fields()
+      return path
+        .dropLast(1)
+        .fold(record) { node, name -> node.getValue(name).jsonObject }
+        .text(path.last())
+        ?.take(10)
+    }
+    assertEquals(IG_BIRTH.toString(), dateOf("TrustDemoSomsak", "birthDate"))
+    assertEquals(IG_J3.toString(), dateOf("TrustDemoJ3Verification", "recorded"))
+    assertEquals(IG_J40.toString(), dateOf("TrustDemoJ4Consent", "provision", "period", "start"))
   }
 
   @Test

@@ -33,6 +33,21 @@ private val HANDOVER =
     App.CLINIC_TABLET to "",
   )
 private const val VHL_LINK = "VHL QR + passcode"
+private const val TITLE_WIDTH = 30
+
+/**
+ * [title] broken after its colon and between words into lines of at most [TITLE_WIDTH], so the
+ * boxes stay narrow.
+ */
+private fun wrapped(title: String): List<String> =
+  title.split(Regex("(?<=:) ")).flatMap { part ->
+    part.split(' ').fold(emptyList()) { lines, word ->
+      val last = lines.lastOrNull()
+      if (last != null && last.length + 1 + word.length <= TITLE_WIDTH) {
+        lines.dropLast(1) + "$last $word"
+      } else lines + word
+    }
+  }
 
 /** [line] with its visible character at [column] replaced, skipping ANSI colour sequences. */
 private fun withCharAt(line: String, column: Int, char: Char): String {
@@ -61,7 +76,7 @@ fun journeyMap(
 ): String {
   val current = StepEngine.currentStep(state)
   val codeWidth = Step.entries.maxOf { it.code.length }
-  val titleWidth = Step.entries.maxOf { it.title.length }
+  val titleWidth = Step.entries.flatMap { wrapped(it.title) }.maxOf { it.length }
   fun mark(step: Step) =
     when {
       state.isDone(step) -> if (unicode) TextColors.green("✅") else TextColors.green("done       ")
@@ -69,15 +84,19 @@ fun journeyMap(
         if (unicode) TextColors.yellow("🔄") else TextColors.yellow("in progress")
       else -> if (unicode) TextStyles.dim("⬜") else TextStyles.dim("to do      ")
     }
-  fun line(step: Step) =
-    "${step.code.padEnd(codeWidth)}  ${step.title.padEnd(titleWidth)}  ${mark(step)} " +
-      "${state.metCount(step)}/${state.expectations.getValue(step).size}"
+  fun rows(step: Step): List<String> {
+    val title = wrapped(step.title)
+    return listOf(
+      "${step.code.padEnd(codeWidth)}  ${title.first().padEnd(titleWidth)}  ${mark(step)} " +
+        "${state.metCount(step)}/${state.expectations.getValue(step).size}"
+    ) + title.drop(1).map { " ".repeat(codeWidth + 2) + it }
+  }
 
   fun width(text: String) =
     Text(text, whitespace = Whitespace.PRE).measure(terminal, MEASURE_WIDTH).max
   fun titleOf(app: App) =
     "${if (app == current?.app) (if (unicode) "▶ " else "> ") else ""}${app.label} · ${app.driver}"
-  fun lines(app: App) = Step.entries.filter { it.app == app }.map(::line)
+  fun lines(app: App) = Step.entries.filter { it.app == app }.flatMap(::rows)
 
   val inner = App.entries.maxOf { app -> maxOf(width(titleOf(app)) + 2, lines(app).maxOf(::width)) }
   val boxWidth = inner + 4
@@ -109,7 +128,7 @@ fun journeyMap(
       App.entries.forEach { app ->
         val indent = INDENT[app] ?: 0
         val lines = terminal.render(panel(app)).lines()
-        val linkRow = lines.size - 2
+        val linkRow = 1
         when (app) {
           App.FAMILY_WALLET -> {
             lines.dropLast(1).forEach { appendLine(" ".repeat(indent) + it) }

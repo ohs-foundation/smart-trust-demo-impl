@@ -35,7 +35,7 @@ import who.smart.trust.verifier.VerificationResult
 import who.smart.trust.verifier.VerifierOptions
 
 class CardSignerTest {
-  private val clock13Nov = StoryClock(LocalDate.parse("2025-11-25"), LocalDate.parse("2026-11-13"))
+  private val clock13Nov = StoryClock(LocalDate.parse("2026-01-06"), LocalDate.parse("2026-11-13"))
   private val now = Instant.parse("2026-11-13T00:00:00Z").epochSecond
   private val json = Json { ignoreUnknownKeys = true }
 
@@ -102,7 +102,7 @@ class CardSignerTest {
         igPatient("TrustDemoTaifafekiSomsak"),
         clock13Nov,
       )
-    assertEquals("2026-10-16", decodedVaccinationDate(hc1))
+    assertEquals("2026-09-04", decodedVaccinationDate(hc1))
   }
 
   @Test

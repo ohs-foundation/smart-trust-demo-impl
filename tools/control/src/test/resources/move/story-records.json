@@ -11,7 +11,7 @@
           ]
         }
       ],
-      "birthDate": "2026-10-17"
+      "birthDate": "2026-09-05"
     },
     {
       "resourceType": "Patient",
@@ -32,7 +32,7 @@
       "patient": {
         "reference": "Patient/Somsak"
       },
-      "occurrenceDateTime": "2026-10-17",
+      "occurrenceDateTime": "2026-09-05",
       "recorded": "2026-11-14T09:00:00+07:00"
     },
     {
@@ -48,13 +48,13 @@
               "linkId": "birth",
               "answer": [
                 {
-                  "valueDate": "2026-10-17",
+                  "valueDate": "2026-09-05",
                   "item": [
                     {
                       "linkId": "again",
                       "answer": [
                         {
-                          "valueDate": "2026-10-18"
+                          "valueDate": "2026-09-06"
                         }
                       ]
                     }
@@ -308,7 +308,7 @@
     {
       "resourceType": "Patient",
       "id": "TaifafekiSomsak",
-      "birthDate": "2026-10-17"
+      "birthDate": "2026-09-05"
     },
     {
       "resourceType": "Immunization",
@@ -324,8 +324,8 @@
       "patient": {
         "reference": "Patient/TaifafekiSomsak"
       },
-      "occurrenceDateTime": "2026-10-17",
-      "recorded": "2026-10-17"
+      "occurrenceDateTime": "2026-09-05",
+      "recorded": "2026-09-05"
     },
     {
       "resourceType": "Provenance",

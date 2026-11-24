@@ -37,7 +37,7 @@ class JourneyMapTest {
       val total = expectations.getValue(step).size
       val box = boxes[App.entries.indexOf(step.app)]
       assertContains(box, "${step.code} ")
-      assertContains(box, step.title)
+      step.title.split(' ').forEach { assertContains(box, it) }
       assertContains(box, "0/$total".takeIf { step != Step.J1 } ?: "2/$total")
     }
     assertContains(boxes[0], "Hospital EMR · Dr Anan")
@@ -47,9 +47,9 @@ class JourneyMapTest {
   @Test
   fun standingShowsDoneInProgressAndToDo() {
     val lines = map("before-J2").lines()
-    assertTrue(lines.single { "Discharge and cards" in it }.contains("✅"))
-    assertTrue(lines.single { "Household registration" in it }.contains("🔄"))
-    assertTrue(lines.single { "Verify the cards" in it }.contains("⬜"))
+    assertTrue(lines.single { "J1 " in it }.contains("✅"))
+    assertTrue(lines.single { "J2 " in it }.contains("🔄"))
+    assertTrue(lines.single { "J3a " in it }.contains("⬜"))
   }
 
   @Test
