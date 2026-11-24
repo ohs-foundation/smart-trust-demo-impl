@@ -60,7 +60,7 @@
 
     <!-- Role screen -->
     <string name="role_none_title">No role assigned</string>
-    <string name="role_none_body">Your account has no role at an Onesan facility yet, so nothing was downloaded. Ask your district health office to assign one.</string>
+    <string name="role_none_body">Your account has no role at an Onesa facility yet, so nothing was downloaded. Ask your district health office to assign one.</string>
     <string name="role_failed_title">Couldn't load your role</string>
     <string name="role_retry">Check Again</string>
 
@@ -190,7 +190,7 @@
     <string name="scan_decoded">Decoded cards</string>
     <string name="scan_prequal_code">PreQual Code: %1$s</string>
     <string name="scan_row_detail">Card %1$d / %2$d • Date %3$s • Issuer %4$s</string>
-    <string name="scan_stored_as_issued">No Local Onesan Schedule Mapping — Stored as Issued</string>
+    <string name="scan_stored_as_issued">No Local Onesa Schedule Mapping — Stored as Issued</string>
     <string name="scan_continue">Continue: Register %1$s &amp; Save the Doses</string>
     <string name="scan_decoded_caption">Decoded on the phone only; nothing is written until registration</string>
     <string name="scan_paste_label">No camera? Paste the card text</string>
@@ -220,7 +220,7 @@
     <string name="registration_parent_father">%1$s (father)</string>
     <string name="registration_born_abroad">Born abroad — %1$s</string>
     <string name="registration_born_in">Born in %1$s</string>
-    <string name="registration_no_national_id">No Onesan national ID yet</string>
+    <string name="registration_no_national_id">No Onesa national ID yet</string>
     <string name="registration_doses_title">Doses read from the paper cards (%1$d)</string>
     <string name="registration_doses_text">%1$s, saved with %2$s as reported by the family (primarySource: false), not verified</string>
     <string name="registration_referral_title">Clinic Verification Referral (FHIR ServiceRequest)</string>
@@ -418,17 +418,17 @@
     <string name="verify_status_local">Status: Cryptographic trust verified via GDHCN (%1$s)</string>
     <string name="verify_status_gdhcn">Status: signature verified against the GDHCN DEV trust list</string>
     <string name="match_mapped">Mapped Automatically</string>
-    <string name="match_question">Which Onesan schedule dose is this?</string>
+    <string name="match_question">Which Onesa schedule dose is this?</string>
     <string name="match_given">Given %1$s at %2$s • Lot %3$s</string>
     <string name="match_birth_day">on the day of birth</string>
-    <string name="match_not_counted">Not counted on the Onesan schedule</string>
+    <string name="match_not_counted">Not counted on the Onesa schedule</string>
     <string name="match_no_proposal">No national dose matches this antigen at this age</string>
     <string name="layers_title">3-Layer Terminology &amp; ConceptMap Adjudication</string>
     <string name="layer1">Layer 1: Certificate product code (issued %1$s)</string>
     <string name="layer1_detail">Stored exactly as issued, from the card's DVCMin PreQual product.</string>
     <string name="layer1_chip">Foreign Source</string>
     <string name="layer2">Layer 2: Derived vaccine type (WHO SMART IG)</string>
-    <string name="layer2_detail">Named by the IG's vaccine product code system.</string>
+    <string name="layer2_detail">Derived from global WHO Prequalification metadata catalogue.</string>
     <string name="layer2_chip">WHO IG PreQual</string>
     <string name="layer3">Layer 3: Onesa national schedule ValueSet</string>
     <string name="layer3_confirmed_detail">Confirmed by %1$s on %2$s and added to the national ConceptMap.</string>
@@ -439,8 +439,8 @@
     <string name="layers_footnote_gap">Resolve the missing national concept mapping for this foreign dose</string>
     <string name="adjudication_title">Clinician Adjudication &amp; Equivalence Confirmation</string>
     <string name="adjudication_verdict">CONFIRMED</string>
-    <string name="adjudication_match">Proposed Onesan EPI Match</string>
-    <string name="adjudication_epi">Onesan EPI: %1$s</string>
+    <string name="adjudication_match">Proposed Onesa EPI Match</string>
+    <string name="adjudication_epi">Onesa EPI: %1$s</string>
     <string name="adjudication_code">Code</string>
     <string name="adjudication_detail">Equivalence Confirmed &amp; Dual-Coding Active • %1$s, %2$s</string>
     <string name="adjudication_pending">Not confirmed yet: press Confirm Equivalence &amp; Add Second Coding</string>
@@ -495,7 +495,7 @@
     <string name="profile_referrals_title">Referrals</string>
     <string name="profile_no_referrals">No referrals for this patient.</string>
     <string name="profile_no_household">Not a member of a synced household.</string>
-    <string name="immunization_codes">PreQual: %1$s • Onesan: %2$s</string>
+    <string name="immunization_codes">PreQual: %1$s • Onesa: %2$s</string>
     <string name="immunization_lot">Lot %1$s</string>
     <string name="record_title">Record a dose given today</string>
     <string name="record_choose">Choose</string>

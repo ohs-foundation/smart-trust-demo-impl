@@ -135,7 +135,7 @@ object ScanTransactions {
   }
 
   /**
-   * The verified Immunization with both codings (the Onesan schedule code from [epiCodes] when the
+   * The verified Immunization with both codings (the Onesa schedule code from [epiCodes] when the
    * national map has one, and the issuer's product), its Provenance, the audit, and a delete for
    * each of [reported] that [card] replaces.
    */

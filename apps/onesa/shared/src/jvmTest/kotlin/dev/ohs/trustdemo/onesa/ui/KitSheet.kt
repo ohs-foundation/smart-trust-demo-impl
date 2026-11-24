@@ -60,7 +60,7 @@ fun KitSheet() {
       avatarColor = ChildAvatar,
       chips =
         listOf(
-          Status("Age: 4 Weeks (T0+4w)", Tone.Info),
+          Status("Age: 10 Weeks (T0+10w)", Tone.Info),
           Status("Referred by CHW Vilay", Tone.Warning),
         ),
     )
@@ -147,7 +147,7 @@ fun KitSheet() {
         label = "Somsak Sengmany",
         badge =
           Status(
-            "Signed VHL Manifest • Onesan National Portal",
+            "Signed VHL Manifest • Onesa National Portal",
             Tone.Success,
             OnesaIcons.ShieldCheck,
           ),

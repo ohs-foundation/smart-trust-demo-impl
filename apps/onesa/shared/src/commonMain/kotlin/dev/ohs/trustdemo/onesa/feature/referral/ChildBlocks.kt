@@ -49,7 +49,7 @@ import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * The header of a screen about one child: the name with the age (`Somsak Sengmany (4 Weeks Old)`),
+ * The header of a screen about one child: the name with the age (`Somsak Sengmany (10 Weeks Old)`),
  * the household id, and how many of the child's foreign doses are verified, with [chips] after.
  */
 @Composable

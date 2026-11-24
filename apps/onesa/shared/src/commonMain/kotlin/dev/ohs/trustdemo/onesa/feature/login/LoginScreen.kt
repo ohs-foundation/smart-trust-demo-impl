@@ -45,7 +45,7 @@ import dev.ohs.trustdemo.onesa.ui.theme.OnesaColors
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * One sign-in for every Onesan role. The username and password go on the identity provider's page
+ * One sign-in for every Onesa role. The username and password go on the identity provider's page
  * (authorization code with PKCE), so the card says where they go instead of asking for them here.
  */
 @Composable

@@ -410,7 +410,7 @@ class ClinicianScreensRenderTest {
         }
       }
       onNodeWithText("Clinician Adjudication & Equivalence Confirmation").assertExists()
-      onNodeWithText("Onesan EPI: Hepatitis B birth dose").assertExists()
+      onNodeWithText("Onesa EPI: Hepatitis B birth dose").assertExists()
       onNodeWithText("Not confirmed yet: press Confirm Equivalence & Add Second Coding")
         .assertExists()
       onNodeWithText("Not booked: Confirm Date").assertExists()

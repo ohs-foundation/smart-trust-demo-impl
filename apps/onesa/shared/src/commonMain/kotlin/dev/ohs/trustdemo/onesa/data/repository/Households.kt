@@ -96,7 +96,7 @@ fun HumanName.display(): String =
   text?.value ?: personName(given.firstOrNull()?.value, family?.value)
 
 /**
- * An age as a household list writes it: weeks under eight weeks (`4w`), months under two years
+ * An age as a household list writes it: weeks under sixteen weeks (`10w`), months under two years
  * (`12m`), years after (`29y`). Null without a readable [birthDate].
  */
 fun shortAge(birthDate: String?, today: LocalDate): String? {
@@ -106,15 +106,15 @@ fun shortAge(birthDate: String?, today: LocalDate): String? {
   val months = born.monthsUntil(today)
   return when {
     days < 0 -> null
-    days < 56 -> "${days / 7}w"
+    days < WEEKS_UNTIL_DAYS -> "${days / 7}w"
     months < 24 -> "${months}m"
     else -> "${born.yearsUntil(today)}y"
   }
 }
 
 /**
- * An age as a clinic header writes it: days in the first week (`5 Days`), weeks under eight weeks
- * (`4 Weeks`), months under two years (`9 Months`), years after. Null without a readable
+ * An age as a clinic header writes it: days in the first week (`5 Days`), weeks under sixteen weeks
+ * (`10 Weeks`), months under two years (`9 Months`), years after. Null without a readable
  * [birthDate].
  */
 fun displayAge(birthDate: String?, today: LocalDate): String? {
@@ -126,11 +126,14 @@ fun displayAge(birthDate: String?, today: LocalDate): String? {
     when {
       days < 0 -> return null
       days < 7 -> days to "Day"
-      days < 56 -> days / 7 to "Week"
+      days < WEEKS_UNTIL_DAYS -> days / 7 to "Week"
       months < 24 -> months to "Month"
       else -> born.yearsUntil(today) to "Year"
     }
   return "$count $unit${if (count == 1) "" else "s"}"
 }
+
+/** Infant ages stay in weeks through the 6-, 10- and 14-week visits of the EPI schedule. */
+private const val WEEKS_UNTIL_DAYS = 16 * 7
 
 private const val ROLE_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-RoleCode"
