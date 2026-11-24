@@ -16,7 +16,7 @@ const kidOf = (stand: string) => createHash("sha256").update(new X509Certificate
 function card(signedBy: string): string {
   const pending = WitIssuer.getInstance().prepare(
     {
-      payloads: [{ tag: "dvc-min", val: { n: "Somsak SENGMANY", dob: "2025-10-28", s: "male", nt: "XXR", vx: { vp: "vp-hepb-peds-monovalent", dv: "2025-10-28", is: "TrustDemoKesaroHospital", bo: "XXR-4821" }, v: "1.0.0", extensions: [] } }],
+      payloads: [{ tag: "dvc-min", val: { n: "Somsak SENGMANY", dob: "2025-10-28", s: "male", nt: "XXR", vx: { vp: "a3K3X000006MiiXUAS", dv: "2025-10-28", is: "TrustDemoKesaroHospital", bo: "XXR-4821" }, v: "1.0.0", extensions: [] } }],
       iss: "XR",
       validity: { iat: BigInt(NOW), exp: BigInt(NOW + 86400) },
       dscDer: new X509Certificate(read(`${signedBy}.crt.pem`)).raw,
@@ -64,7 +64,7 @@ describe("aCardSaysWhoSignedIt", () => {
       hc1: expect.stringMatching(/^HC1:/),
       holder: "Somsak SENGMANY",
       birth: "2025-10-28",
-      product: "vp-hepb-peds-monovalent",
+      product: "a3K3X000006MiiXUAS",
       date: "2025-10-28",
       lot: "XXR-4821",
       kid: kidOf("XXR_CARD"),
@@ -85,7 +85,7 @@ describe("aCardSaysWhoSignedIt", () => {
 describe("theHospitalsParticipation", () => {
   it("lists the participants on each trust list", async () => {
     const [local, dev] = (await trustLists()).statuses();
-    expect(local?.participants).toEqual(["XXK", "XXR"]);
+    expect(local?.participants).toEqual(["XXU", "XXR"]);
     expect(dev?.participants).toContain("XXR");
     expect(dev?.participants).not.toContain("trustlist");
   });

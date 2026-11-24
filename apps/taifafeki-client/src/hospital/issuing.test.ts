@@ -25,7 +25,7 @@ function setup(existing: DocumentReference[]) {
   return { medplum: medplum as unknown as Pick<MedplumClient, "searchResources" | "createResourceIfNoneExist">, spies: medplum, issue, read };
 }
 
-const doses = [dose("d1", "vp-hepb-peds-monovalent"), dose("d2", "vp-bcg-freeze-dried")];
+const doses = [dose("d1", "a3K3X000006MiiXUAS"), dose("d2", "a3K3X000006MiisUAC")];
 
 describe("cardsAreIssuedAtPrint", () => {
   it("issues and stores a card per dose for a newborn who has none", async () => {
@@ -53,7 +53,7 @@ describe("cardsAreIssuedAtPrint", () => {
 
   it("does not call the issuer when every dose has a card or is not completed", async () => {
     const { medplum, issue, read } = setup([stored("d1", "HC1:a"), stored("d2", "HC1:b")]);
-    await readCards(medplum, patient, [...doses, { ...dose("d3", "vp-opv"), status: "entered-in-error" }], "t", { issue, read });
+    await readCards(medplum, patient, [...doses, { ...dose("d3", "a3K3X000006MijBUAS"), status: "entered-in-error" }], "t", { issue, read });
     expect(issue).not.toHaveBeenCalled();
   });
 });

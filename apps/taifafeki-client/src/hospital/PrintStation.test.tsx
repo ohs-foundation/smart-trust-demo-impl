@@ -79,7 +79,7 @@ describe("theIgsPrintStationStates", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Inspect Raw DVCMinPreQual & CBOR" }));
     const [first] = screen.getAllByRole("heading", { name: /^Card 1 of 2/ });
     const panel = first?.closest("[data-slot=card]") as HTMLElement;
-    expect(within(panel).getByText("vp-hepb-peds-monovalent")).toBeTruthy();
+    expect(within(panel).getByText("a3K3X000006MiiXUAS")).toBeTruthy();
     expect(within(panel).getByText("XXR-4821")).toBeTruthy();
     expect(within(panel).getByText(cards[0]?.date ?? "")).toBeTruthy();
     expect(within(panel).getByText(cards[0]?.kid ?? "")).toBeTruthy();

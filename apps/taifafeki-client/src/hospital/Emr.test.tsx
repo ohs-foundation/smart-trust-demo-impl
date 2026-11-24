@@ -11,8 +11,8 @@ import { Emr, type EmrSearch } from "./Emr";
 vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: ReactNode }) => <a href="/">{children}</a> }));
 
 const PRODUCTS = [
-  { code: "vp-hepb-peds-monovalent", display: "Hep B" },
-  { code: "vp-bcg-freeze-dried", display: "BCG" },
+  { code: "a3K3X000006MiiXUAS", display: "Hepatitis B Vaccine (rDNA) (Paediatric) (HepB), Serum Institute of India, Vial, 10 doses [FVP-P-132]" },
+  { code: "a3K3X000006MiisUAC", display: "BCG Vaccine (BCG), Serum Institute of India, Vial, 20 doses [FVP-P-117]" },
 ];
 
 function mount(organization: string) {
@@ -68,8 +68,8 @@ describe("theDosePickerNamesTheProducts", () => {
     mount("hospital-org");
     const [picker] = (await screen.findAllByLabelText("Product")) as HTMLSelectElement[];
     const options = Array.from(picker?.options ?? []);
-    expect(options.map((it) => it.textContent)).toEqual(["Hep B", "BCG"]);
-    expect(options.map((it) => it.value)).toEqual(["vp-hepb-peds-monovalent", "vp-bcg-freeze-dried"]);
+    expect(options.map((it) => it.textContent)).toEqual(["Hepatitis B Vaccine (rDNA) (Paediatric) (HepB), Serum Institute of India, Vial, 10 doses [FVP-P-132]", "BCG Vaccine (BCG), Serum Institute of India, Vial, 20 doses [FVP-P-117]"]);
+    expect(options.map((it) => it.value)).toEqual(["a3K3X000006MiiXUAS", "a3K3X000006MiisUAC"]);
   });
 });
 

@@ -106,16 +106,16 @@ describe("readSummary", () => {
       date: "2025-10-28T09:15:00+07:00",
       dose: "1",
       performer: "",
-      product: "vp-hepb-peds-monovalent",
-      schedule: "XXK-EPI-HEPB-BD",
+      product: "a3K3X000006MiiXUAS",
+      schedule: "XXU-EPI-HEPB-BD",
       cvx: "08",
       lot: "XXR-4821",
       location: "Kesaro Provincial Hospital, Taifafeki",
       primarySource: true,
     });
-    expect(view.immunizations[2]).toMatchObject({ product: "vp-pentavalent-liquid", schedule: "XXK-EPI-PENTA-1", cvx: "", lot: "XXK-2201", location: "Lomaru District Health Center, Onesa" });
+    expect(view.immunizations[2]).toMatchObject({ product: "a3K3X000006MijGUAS", schedule: "XXU-EPI-PENTA-1", cvx: "", lot: "XXU-2201", location: "Lomaru District Health Center, Onesa" });
     expect(view.date).toBe("2026-10-26T09:00:00+07:00");
-    expect(view.source).toBe("Onesa national health portal (Country B, XXK)");
+    expect(view.source).toBe("Onesa national health portal (Country B, XXU)");
   });
 
   it("names a performer from the summary's own records and never shows a bare reference", () => {

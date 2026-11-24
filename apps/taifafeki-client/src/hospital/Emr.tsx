@@ -425,7 +425,7 @@ function Failure({ error }: { error: unknown }) {
 
 function defaultDoses(products: Product[], birth: string): DoseDraft[] {
   const at = localNow() > birth ? localNow() : birth;
-  return ["vp-hepb-peds-monovalent", "vp-bcg-freeze-dried"].flatMap((code) =>
+  return ["a3K3X000006MiiXUAS", "a3K3X000006MiisUAC"].flatMap((code) =>
     products.some((it) => it.code === code) ? [{ productCode: code, occurredAt: at, lot: "" }] : [],
   );
 }

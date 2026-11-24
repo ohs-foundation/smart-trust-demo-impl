@@ -15,13 +15,13 @@ const newborn: Newborn = {
 };
 
 const hepB: Dose = {
-  productCode: "vp-hepb-peds-monovalent",
+  productCode: "a3K3X000006MiiXUAS",
   productDisplay: "Hepatitis B vaccine, paediatric, monovalent",
   occurredAt: "2025-10-28T09:15",
   lot: "XXR-4821",
 };
 const bcg: Dose = {
-  productCode: "vp-bcg-freeze-dried",
+  productCode: "a3K3X000006MiisUAC",
   productDisplay: "BCG vaccine, freeze-dried",
   occurredAt: "2025-10-28T09:20",
   lot: "XXR-9012",
@@ -64,10 +64,10 @@ describe("registration", () => {
     expect(patient.identifier?.[0]?.system).toBe(example.identifier?.[0]?.system);
     expect(patient.managingOrganization?.reference).toBe("Organization/org-1");
 
-    const system = ig("CodeSystem-TrustDemoVaccineProduct.json");
-    const codes = system.concept.map((concept: { code: string }) => concept.code);
+    const include = ig("ValueSet-TrustDemoVaccineProducts.json").compose.include[0];
+    const codes = include.concept.map((concept: { code: string }) => concept.code);
     for (const dose of doses) {
-      const product = dose.vaccineCode?.coding?.find((coding) => coding.system === system.url);
+      const product = dose.vaccineCode?.coding?.find((coding) => coding.system === include.system);
       expect(codes).toContain(product?.code);
     }
   });

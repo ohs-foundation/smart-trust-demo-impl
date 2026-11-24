@@ -1,7 +1,7 @@
 import type { Bundle, BundleEntry, Coding, Element, Immunization, Patient } from "@medplum/fhirtypes";
 
 export const HOSPITAL_NUMBER_SYSTEM = "http://smart.who.int/trust-demo/sid/xxr-kesaro-hn";
-export const PRODUCT_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct";
+export const PRODUCT_SYSTEM = "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds";
 export const PRODUCTS_VALUE_SET = "http://smart.who.int/trust-demo/ValueSet/TrustDemoVaccineProducts";
 const PROFILES = "http://smart.who.int/trust-demo/StructureDefinition";
 const PATIENT_PROFILE = `${PROFILES}/TrustDemoTaifafekiPatient`;
@@ -10,7 +10,7 @@ const CVX_SYSTEM = "http://hl7.org/fhir/sid/cvx";
 export const BIRTH_TIME = "http://hl7.org/fhir/StructureDefinition/patient-birthTime";
 
 const CVX_BY_PRODUCT: Record<string, Coding> = {
-  "vp-hepb-peds-monovalent": { system: CVX_SYSTEM, code: "08", display: "Hep B, adolescent or pediatric" },
+  "a3K3X000006MiiXUAS": { system: CVX_SYSTEM, code: "08", display: "Hep B, adolescent or pediatric" },
 };
 
 export type TimedPatient = Patient & { _birthDate?: Element };

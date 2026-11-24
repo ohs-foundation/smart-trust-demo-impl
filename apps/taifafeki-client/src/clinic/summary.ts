@@ -3,7 +3,7 @@ import type { Bundle, CodeableConcept, Composition, CompositionSection, HumanNam
 const MAX_DOCUMENT_BYTES = 64 * 1024 * 1024;
 const KEY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const BASE64URL = /^[A-Za-z0-9_-]*$/;
-const PRODUCT_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct";
+const PRODUCT_SYSTEM = "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds";
 const SCHEDULE_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule";
 const CVX_SYSTEM = "http://hl7.org/fhir/sid/cvx";
 const LOINC = "http://loinc.org";
