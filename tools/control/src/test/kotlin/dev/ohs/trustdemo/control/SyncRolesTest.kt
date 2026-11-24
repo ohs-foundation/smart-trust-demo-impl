@@ -40,7 +40,9 @@ class SyncRolesTest {
             it.jsonObject.getValue("type").jsonPrimitive.content
           }
         assertTrue(synced.isNotEmpty())
-        synced.filterNot { "GET_${it.uppercase()}" in groups.getValue(group) }.map { "$config: $it" }
+        synced
+          .filterNot { "GET_${it.uppercase()}" in groups.getValue(group) }
+          .map { "$config: $it" }
       }
 
     assertEquals(emptyList(), unreadable)
