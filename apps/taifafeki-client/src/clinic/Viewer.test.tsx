@@ -10,10 +10,15 @@ import { fetchSummary, scanVhl, trustListStatuses } from "../server/links";
 import { ig } from "../testing/ig";
 import { issueLink } from "../testing/link";
 import { searchAnansWorkplaces } from "../testing/workplaces";
+import { keyOf } from "./link";
 import { Viewer } from "./Viewer";
 
 vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: ReactNode }) => <a href="/">{children}</a> }));
 vi.mock("../server/links", () => ({ scanVhl: vi.fn(), fetchSummary: vi.fn(), trustListStatuses: vi.fn() }));
+vi.mock("./link", async (importOriginal) => {
+  const link = await importOriginal<typeof import("./link")>();
+  return { ...link, keyOf: vi.fn(link.keyOf) };
+});
 
 configure({ asyncUtilTimeout: 15_000 });
 vi.setConfig({ testTimeout: 60_000 });
@@ -151,6 +156,20 @@ describe("theSummaryScreen", () => {
     expect(createResource).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "Close Summary" }));
     expect(await screen.findByRole("button", { name: "Check link" })).toBeTruthy();
+  });
+
+  it("waits for the link's key when Open Records comes before it is read", async () => {
+    const { keyOf: read } = await vi.importActual<typeof import("./link")>("./link");
+    let release = () => undefined as void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    vi.mocked(keyOf).mockImplementationOnce(async (text) => {
+      await held;
+      return read(text);
+    });
+    mount();
+    await openSummary();
+    release();
+    expect(await screen.findByText(/Somsak SENGMANY/)).toBeTruthy();
   });
 
   it("shows a plain notice and no receipt when the summary does not open", async () => {

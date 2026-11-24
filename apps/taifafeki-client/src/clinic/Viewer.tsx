@@ -67,8 +67,7 @@ function ViewerFor({ organization }: { organization: string }) {
   const [notice, setNotice] = useState<Refusal>();
   const [paper, setPaper] = useState<Unverified>();
   const [opened, setOpened] = useState<Opened>();
-  const [key, setKey] = useState<string>();
-  const scans = useRef(0);
+  const key = useRef<Promise<string | undefined>>(Promise.resolve(undefined));
   const token = () => medplum.getAccessToken() ?? "";
   const lists = useQuery({ queryKey: ["trust-lists"], queryFn: () => trustListStatuses({ data: { token: token() } }), refetchInterval: 60_000 });
   const scan = useMutation({
@@ -84,13 +83,8 @@ function ViewerFor({ organization }: { organization: string }) {
   const failed = scan.data && scan.data.kind !== "fetch" ? scan.data : undefined;
   const scanned = useCallback(
     (text: string) => {
-      const scan = ++scans.current;
       setCamera(false);
-      setKey(undefined);
-      keyOf(text).then(
-        (read) => scan === scans.current && setKey(read),
-        () => undefined,
-      );
+      key.current = keyOf(text).catch(() => undefined);
       mutate(text);
     },
     [mutate],
@@ -102,7 +96,8 @@ function ViewerFor({ organization }: { organization: string }) {
     try {
       const outcome = await fetchSummary({ data: { token: token(), handle, passcode } });
       if (outcome.kind === "refused") return setNotice(outcome.reason === "wrong-passcode" ? { ...outcome, entered: passcode } : outcome);
-      const bundle = await (key ? openSummary(outcome.documents, key) : Promise.reject(new Error("no key"))).catch(() => undefined);
+      const read = await key.current;
+      const bundle = await (read ? openSummary(outcome.documents, read) : Promise.reject(new Error("no key"))).catch(() => undefined);
       if (!bundle) return setNotice({ message: "The summary could not be opened" });
       const view = readSummary(bundle);
       setOpened({ view, receipt: { state: "pending" }, passcode: needsPasscode });
@@ -121,8 +116,7 @@ function ViewerFor({ organization }: { organization: string }) {
   };
 
   const restart = () => {
-    scans.current++;
-    setKey(undefined);
+    key.current = Promise.resolve(undefined);
     setOpened(undefined);
     setPasted("");
     setPasscode("");
