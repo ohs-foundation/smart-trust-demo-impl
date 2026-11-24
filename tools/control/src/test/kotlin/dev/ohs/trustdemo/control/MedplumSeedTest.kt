@@ -48,7 +48,7 @@ class MedplumSeedTest {
   }
 
   @Test
-  fun anansRolesCarryTheirAppRoleCodes() = runTest {
+  fun anansRolesCarryTheirAppRoleCodesAndSpecialty() = runTest {
     val medplum = FakeMedplum()
     medplum.admin.seedBase(ig)
     val codes =
@@ -58,6 +58,7 @@ class MedplumSeedTest {
     assertTrue(codes[0].contains("\"code\":\"facility-emr\""))
     assertTrue(codes[1].contains("\"code\":\"vhl-viewer\""))
     assertTrue(codes.all { it.contains("http://ohs.dev/fhir/CodeSystem/app-role") })
+    assertTrue(codes.all { it.contains("\"code\":\"394537008\"") })
   }
 
   @Test

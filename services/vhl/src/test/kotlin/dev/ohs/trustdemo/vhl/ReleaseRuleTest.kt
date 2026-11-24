@@ -92,7 +92,7 @@ class ReleaseRuleTest {
   private class Seeded(val share: Share, val passcode: String) {
     val consentId = share.consent.id()
     val manifestBody =
-      "_id=${share.listId}&code=folder&status=current&recipient=Kesaro+clinic&passcode=%s"
+      "_id=${share.listId}&code=folder&status=current&recipient=Kesaro+paediatric+clinic&passcode=%s"
   }
 
   private fun withService(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {

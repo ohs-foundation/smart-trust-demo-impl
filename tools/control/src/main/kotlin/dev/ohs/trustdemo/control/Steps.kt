@@ -114,7 +114,7 @@ enum class Step(
     "J4.1",
     "Continuity across a border: a paediatrician in Taifafeki sees the full history",
     "Dr Anan",
-    "Kesaro clinic, facility client",
+    "Kesaro paediatric clinic, facility client",
     "scan link and passcode, S8",
     App.VHL_VIEWER,
     "scan the link, enter the passcode and view the summary",

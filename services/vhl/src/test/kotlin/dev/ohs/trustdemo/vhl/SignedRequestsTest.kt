@@ -53,7 +53,7 @@ private const val MANIFEST_PATH = "/vhl/List/_search"
 private const val ANCHOR_ENTRY = "trustlist:DEMO-VHL:XXR:CSCA"
 private const val FORM_BODY =
   "_id=list-1&code=folder&status=current&patient.identifier=urn%3Aietf%3Arfc%3A3986%7CPatient%2Fp1" +
-    "&recipient=Kesaro+clinic&passcode=482913"
+    "&recipient=Kesaro+paediatric+clinic&passcode=482913"
 
 class SignedRequestsTest {
   private var now = Instant.now().truncatedTo(ChronoUnit.SECONDS)
@@ -115,7 +115,7 @@ class SignedRequestsTest {
     assertEquals(kid(clinic.second), request.requester.kid)
     assertEquals("list-1", request.listId)
     assertEquals("482913", request.passcode)
-    assertEquals("Kesaro clinic", request.recipient)
+    assertEquals("Kesaro paediatric clinic", request.recipient)
   }
 
   @Test

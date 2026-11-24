@@ -526,6 +526,7 @@ class MedplumAdmin(
       """{"resourceType":"PractitionerRole","id":"$id",
         "practitioner":{"reference":"Practitioner/$ANAN"},
         "organization":{"reference":"Organization/$organization"},
-        "code":[{"coding":[{"system":"http://ohs.dev/fhir/CodeSystem/app-role","code":"$code","display":"$display"}]}]}"""
+        "code":[{"coding":[{"system":"http://ohs.dev/fhir/CodeSystem/app-role","code":"$code","display":"$display"}]}],
+        "specialty":[{"coding":[{"system":"http://snomed.info/sct","code":"394537008","display":"Pediatric specialty"}],"text":"Paediatrics"}]}"""
   }
 }
