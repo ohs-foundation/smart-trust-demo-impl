@@ -150,6 +150,9 @@ class ShareService(
   /** [patientId]'s doses, oldest first. */
   suspend fun doses(patientId: String): List<FamilyDose> = records.doses(patientId)
 
+  /** [patientId]'s own problems, medicines, allergies and vital signs. */
+  suspend fun health(patientId: String): FamilyHealth = records.health(patientId)
+
   /** The links of [consentIds], and whether any of them is held in memory only. */
   suspend fun issued(consentIds: List<String>): Pair<List<IssuedLink>, Boolean> {
     val kept = links.get(consentIds)

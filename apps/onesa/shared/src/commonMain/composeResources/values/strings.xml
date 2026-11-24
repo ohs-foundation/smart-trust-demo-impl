@@ -543,6 +543,10 @@
     <string name="wallet_relation_mother">Mother</string>
     <string name="wallet_relation_head">Head</string>
     <string name="wallet_ips">Longitudinal Immunization Summary (IPS)</string>
+    <string name="wallet_problems">Problems (IPS)</string>
+    <string name="wallet_medications">Medication Summary (IPS)</string>
+    <string name="wallet_allergies">Allergies &amp; Intolerances (IPS)</string>
+    <string name="wallet_vital_signs">Vital Signs (IPS)</string>
     <string name="wallet_doses_verified">%1$d Doses Verified</string>
     <string name="wallet_no_doses">No doses recorded yet.</string>
     <string name="wallet_doses_footnote">%1$s • %2$d from verified foreign cards, %3$d recorded in Onesa</string>

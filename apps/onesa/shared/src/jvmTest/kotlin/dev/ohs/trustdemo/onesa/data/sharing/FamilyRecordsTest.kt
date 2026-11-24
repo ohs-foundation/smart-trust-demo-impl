@@ -99,4 +99,60 @@ class FamilyRecordsTest {
       doses.map { listOf(it.name, it.scheduleCode, it.lot, it.primarySource, it.fromCard) },
     )
   }
+
+  @Test
+  fun aMembersOwnHealthRecordsAreReadForTheirSummary() = runTest {
+    fun record(json: String) = FhirJson.instance.decodeFromString(Resource.serializer(), json)
+    val bounmy = "Patient/TrustDemoBounmyPatient"
+    val repository =
+      InMemorySampleFhirRepository().apply {
+        upsert(
+          record(
+            """{"resourceType":"Condition","id":"htn","subject":{"reference":"$bounmy"},
+              "clinicalStatus":{"coding":[{"code":"active"}]},
+              "code":{"coding":[{"display":"Essential hypertension"}],"text":"Essential hypertension"}}"""
+          )
+        )
+        upsert(
+          record(
+            """{"resourceType":"Condition","id":"anaemia",
+              "subject":{"reference":"Patient/TrustDemoKhamlaPatient"},
+              "code":{"text":"Iron deficiency anaemia"}}"""
+          )
+        )
+        upsert(
+          record(
+            """{"resourceType":"MedicationStatement","id":"amlodipine","status":"active",
+              "subject":{"reference":"$bounmy"},"medicationCodeableConcept":{"text":"amlodipine"},
+              "dosage":[{"text":"5 mg by mouth once daily"}]}"""
+          )
+        )
+        upsert(
+          record(
+            """{"resourceType":"AllergyIntolerance","id":"penicillin","patient":{"reference":"$bounmy"},
+              "code":{"text":"Allergy to penicillin"},
+              "reaction":[{"manifestation":[{"text":"Eruption of skin"}]}]}"""
+          )
+        )
+        upsert(
+          record(
+            """{"resourceType":"Observation","id":"bp","status":"final","subject":{"reference":"$bounmy"},
+              "code":{"text":"Blood pressure"},"effectiveDateTime":"2026-10-25",
+              "component":[
+                {"code":{"text":"Systolic"},"valueQuantity":{"value":148,"unit":"mmHg"}},
+                {"code":{"text":"Diastolic"},"valueQuantity":{"value":94,"unit":"mmHg"}}]}"""
+          )
+        )
+      }
+
+    val health = FamilyRecords(repository).health("TrustDemoBounmyPatient")
+
+    assertEquals(listOf(HealthItem("Essential hypertension", "active")), health.problems)
+    assertEquals(listOf(HealthItem("amlodipine", "5 mg by mouth once daily")), health.medications)
+    assertEquals(listOf(HealthItem("Allergy to penicillin", "Eruption of skin")), health.allergies)
+    assertEquals(
+      listOf(HealthItem("Blood pressure", "148/94 mmHg • 2026-10-25")),
+      health.vitalSigns,
+    )
+  }
 }

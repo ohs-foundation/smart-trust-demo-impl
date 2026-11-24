@@ -32,17 +32,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ohs.trustdemo.onesa.data.registration.NewbornRegistration
 import dev.ohs.trustdemo.onesa.data.repository.displayAge
 import dev.ohs.trustdemo.onesa.data.repository.shortAge
 import dev.ohs.trustdemo.onesa.data.sharing.FamilyDose
+import dev.ohs.trustdemo.onesa.data.sharing.FamilyHealth
 import dev.ohs.trustdemo.onesa.data.sharing.FamilyMember
 import dev.ohs.trustdemo.onesa.data.sharing.FamilyRecords
+import dev.ohs.trustdemo.onesa.data.sharing.HealthItem
 import dev.ohs.trustdemo.onesa.generated.resources.Res
 import dev.ohs.trustdemo.onesa.generated.resources.verify_primary_source_false
 import dev.ohs.trustdemo.onesa.generated.resources.verify_primary_source_true
+import dev.ohs.trustdemo.onesa.generated.resources.wallet_allergies
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_card_verified
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_cross_border
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_dose_detail
@@ -51,13 +55,16 @@ import dev.ohs.trustdemo.onesa.generated.resources.wallet_doses_verified
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_empty
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_household
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_ips
+import dev.ohs.trustdemo.onesa.generated.resources.wallet_medications
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_no_doses
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_not_synced
+import dev.ohs.trustdemo.onesa.generated.resources.wallet_problems
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_relation_child
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_relation_father
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_relation_head
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_relation_mother
 import dev.ohs.trustdemo.onesa.generated.resources.wallet_viewing
+import dev.ohs.trustdemo.onesa.generated.resources.wallet_vital_signs
 import dev.ohs.trustdemo.onesa.ui.CardTitle
 import dev.ohs.trustdemo.onesa.ui.OnesaIcons
 import dev.ohs.trustdemo.onesa.ui.RecordRow
@@ -70,18 +77,23 @@ import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
-/** S6: the household the signed-in family member manages, each open member's doses under them. */
+/**
+ * S6: the household the signed-in family member manages, each open member's summary under them:
+ * their problems, medicines, allergies and vital signs, then their doses.
+ */
 @Composable
 fun WalletScreen() {
   val viewModel: WalletViewModel = koinViewModel()
   val family by viewModel.family.collectAsStateWithLifecycle()
   val open by viewModel.open.collectAsStateWithLifecycle()
   val doses by viewModel.doses.collectAsStateWithLifecycle()
+  val health by viewModel.health.collectAsStateWithLifecycle()
   val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-  WalletContent(family, open, doses, today, viewModel::toggle)
+  WalletContent(family, open, doses, today, viewModel::toggle, health)
 }
 
 @Composable
@@ -91,6 +103,7 @@ fun WalletContent(
   doses: Map<String, List<FamilyDose>>,
   today: LocalDate,
   onToggle: (String) -> Unit,
+  health: Map<String, FamilyHealth> = emptyMap(),
 ) {
   Column(
     Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -109,15 +122,24 @@ fun WalletContent(
           selected = viewing,
           onClick = { onToggle(member.id) },
         )
-        if (viewing) doses[member.id]?.let { MemberSummary(member, it, today) }
+        if (viewing) {
+          doses[member.id]?.let {
+            MemberSummary(member, it, health[member.id] ?: FamilyHealth(), today)
+          }
+        }
       }
     }
   }
 }
 
-/** A member's immunization summary, threaded under their row in the brand. */
+/** A member's summary, threaded under their row in the brand. */
 @Composable
-private fun MemberSummary(member: FamilyMember, doses: List<FamilyDose>, today: LocalDate) {
+private fun MemberSummary(
+  member: FamilyMember,
+  doses: List<FamilyDose>,
+  health: FamilyHealth,
+  today: LocalDate,
+) {
   val brand = MaterialTheme.colorScheme.primary
   val cards = doses.count { it.fromCard && it.primarySource }
   val verified = doses.count { it.primarySource }
@@ -127,6 +149,10 @@ private fun MemberSummary(member: FamilyMember, doses: List<FamilyDose>, today: 
       .padding(start = 12.dp, top = 2.dp, bottom = 2.dp),
     verticalArrangement = Arrangement.spacedBy(6.dp),
   ) {
+    HealthSection(Res.string.wallet_problems, OnesaIcons.Layers, health.problems)
+    HealthSection(Res.string.wallet_medications, OnesaIcons.File, health.medications)
+    HealthSection(Res.string.wallet_allergies, OnesaIcons.Alert, health.allergies)
+    HealthSection(Res.string.wallet_vital_signs, OnesaIcons.Clock, health.vitalSigns)
     FlowRow(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = Arrangement.SpaceBetween,
@@ -154,6 +180,13 @@ private fun MemberSummary(member: FamilyMember, doses: List<FamilyDose>, today: 
       )
     }
   }
+}
+
+@Composable
+private fun HealthSection(title: StringResource, icon: ImageVector, items: List<HealthItem>) {
+  if (items.isEmpty()) return
+  CardTitle(stringResource(title), icon)
+  items.forEach { RecordRow(label = it.label, detail = it.detail) }
 }
 
 @Composable

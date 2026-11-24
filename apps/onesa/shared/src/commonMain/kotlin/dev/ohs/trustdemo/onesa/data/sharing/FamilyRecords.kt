@@ -54,6 +54,17 @@ data class FamilyDose(
   val fromCard: Boolean,
 )
 
+/** One of a member's health records as the wallet lists it: what it is, then its specifics. */
+data class HealthItem(val label: String, val detail: String?)
+
+/** A member's own problems, medicines, allergies and vital signs, as their summary shows them. */
+data class FamilyHealth(
+  val problems: List<HealthItem> = emptyList(),
+  val medications: List<HealthItem> = emptyList(),
+  val allergies: List<HealthItem> = emptyList(),
+  val vitalSigns: List<HealthItem> = emptyList(),
+)
+
 /**
  * Reads the wallet's household and doses from what the family phone syncs: Groups, Patients and
  * Immunizations. It holds no RelatedPerson, so a parent's role comes from the child's own record,
@@ -143,6 +154,68 @@ class FamilyRecords(private val repository: FhirRepository) {
         )
       }
       .sortedBy { it.date }
+
+  /** [patientId]'s own problems, medicines, allergies and vital signs. */
+  suspend fun health(patientId: String): FamilyHealth {
+    suspend fun own(type: String, field: String) =
+      repository
+        .all(type)
+        .map { it.toJson() }
+        .filter { it[field]?.jsonObject?.text("reference") == "Patient/$patientId" }
+    return FamilyHealth(
+      problems =
+        own("Condition", "subject").map {
+          HealthItem(it.concept("code"), it.firstCoding("clinicalStatus")?.text("code"))
+        },
+      medications =
+        own("MedicationStatement", "subject").map {
+          HealthItem(
+            it.concept("medicationCodeableConcept"),
+            it["dosage"]?.jsonArray?.firstOrNull()?.jsonObject?.text("text"),
+          )
+        },
+      allergies =
+        own("AllergyIntolerance", "patient").map { allergy ->
+          val reaction =
+            allergy["reaction"]?.jsonArray?.firstOrNull()?.jsonObject?.get("manifestation")
+          HealthItem(
+            allergy.concept("code"),
+            reaction?.jsonArray?.firstOrNull()?.jsonObject?.conceptText(),
+          )
+        },
+      vitalSigns = own("Observation", "subject").map(::vitalSign),
+    )
+  }
+
+  private fun vitalSign(observation: JsonObject): HealthItem {
+    val quantities =
+      observation["component"]?.jsonArray?.map { it.jsonObject["valueQuantity"]?.jsonObject }
+        ?: listOf(observation["valueQuantity"]?.jsonObject)
+    val value =
+      quantities
+        .mapNotNull { it?.text("value") }
+        .joinToString("/")
+        .ifEmpty { null }
+        ?.let { listOfNotNull(it, quantities.firstOrNull()?.text("unit")).joinToString(" ") }
+    return HealthItem(
+      observation.concept("code"),
+      listOfNotNull(value, observation.text("effectiveDateTime")?.substringBefore('T'))
+        .joinToString(" • ")
+        .ifEmpty { null },
+    )
+  }
+
+  private fun JsonObject.concept(name: String): String =
+    this[name]?.jsonObject?.conceptText().orEmpty()
+
+  private fun JsonObject.conceptText(): String? =
+    text("text")
+      ?: this["coding"]?.jsonArray?.firstOrNull()?.jsonObject?.let {
+        it.text("display") ?: it.text("code")
+      }
+
+  private fun JsonObject.firstCoding(name: String): JsonObject? =
+    this[name]?.jsonObject?.get("coding")?.jsonArray?.firstOrNull()?.jsonObject
 
   private fun JsonObject.memberRefs(): List<String> =
     this["member"]?.jsonArray.orEmpty().mapNotNull {

@@ -18,6 +18,7 @@ package dev.ohs.trustdemo.onesa.feature.wallet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.ohs.trustdemo.onesa.data.sharing.FamilyDose
+import dev.ohs.trustdemo.onesa.data.sharing.FamilyHealth
 import dev.ohs.trustdemo.onesa.data.sharing.FamilyMember
 import dev.ohs.trustdemo.onesa.data.sharing.FamilyRecords
 import dev.ohs.trustdemo.onesa.data.sharing.Person
@@ -42,6 +43,8 @@ internal class WalletViewModel(private val service: ShareService, selfId: () -> 
   val open: StateFlow<Set<String>> = _open.asStateFlow()
   private val _doses = MutableStateFlow<Map<String, List<FamilyDose>>>(emptyMap())
   val doses: StateFlow<Map<String, List<FamilyDose>>> = _doses.asStateFlow()
+  private val _health = MutableStateFlow<Map<String, FamilyHealth>>(emptyMap())
+  val health: StateFlow<Map<String, FamilyHealth>> = _health.asStateFlow()
   private var toggled = false
 
   init {
@@ -59,6 +62,8 @@ internal class WalletViewModel(private val service: ShareService, selfId: () -> 
                 ?: people.firstOrNull()?.id
             )
         val loaded = _open.value.associateWith { service.doses(it) }
+        val records = _open.value.associateWith { service.health(it) }
+        _health.update { it + records }
         _doses.update { it + loaded }
       }
     }
@@ -74,6 +79,8 @@ internal class WalletViewModel(private val service: ShareService, selfId: () -> 
     _open.update { it + patientId }
     viewModelScope.launch {
       val doses = service.doses(patientId)
+      val records = service.health(patientId)
+      _health.update { it + (patientId to records) }
       _doses.update { it + (patientId to doses) }
     }
   }
