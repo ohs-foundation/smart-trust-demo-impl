@@ -7,7 +7,12 @@ touch "$env_file"
 chmod 600 "$env_file"
 
 if [ -z "${STACK_HOST:-}" ]; then
-  lan_ip=$(ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i < NF; i++) if ($i == "src") print $(i + 1)}')
+  # `ip` is Linux only; without `|| true` its absence ends the script here under `set -e` and pipefail.
+  lan_ip=$(ip route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i < NF; i++) if ($i == "src") print $(i + 1)}' || true)
+  if [ -z "$lan_ip" ] && command -v ipconfig >/dev/null; then
+    # macOS: the address of the interface that carries the default route.
+    lan_ip=$(ipconfig getifaddr "$(route -n get 1.1.1.1 2>/dev/null | awk '/interface:/ {print $2}')" 2>/dev/null || true)
+  fi
   [ -n "$lan_ip" ] || { echo "stack/init-env.sh: no LAN address found; set STACK_HOST" >&2; exit 1; }
   STACK_HOST="${lan_ip//./-}.sslip.io"
 fi

@@ -67,7 +67,9 @@ Taifafeki · facility client                Onesa · Onesa app
 
 ## Run it locally
 
-Requires JDK 21 (JDK 25 fails the Gradle build), Docker, Node with pnpm, and an Android SDK for the app.
+Requires JDK 21 (JDK 25 fails the Gradle build), Docker, Node 22 with pnpm, and an Android SDK for the app.
+The `hcert-core` build also needs Gradle 8.x and `yarn` on the `PATH`, and `make ig-check` needs Python 3.12
+or newer (macOS's own Python 3.9 fails).
 `hcert-core` 0.1.0 comes from [smart-trust-tools](https://github.com/litlfred/smart-trust-tools) at `d94e21d`:
 
 ```
@@ -124,7 +126,7 @@ The debug build trusts `stack/tls/ca.crt`, so `make stack-up` comes first. Sign 
 | Command | Covers |
 | --- | --- |
 | `./gradlew check` (or `make test`) | Kotlin unit and integration tests, Spotless |
-| `pnpm test` in `apps/taifafeki-client/` | the facility client (`pnpm typecheck` too) |
+| `pnpm test` in `apps/taifafeki-client/`, after `make hcert-js` | the facility client (`pnpm typecheck` too) |
 | `make stack-check` | the running stack, after `trust-demo reset` |
 | `make qa` | repo scans, static checks, screens agreement |
 | `make ig-check` | `ig/resources/` matches the pinned IG |

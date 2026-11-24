@@ -84,7 +84,9 @@ describe("aSummaryThatDoesNotOpen", () => {
   it("is refused for another key, an altered part, a bad key and a non-Bundle", async () => {
     await expect(openSummary(document(jwe), vhl.newKey())).rejects.toBeInstanceOf(Unreadable);
     const [header, empty, iv, text, tag] = jwe.split(".");
-    await expect(openSummary(document([header, empty, iv, `A${text?.slice(1)}`, tag].join(".")), key)).rejects.toBeInstanceOf(Unreadable);
+    // A first character that differs from the original: "A" alone leaves one ciphertext in 64 unchanged.
+    const altered = `${text?.startsWith("A") ? "B" : "A"}${text?.slice(1)}`;
+    await expect(openSummary(document([header, empty, iv, altered, tag].join(".")), key)).rejects.toBeInstanceOf(Unreadable);
     await expect(openSummary(document(jwe), "short")).rejects.toBeInstanceOf(Unreadable);
     const note = vhl.encrypt(Buffer.from(JSON.stringify({ resourceType: "Patient" })), "application/fhir+json", key);
     await expect(openSummary(document(note), key)).rejects.toBeInstanceOf(Unreadable);
