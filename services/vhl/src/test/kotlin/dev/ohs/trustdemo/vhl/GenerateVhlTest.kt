@@ -84,7 +84,7 @@ class GenerateVhlTest {
   private val hapi =
     FakeHapi(
       listOf(
-        clinicalRecord("Condition", "htn", "khamla"),
+        clinicalRecord("Condition", "htn", "khamla", "subject"),
         clinicalRecord("AllergyIntolerance", "nka", "khamla"),
         clinicalRecord("MedicationStatement", "amlodipine", "khamla", "subject"),
         clinicalRecord("Observation", "bp", "khamla", "subject"),

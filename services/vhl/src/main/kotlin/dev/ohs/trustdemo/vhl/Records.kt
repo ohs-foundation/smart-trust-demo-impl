@@ -88,7 +88,7 @@ class Records(private val publicUrl: String, private val now: Instant) {
       ClinicalSections(
         allergies = clinical.allergies.filter { it.refers("patient", own) },
         medications = clinical.medications.filter { it.refers("subject", own) },
-        problems = clinical.conditions.filter { it.refers("patient", own) },
+        problems = clinical.conditions.filter { it.refers("subject", own) },
         vitalSigns = clinical.vitalSigns.filter { it.refers("subject", own) },
       )
     val bundleId = newId()
