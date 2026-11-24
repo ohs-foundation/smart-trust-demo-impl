@@ -25,6 +25,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
@@ -35,6 +36,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class FakeHapi {
   val stored = mutableMapOf<String, Resource>()
@@ -119,4 +124,98 @@ class ResetTest {
     )
     assertNull(subscription.channel.payload)
   }
+
+  @Test
+  fun resetWritesSomsaksJ1RecordsAsTheClientDoes() = runTest {
+    val medplum = resetInto(FakeMedplum())
+    val patient = medplum.stored.values.single { it.type() == "Patient" }
+    val doses = medplum.stored.values.filter { it.type() == "Immunization" }
+    val shift = ChronoUnit.DAYS.between(IG_J3, today)
+    val hospital = medplum.stored.entries.single { it.value.igId() == "TrustDemoKesaroHospital" }
+
+    assertEquals(
+      "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoTaifafekiPatient",
+      patient.profile(),
+    )
+    assertTrue(patient.hasIdentifier("CRH-HN-68-104377"))
+    assertEquals(IG_BIRTH.plusDays(shift).toString(), patient.text("birthDate"))
+    assertEquals(
+      hospital.key,
+      patient.getValue("managingOrganization").jsonObject.text("reference"),
+    )
+    assertEquals(2, doses.size)
+    doses.forEach { dose ->
+      assertEquals(
+        "http://smart.who.int/trust-demo/StructureDefinition/TrustDemoTaifafekiImmunization",
+        dose.profile(),
+      )
+      assertEquals("completed", dose.text("status"))
+      assertTrue(dose.text("occurrenceDateTime")!!.startsWith(IG_BIRTH.plusDays(shift).toString()))
+      assertEquals(
+        "Patient/${patient.text("id")}",
+        dose.getValue("patient").jsonObject.text("reference"),
+      )
+      assertEquals(
+        medplum.stored.entries.single { it.value.igId() == "TrustDemoAnan" }.key,
+        dose
+          .getValue("performer")
+          .jsonArray
+          .single()
+          .jsonObject
+          .getValue("actor")
+          .jsonObject
+          .text("reference"),
+      )
+    }
+    assertTrue(medplum.stored.keys.none { it.startsWith("DocumentReference/") })
+  }
+
+  @Test
+  fun resetMeetsJ1AndLeavesJ2Next() = runTest {
+    val medplum = resetInto(FakeMedplum())
+    val state = stateOf(medplum, today)
+    assertTrue(state.isDone(Step.J1))
+    assertEquals(2, state.metCount(Step.J1))
+    assertEquals(Step.J2, StepEngine.currentStep(state))
+  }
+
+  @Test
+  fun resetTwiceLeavesOneSomsakAndTwoDoses() = runTest {
+    val medplum = FakeMedplum()
+    repeat(2) { resetInto(medplum) }
+    assertEquals(1, medplum.stored.values.count { it.type() == "Patient" })
+    assertEquals(2, medplum.stored.values.count { it.type() == "Immunization" })
+  }
+
+  @Test
+  fun beforeJ1WritesNoSomsak() = runTest {
+    val medplum = resetInto(FakeMedplum(), beforeJ1 = true)
+    assertTrue(medplum.stored.values.none { it.type() in listOf("Patient", "Immunization") })
+    assertEquals(Step.J1, StepEngine.currentStep(stateOf(medplum, today)))
+  }
+
+  private suspend fun resetInto(medplum: FakeMedplum, beforeJ1: Boolean = false): FakeMedplum {
+    Reset(
+        FakeHapi().server,
+        medplum.admin,
+        "password",
+        createTempDirectory(),
+        WATCH_PORT,
+        CLIENT_ORIGIN,
+      )
+      .run(today, beforeJ1)
+    return medplum
+  }
+
+  private suspend fun stateOf(medplum: FakeMedplum, resetDay: LocalDate): StoryState {
+    val patients = medplum.admin.searchResources("Patient", mapOf("identifier" to HOSPITAL_NUMBER))
+    val doses = medplum.admin.searchResources("Immunization", emptyMap())
+    val labels = expectations.getValue(Step.J1).map { it.label }
+    return StoryState(resetDay, resetDay, mapOf(labels[0] to patients, labels[1] to doses))
+  }
+
+  private fun JsonObject.type() = text("resourceType")
+
+  private fun JsonObject.profile() =
+    getValue("meta").jsonObject.getValue("profile").jsonArray.single().jsonPrimitive.content
 }

@@ -136,7 +136,7 @@ The debug build trusts `stack/tls/ca.crt`, so `make stack-up` comes first. Sign 
 
 | Command | Does |
 | --- | --- |
-| `reset` | both countries to the starting state; registers the webhook |
+| `reset` | both countries to the starting state, Somsak registered with his Hep B and BCG doses (J1 done, no cards issued); registers the webhook. `--before-j1` leaves him not yet entered, to run J1 live |
 | `status` | the current step, worked out from the records (`--current` prints only it) |
 | `journeys` | each app's box with its journeys, live from the records; also heads `status` |
 | `inspect [J1\|J2\|J3a\|J3b\|Year\|J4.0\|J4.1]` | the records behind the current or named step (`--json` in full) |

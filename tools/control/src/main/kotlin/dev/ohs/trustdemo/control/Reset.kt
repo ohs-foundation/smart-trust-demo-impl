@@ -25,6 +25,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import java.util.Base64
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
@@ -39,9 +40,9 @@ internal const val WATCH_CRITERIA =
     "http://hl7.org/fhir/restful-interaction|search-system"
 
 /**
- * Puts both countries into the story's starting state, before journey J1: Onesa's HAPI server and
- * Taifafeki's Medplum project, and in [secretsDir] the clinic certificate and the facility client's
- * id.
+ * Puts both countries into the story's starting state: Somsak registered with his birth doses (J1
+ * done), or before J1 when [run] is asked to: Onesa's HAPI server and Taifafeki's Medplum project,
+ * and in [secretsDir] the clinic certificate and the facility client's id.
  */
 class Reset(
   private val onesa: FhirServer,
@@ -51,7 +52,7 @@ class Reset(
   private val watchPort: Int,
   private val clientOrigin: String,
 ) {
-  suspend fun run(today: LocalDate) {
+  suspend fun run(today: LocalDate, beforeJ1: Boolean = false) {
     val ig = IgResources.all()
     kesaro.preflight()
     onesa.ping()
@@ -62,6 +63,7 @@ class Reset(
       kesaro.wipeStory()
       kesaro.seedBase(ig)
       kesaro.ensureClinician(ananPassword)
+      if (!beforeJ1) kesaro.seedJ1(ig, ChronoUnit.DAYS.between(IG_J3, today))
       writeClinicCertificate()
       writeClientId(kesaro.ensureClientApplication(clientOrigin))
     } catch (failure: CancellationException) {

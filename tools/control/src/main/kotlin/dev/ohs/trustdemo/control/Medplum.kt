@@ -17,7 +17,9 @@ package dev.ohs.trustdemo.control
 
 import dev.ohs.fhir.model.r4.CodeSystem
 import dev.ohs.fhir.model.r4.Device
+import dev.ohs.fhir.model.r4.Immunization
 import dev.ohs.fhir.model.r4.Organization
+import dev.ohs.fhir.model.r4.Patient
 import dev.ohs.fhir.model.r4.Practitioner
 import dev.ohs.fhir.model.r4.Resource
 import dev.ohs.fhir.model.r4.StructureDefinition
@@ -55,6 +57,9 @@ const val IG_ID_SYSTEM = "http://ohs.dev/fhir/trust-demo/ig-id"
 private const val HOSPITAL = "TrustDemoKesaroHospital"
 private const val CLINIC = "TrustDemoKesaroClinic"
 private const val ANAN = "TrustDemoAnan"
+private const val HOSPITAL_LOCATION_ID = "TrustDemoKesaroHospitalLoc"
+private const val J1_PATIENT = "TrustDemoTaifafekiSomsak"
+private val J1_DOSES = listOf("TrustDemoJ1HepB", "TrustDemoJ1Bcg")
 private const val PROFILE_PREFIX = "TrustDemoTaifafeki"
 private const val PROJECT_NAME = "Taifafeki Ministry of Public Health"
 private const val POLICY_NAME = "Taifafeki clinician"
@@ -240,6 +245,57 @@ class MedplumAdmin(
       ids["$type/$igId"] = "$type/${upsert(type, igId, linked, owner(type, linked, ids))}"
     }
   }
+
+  /**
+   * Writes Somsak's J1 records as the facility client does: his patient record and his two birth
+   * doses, [days] after the IG's dates, filed under the hospital. No card is issued.
+   */
+  suspend fun seedJ1(ig: List<Resource>, days: Long) {
+    val hospital = "Organization/${checkNotNull(findByIgId("Organization", HOSPITAL)).id()}"
+    val anan = "Practitioner/${checkNotNull(findByIgId("Practitioner", ANAN)).id()}"
+    val location = "Location/${checkNotNull(findByIgId("Location", HOSPITAL_LOCATION_ID)).id()}"
+    val patient = checkNotNull(ig.filterIsInstance<Patient>().firstOrNull { it.id == J1_PATIENT })
+    val patientJson = encode(patient)
+    val patientId =
+      create(
+        "Patient",
+        JsonObject(
+          patientJson - "id" +
+            mapOf(
+              "meta" to filed(patientJson, hospital),
+              "managingOrganization" to reference(hospital),
+              "birthDate" to
+                JsonPrimitive(StoryDates.shift(patientJson.getValue("birthDate").text(), days)),
+            )
+        ),
+      )
+    ig
+      .filterIsInstance<Immunization>()
+      .filter { it.id in J1_DOSES }
+      .forEach { dose ->
+        val json = encode(dose)
+        create(
+          "Immunization",
+          JsonObject(
+            json - "id" +
+              mapOf(
+                "meta" to filed(json, hospital),
+                "patient" to reference("Patient/$patientId"),
+                "occurrenceDateTime" to
+                  JsonPrimitive(StoryDates.shift(json.getValue("occurrenceDateTime").text(), days)),
+                "primarySource" to JsonPrimitive(true),
+                "location" to reference(location),
+                "performer" to JsonArray(listOf(buildJsonObject { put("actor", reference(anan)) })),
+              )
+          ),
+        )
+      }
+  }
+
+  private suspend fun filed(resource: JsonObject, account: String) =
+    JsonObject(resource.getValue("meta").jsonObject + meta(account))
+
+  private fun JsonElement.text() = jsonPrimitive.content
 
   /**
    * Logs Dr Anan in at [ANAN_EMAIL], created once with the clinician policy and kept across runs.
@@ -513,7 +569,7 @@ class MedplumAdmin(
 
   private companion object {
     val HOSPITAL_LOCATION =
-      """{"resourceType":"Location","id":"TrustDemoKesaroHospitalLoc","name":"Kesaro Provincial Hospital",
+      """{"resourceType":"Location","id":"$HOSPITAL_LOCATION_ID","name":"Kesaro Provincial Hospital",
         "managingOrganization":{"reference":"Organization/$HOSPITAL"}}"""
 
     val PRACTITIONER_ROLES =

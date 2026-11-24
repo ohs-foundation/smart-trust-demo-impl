@@ -115,9 +115,10 @@ abstract class NewbornCommand(name: String) : StackCommand(name) {
 }
 
 class ResetCommand : StackCommand("reset") {
+  private val beforeJ1 by option("--before-j1", help = "Leave Somsak not yet entered").flag()
 
   override fun help(context: Context) =
-    "Put both countries' servers into the story's starting state."
+    "Put both countries' servers into the story's starting state, Somsak registered."
 
   override fun run() = runBlocking {
     val env = StackEnv.load(stackEnv)
@@ -131,7 +132,7 @@ class ResetCommand : StackCommand("reset") {
         stack.watchPort,
         stack.clientOrigin,
       )
-      .run(LocalDate.now())
+      .run(LocalDate.now(), beforeJ1)
     echo(
       "Reset HAPI at ${stack.hapiUrl} and Medplum at ${stack.medplumUrl}; clinic certificate in $secrets"
     )
