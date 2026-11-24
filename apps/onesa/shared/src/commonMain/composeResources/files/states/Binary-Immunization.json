@@ -34,7 +34,7 @@
         },
         {
           "name": "productCode",
-          "path": "vaccineCode.coding.where(system = 'http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct').code.first()",
+          "path": "vaccineCode.coding.where(system = 'http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds').code.first()",
           "type": "http://hl7.org/fhir/StructureDefinition/string"
         },
         {

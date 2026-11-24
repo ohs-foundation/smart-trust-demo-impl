@@ -253,7 +253,7 @@ class ScheduleService(
     val codings = dose.codings()
     val product = codings.firstOrNull { it.text("system") == ScanTransactions.PRODUCT_SYSTEM }
     val name =
-      product?.text("code")?.let { NewbornRegistration.PRODUCTS[it] ?: it }
+      product?.text("code")?.let { NewbornRegistration.productName(it) ?: it }
         ?: codings.firstNotNullOfOrNull { it.text("display") ?: it.text("code") }
     val date = dose.text("occurrenceDateTime")?.substringBefore('T')
     return ScheduleDose(

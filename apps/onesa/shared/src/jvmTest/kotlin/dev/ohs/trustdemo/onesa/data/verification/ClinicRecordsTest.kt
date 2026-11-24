@@ -124,18 +124,18 @@ class ClinicRecordsTest {
     val doses = ForeignDoses(repository).of("TrustDemoSomsak").associateBy { it.product }
 
     assertEquals(
-      setOf("vp-hepb-peds-monovalent", "vp-bcg-freeze-dried", "vp-pentavalent-liquid"),
+      setOf("a3K3X000006MiiXUAS", "a3K3X000006MiisUAC", "a3K3X000006MijGUAS"),
       doses.keys,
     )
-    val hepB = doses.getValue("vp-hepb-peds-monovalent")
+    val hepB = doses.getValue("a3K3X000006MiiXUAS")
     assertEquals(EpiDose("XXU-EPI-HEPB-BD", "Hepatitis B birth dose"), hepB.schedule)
     assertTrue(hepB.mapped && hepB.verified)
     assertEquals(Adjudication("Nurse Chanthason", "2025-11-25T10:21:00+07:00"), hepB.adjudication)
     assertEquals("Kesaro Provincial Hospital, Taifafeki" to "XXR-4821", hepB.origin to hepB.lot)
-    val bcg = doses.getValue("vp-bcg-freeze-dried")
+    val bcg = doses.getValue("a3K3X000006MiisUAC")
     assertTrue(bcg.verified)
     assertNull(bcg.adjudication)
-    val penta = doses.getValue("vp-pentavalent-liquid")
+    val penta = doses.getValue("a3K3X000006MijGUAS")
     assertTrue(!penta.verified, "the clinic's own dose has no card to verify")
 
     val hepBRecord = repository.get("Immunization", "TrustDemoJ3HepB") as Immunization

@@ -28,7 +28,7 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 
 /**
  * What each vaccine product and national schedule dose protects against, bundled with the app: a
- * `TrustDemoVaccineProduct` code maps to its antigens as a CVX code maps to CDC's vaccine groups.
+ * WHO PreQual product id maps to its antigens as a CVX code maps to CDC's vaccine groups.
  */
 @Serializable
 class Antigens(

@@ -143,7 +143,7 @@ class VerificationService(
             VerificationFailure(VerifyStep.PAYLOAD, FailureReason.PAYLOAD_INVALID),
           )
         )
-    val dose = "${NewbornRegistration.PRODUCTS[dvc.vx.vp] ?: dvc.vx.vp}, ${dvc.vx.dv}"
+    val dose = "${NewbornRegistration.productName(dvc.vx.vp) ?: dvc.vx.vp}, ${dvc.vx.dv}"
 
     existing(current, request, referral, dvc, dose)?.let {
       return settled(it)

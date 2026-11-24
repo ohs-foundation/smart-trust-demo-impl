@@ -451,7 +451,7 @@ fun VerifyCardsContent(
 @Composable
 private fun DoseRow(product: String, lot: String?, origin: String?, status: Status) {
   RecordRow(
-    label = NewbornRegistration.PRODUCTS[product] ?: product,
+    label = NewbornRegistration.productName(product) ?: product,
     icon = OnesaIcons.Syringe,
     code = stringResource(Res.string.verify_dose_code, product, lot ?: "-"),
     detail =

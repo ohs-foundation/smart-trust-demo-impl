@@ -1,13 +1,13 @@
 {
-  "source": "The antigens of the IG's TrustDemoVaccineProduct and TrustDemoOnesaEpiSchedule codes, named as S8 names each dose's diseases; a product maps to its antigens as a CVX code maps to CDC's vaccine groups",
+  "source": "The antigens of the IG's WHO PreQual products (TrustDemoVaccineProducts) and TrustDemoOnesaEpiSchedule codes, named as S8 names each dose's diseases; a product maps to its antigens as a CVX code maps to CDC's vaccine groups",
   "note": "latestAgeDays: the IG counts a Hep B dose as the birth dose only within 24 hours of birth (ConceptMap TrustDemoProductToOnesaEpi)",
   "products": {
-    "vp-hepb-peds-monovalent": ["Hepatitis B"],
-    "vp-bcg-freeze-dried": ["Tuberculosis"],
-    "vp-pentavalent-liquid": ["Diphtheria", "Tetanus", "Pertussis", "Hepatitis B", "Hib"],
-    "vp-bopv-drops": ["Poliomyelitis"],
-    "vp-pcv-13-dose": ["Streptococcus pneumoniae"],
-    "vp-mr-freeze-dried": ["Measles", "Rubella"]
+    "a3K3X000006MiiXUAS": ["Hepatitis B"],
+    "a3K3X000006MiisUAC": ["Tuberculosis"],
+    "a3K3X000006MijGUAS": ["Diphtheria", "Tetanus", "Pertussis", "Hepatitis B", "Hib"],
+    "a3K3X000006MijBUAS": ["Poliomyelitis"],
+    "a3K3X000006MijJUAS": ["Streptococcus pneumoniae"],
+    "a3K3X000006MiimUAC": ["Measles", "Rubella"]
   },
   "doses": {
     "XXU-EPI-HEPB-BD": { "antigens": ["Hepatitis B"], "latestAgeDays": 1 },

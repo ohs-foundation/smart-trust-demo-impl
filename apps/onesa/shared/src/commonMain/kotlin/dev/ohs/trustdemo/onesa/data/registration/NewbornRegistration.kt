@@ -23,6 +23,7 @@ import dev.ohs.trustdemo.hcert.CertificateFingerprint
 import dev.ohs.trustdemo.hcert.DvcFhirMapper
 import dev.ohs.trustdemo.hcert.DvcMappingOptions
 import dev.ohs.trustdemo.hcert.DvcMin
+import dev.ohs.trustdemo.hcert.PreQualProducts
 import dev.ohs.trustdemo.onesa.data.repository.personName
 import dev.ohs.trustdemo.onesa.data.verification.ScanTransactions
 import dev.ohs.trustdemo.onesa.generateId
@@ -139,21 +140,22 @@ object NewbornRegistration {
   private const val CARD_NOTE =
     "Read from a paper DVC the family showed, without verifying its signature: reported, not verified."
 
-  private const val PRODUCT_SYSTEM =
-    "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
+  /**
+   * A product's display, as the IG's TrustDemoVaccineProducts names the demonstrator's products.
+   */
+  fun productDisplay(code: String): String? = PreQualProducts.DEMO.find(code)?.display
 
-  /** The demonstrator's products, as the IG's TrustDemoVaccineProduct names them. */
-  val PRODUCTS =
-    mapOf(
-      "vp-hepb-peds-monovalent" to "Hepatitis B vaccine, paediatric, monovalent",
-      "vp-bcg-freeze-dried" to "BCG vaccine, freeze-dried",
-    )
+  /**
+   * A product's name, for a label: its display up to the manufacturer, as WHO PreQual composes it
+   * (`name, manufacturer, presentation [FVP code]`). Null when the product is unknown.
+   */
+  fun productName(code: String): String? = productDisplay(code)?.substringBefore(", ")
 
   /** The CVX coding of each product, as the IG's Hep B hospital record and BCG dose give it. */
   val CVX =
     mapOf(
-      "vp-hepb-peds-monovalent" to ("08" to "Hep B, adolescent or pediatric"),
-      "vp-bcg-freeze-dried" to ("19" to "BCG"),
+      "a3K3X000006MiiXUAS" to ("08" to "Hep B, adolescent or pediatric"),
+      "a3K3X000006MiisUAC" to ("19" to "BCG"),
     )
 
   /** The demo's fictional countries, as a card or a form names them by code. */
@@ -218,7 +220,7 @@ object NewbornRegistration {
       childName =
         "${answers.required(RegistrationItems.GIVEN)} ${answers.required(RegistrationItems.FAMILY)}",
       birthDate = answers.required(RegistrationItems.BIRTH_DATE),
-      doses = cards.map { "${PRODUCTS[it.dvc.vx.vp] ?: it.dvc.vx.vp}, ${it.dvc.vx.dv}" },
+      doses = cards.map { "${productName(it.dvc.vx.vp) ?: it.dvc.vx.vp}, ${it.dvc.vx.dv}" },
       referredTo = referredTo.takeIf { cards.isNotEmpty() },
     )
   }
@@ -520,12 +522,12 @@ object NewbornRegistration {
       ?.takeIf { it.isNotBlank() } ?: patient.id.orEmpty()
 
   private fun product(vp: String): JsonObject? =
-    PRODUCTS[vp]?.let { display ->
+    productDisplay(vp)?.let { display ->
       buildJsonObject {
         putJsonArray("coding") {
           add(
             buildJsonObject {
-              put("system", PRODUCT_SYSTEM)
+              put("system", ScanTransactions.PRODUCT_SYSTEM)
               put("code", vp)
               put("display", display)
             }

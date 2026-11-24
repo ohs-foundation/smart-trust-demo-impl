@@ -102,12 +102,9 @@ class DoseRecordingTest {
           .jsonObject
       )
     )
-    listOf(
-        epi,
-        ig("CodeSystem-TrustDemoVaccineProduct.json"),
-        ig("ConceptMap-TrustDemoProductToOnesaEpi.json"),
-      )
-      .forEach { repository.upsert(decode(it)) }
+    listOf(epi, ig("ConceptMap-TrustDemoProductToOnesaEpi.json")).forEach {
+      repository.upsert(decode(it))
+    }
   }
 
   private suspend fun entry(code: String, date: String, lot: String = "XXU-2201"): DoseEntry {
@@ -177,7 +174,7 @@ class DoseRecordingTest {
     assertEquals(listOf("Immunization/dose-1"), urls.take(1))
     assertTrue(urls.none { it.startsWith("urn:uuid") })
     assertEquals(
-      listOf("XXU-EPI-PENTA-1", "vp-pentavalent-liquid"),
+      listOf("XXU-EPI-PENTA-1", "a3K3X000006MijGUAS"),
       penta.getValue("vaccineCode").jsonObject.getValue("coding").jsonArray.map {
         it.jsonObject.getValue("code").jsonPrimitive.content
       },

@@ -115,7 +115,7 @@ class DoseMatchService(
         if (id == null || product == null || product in mapped || hasSchedule)
           return@mapNotNull null
         val date = dose.text("occurrenceDateTime")?.substringBefore('T')
-        val name = NewbornRegistration.PRODUCTS[product] ?: product
+        val name = NewbornRegistration.productName(product) ?: product
         UnmatchedDose(
           id,
           patientId,
@@ -231,6 +231,7 @@ class DoseMatchService(
   ): JsonObject {
     val element = buildJsonObject {
       put("code", product)
+      NewbornRegistration.productDisplay(product)?.let { put("display", it) }
       putJsonArray("target") {
         add(
           buildJsonObject {

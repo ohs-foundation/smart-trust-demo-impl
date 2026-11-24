@@ -107,14 +107,12 @@ class DoseRecording(
   /**
    * The products the national map names for [dose]; none means the schedule code is recorded alone.
    */
-  suspend fun products(dose: EpiDose): List<EpiDose> {
-    val names = productNames()
-    return NationalMap(repository)
+  suspend fun products(dose: EpiDose): List<EpiDose> =
+    NationalMap(repository)
       .epiCodes()
       .filterValues { it == dose.code }
       .keys
-      .map { EpiDose(it, names[it] ?: NewbornRegistration.PRODUCTS[it] ?: it) }
-  }
+      .map { EpiDose(it, NewbornRegistration.productName(it) ?: it) }
 
   /**
    * Writes the dose, unless the entry is refused or it repeats a counted dose not yet [confirmed].
@@ -160,7 +158,6 @@ class DoseRecording(
   }
 
   private suspend fun immunization(entry: DoseEntry, current: RegistrationSession): JsonObject {
-    val names = productNames()
     val clinic = organisationName(current)
     return buildJsonObject {
       put("resourceType", "Immunization")
@@ -170,13 +167,7 @@ class DoseRecording(
         putJsonArray("coding") {
           add(coding(ScanTransactions.EPI_SYSTEM, entry.dose.code, entry.dose.display))
           entry.product?.let {
-            add(
-              coding(
-                ScanTransactions.PRODUCT_SYSTEM,
-                it,
-                names[it] ?: NewbornRegistration.PRODUCTS[it],
-              )
-            )
+            add(coding(ScanTransactions.PRODUCT_SYSTEM, it, NewbornRegistration.productDisplay(it)))
           }
         }
       }
@@ -227,18 +218,6 @@ class DoseRecording(
       }
     )
   }
-
-  private suspend fun productNames(): Map<String, String> =
-    repository
-      .all("CodeSystem")
-      .map { it.toJson() }
-      .filter { it.text("url") == ScanTransactions.PRODUCT_SYSTEM }
-      .flatMap { it["concept"]?.jsonArray.orEmpty() }
-      .mapNotNull { concept ->
-        val code = concept.jsonObject.text("code") ?: return@mapNotNull null
-        concept.jsonObject.text("display")?.let { code to it }
-      }
-      .toMap()
 
   private suspend fun organisationName(current: RegistrationSession): String? =
     repository.get("Organization", current.organizationId)?.toJson()?.text("name")

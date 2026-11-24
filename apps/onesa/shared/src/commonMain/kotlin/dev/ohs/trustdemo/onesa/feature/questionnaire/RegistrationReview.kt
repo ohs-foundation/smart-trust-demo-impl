@@ -182,7 +182,7 @@ fun RegistrationReviewContent(
         text =
           stringResource(
             Res.string.registration_doses_text,
-            records.doses.joinToString(" & ") { NewbornRegistration.PRODUCTS[it] ?: it },
+            records.doses.joinToString(" & ") { NewbornRegistration.productName(it) ?: it },
             name,
           ),
         tone = Tone.Info,

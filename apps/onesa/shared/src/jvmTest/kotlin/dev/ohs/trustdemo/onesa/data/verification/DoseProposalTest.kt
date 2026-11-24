@@ -53,29 +53,29 @@ class DoseProposalTest {
 
   @Test
   fun hepBGivenAtBirthIsTheBirthDose() {
-    assertEquals("XXU-EPI-HEPB-BD", proposed("vp-hepb-peds-monovalent", "2025-10-28"))
-    assertEquals("XXU-EPI-HEPB-BD", proposed("vp-hepb-peds-monovalent", "2025-10-29"))
+    assertEquals("XXU-EPI-HEPB-BD", proposed("a3K3X000006MiiXUAS", "2025-10-28"))
+    assertEquals("XXU-EPI-HEPB-BD", proposed("a3K3X000006MiiXUAS", "2025-10-29"))
   }
 
   @Test
   fun eachProductGivenAtItsAgeIsItsScheduleDose() {
-    assertEquals("XXU-EPI-BCG", proposed("vp-bcg-freeze-dried", "2025-10-28"))
-    assertEquals("XXU-EPI-PENTA-1", proposed("vp-pentavalent-liquid", "2025-12-10"))
-    assertEquals("XXU-EPI-OPV-1", proposed("vp-bopv-drops", "2025-12-10"))
-    assertEquals("XXU-EPI-PCV-1", proposed("vp-pcv-13-dose", "2025-12-10"))
-    assertEquals("XXU-EPI-MR-1", proposed("vp-mr-freeze-dried", "2026-07-28"))
+    assertEquals("XXU-EPI-BCG", proposed("a3K3X000006MiisUAC", "2025-10-28"))
+    assertEquals("XXU-EPI-PENTA-1", proposed("a3K3X000006MijGUAS", "2025-12-10"))
+    assertEquals("XXU-EPI-OPV-1", proposed("a3K3X000006MijBUAS", "2025-12-10"))
+    assertEquals("XXU-EPI-PCV-1", proposed("a3K3X000006MijJUAS", "2025-12-10"))
+    assertEquals("XXU-EPI-MR-1", proposed("a3K3X000006MiimUAC", "2026-07-28"))
   }
 
   @Test
   fun aDoseGivenAtTheWrongAgeIsNoScheduleDose() {
-    assertNull(proposed("vp-hepb-peds-monovalent", "2025-12-10"))
-    assertNull(proposed("vp-pentavalent-liquid", "2025-10-28"))
-    assertNull(proposed("vp-mr-freeze-dried", "2025-12-10"))
+    assertNull(proposed("a3K3X000006MiiXUAS", "2025-12-10"))
+    assertNull(proposed("a3K3X000006MijGUAS", "2025-10-28"))
+    assertNull(proposed("a3K3X000006MiimUAC", "2025-12-10"))
   }
 
   @Test
   fun aProductOfUnknownAntigensIsNoScheduleDose() {
-    assertNull(proposed("vp-yellow-fever", "2026-07-28"))
+    assertNull(proposed("XM9V38", "2026-07-28"))
   }
 
   private fun ig(name: String): Resource =

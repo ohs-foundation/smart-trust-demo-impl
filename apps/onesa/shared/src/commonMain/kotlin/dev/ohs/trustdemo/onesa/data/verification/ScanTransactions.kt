@@ -24,6 +24,7 @@ import dev.ohs.trustdemo.hcert.DvcFhirMapper
 import dev.ohs.trustdemo.hcert.DvcMappingOptions
 import dev.ohs.trustdemo.hcert.DvcMin
 import dev.ohs.trustdemo.hcert.FailureReason
+import dev.ohs.trustdemo.hcert.PreQualTerminology
 import dev.ohs.trustdemo.hcert.VerificationEvidence
 import dev.ohs.trustdemo.hcert.VerificationFailure
 import dev.ohs.trustdemo.hcert.VerifiedHcert
@@ -106,7 +107,7 @@ val FailureReason.code: String
  * of outcomes (IND01) reads them straight off.
  */
 object ScanTransactions {
-  const val PRODUCT_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
+  const val PRODUCT_SYSTEM = PreQualTerminology.PRODUCT_IDS
   const val EPI_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOnesaEpiSchedule"
   const val CVX_SYSTEM = "http://hl7.org/fhir/sid/cvx"
   const val REFUSAL_SYSTEM = "http://ohs.dev/fhir/trust-demo/CodeSystem/TrustDemoScanRefusal"
@@ -211,7 +212,7 @@ object ScanTransactions {
     scheduleDisplays: Map<String, String>,
   ): JsonObject {
     val resource = json.encodeToJsonElement(Immunization.serializer(), verified).jsonObject
-    val named = NewbornRegistration.PRODUCTS[product]
+    val named = NewbornRegistration.productDisplay(product)
     val codings =
       listOfNotNull(
         epiCodes[product]?.let { coding(EPI_SYSTEM, it, scheduleDisplays[it]) },

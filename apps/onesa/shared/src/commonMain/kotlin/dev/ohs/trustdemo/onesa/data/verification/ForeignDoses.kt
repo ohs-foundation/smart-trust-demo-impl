@@ -77,7 +77,7 @@ class ForeignDoses(private val repository: FhirRepository) {
         ForeignDose(
           id = id,
           product = code,
-          productName = NewbornRegistration.PRODUCTS[code] ?: product.text("display") ?: code,
+          productName = NewbornRegistration.productName(code) ?: product.text("display") ?: code,
           date = dose.text("occurrenceDateTime")?.substringBefore('T'),
           lot = dose.text("lotNumber"),
           origin = dose["location"]?.jsonObject?.text("display"),

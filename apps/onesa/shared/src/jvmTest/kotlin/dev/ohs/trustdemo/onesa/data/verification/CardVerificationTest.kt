@@ -131,14 +131,14 @@ class CardVerificationTest {
     SignedCards.dvc(
       StandIn.XXR_CARD,
       nowSeconds,
-      "vp-hepb-peds-monovalent",
+      "a3K3X000006MiiXUAS",
       holder = DvcHolder(given = "2026-01-01"),
     )
-  private val bcg = SignedCards.dvc(StandIn.XXR_CARD, nowSeconds, "vp-bcg-freeze-dried")
+  private val bcg = SignedCards.dvc(StandIn.XXR_CARD, nowSeconds, "a3K3X000006MiisUAC")
 
   private suspend fun withReportedDoses() {
-    reportDose("reported-hepb", "vp-hepb-peds-monovalent", hepB, "2026-01-01")
-    reportDose("reported-bcg", "vp-bcg-freeze-dried", bcg, "2026-03-01")
+    reportDose("reported-hepb", "a3K3X000006MiiXUAS", hepB, "2026-01-01")
+    reportDose("reported-bcg", "a3K3X000006MiisUAC", bcg, "2026-03-01")
     repository.upsert(
       decode(
         FhirJson.instance
@@ -191,7 +191,7 @@ class CardVerificationTest {
   @Test
   fun aCardThatFailsVerificationImportsNothingAndAuditsTheReason() = runTest {
     withReportedDoses()
-    val linkCard = SignedCards.dvc(StandIn.XXU_LINK, nowSeconds, "vp-hepb-peds-monovalent")
+    val linkCard = SignedCards.dvc(StandIn.XXU_LINK, nowSeconds, "a3K3X000006MiiXUAS")
 
     val outcome = assertIs<ScanOutcome.Failed>(scan(linkCard))
 
@@ -360,7 +360,7 @@ class CardVerificationTest {
           .jsonObject
       )
     )
-    val card = SignedCards.dvc(StandIn.XXR_CARD, nowSeconds, "vp-hepb-peds-monovalent", "2026-01")
+    val card = SignedCards.dvc(StandIn.XXR_CARD, nowSeconds, "a3K3X000006MiiXUAS", "2026-01")
 
     assertIs<ScanOutcome.HolderMismatch>(scan(card))
     assertEquals(0, gateway.immunizations.values.count { it.flag("primarySource") == true })
@@ -369,7 +369,7 @@ class CardVerificationTest {
   @Test
   fun aCardReplacesOnlyItsOwnReportedDose() = runTest {
     withReportedDoses()
-    reportDose("reported-hepb-later", "vp-hepb-peds-monovalent", hepB, "2026-04-01")
+    reportDose("reported-hepb-later", "a3K3X000006MiiXUAS", hepB, "2026-04-01")
 
     scan(hepB)
 
@@ -382,7 +382,7 @@ class CardVerificationTest {
         .parseToJsonElement(
           """{"resourceType":"ConceptMap","id":"$MAP_ID","status":"draft","url":"${ScanTransactions.EPI_MAP}",
           "group":[{"source":"${ScanTransactions.PRODUCT_SYSTEM}",
-          "target":"${ScanTransactions.EPI_SYSTEM}","element":[{"code":"vp-bcg-freeze-dried",
+          "target":"${ScanTransactions.EPI_SYSTEM}","element":[{"code":"a3K3X000006MiisUAC",
           "target":[{"code":"XXU-EPI-BCG","equivalence":"equivalent"}]}]}]}"""
         )
         .jsonObject
@@ -404,7 +404,6 @@ class CardVerificationTest {
   fun thePickerOffersTheSyncedNationalSchedule() = runTest {
     val schedule = igResource("CodeSystem-TrustDemoOnesaEpiSchedule.json")
     repository.upsert(decode(schedule))
-    repository.upsert(decode(igResource("CodeSystem-TrustDemoVaccineProduct.json")))
     val concepts =
       schedule.getValue("concept").jsonArray.map {
         EpiDose(it.jsonObject.text("code"), it.jsonObject.text("display"))
@@ -430,10 +429,7 @@ class CardVerificationTest {
     repository.upsert(decode(gateway.immunizations.getValue(ScanTransactions.immunizationId(hepB))))
     repository.upsert(decode(gateway.immunizations.getValue(ScanTransactions.immunizationId(bcg))))
 
-    assertEquals(
-      listOf("vp-hepb-peds-monovalent"),
-      matching.unmatched(patientId).map { it.product },
-    )
+    assertEquals(listOf("a3K3X000006MiiXUAS"), matching.unmatched(patientId).map { it.product })
   }
 
   @Test
@@ -552,7 +548,7 @@ class CardVerificationTest {
             .toString()
             .replace(
               "\"element\":[",
-              "\"element\":[{\"code\":\"vp-hepb-peds-monovalent\",\"target\":[{\"code\":\"XXU-EPI-HEPB-BD\"}]},",
+              "\"element\":[{\"code\":\"a3K3X000006MiiXUAS\",\"target\":[{\"code\":\"XXU-EPI-HEPB-BD\"}]},",
             )
         )
         .jsonObject
@@ -786,7 +782,7 @@ class CardVerificationTest {
         )
 
       val before = viewModel.uiState.first { !it.busy }
-      assertEquals(listOf("vp-hepb-peds-monovalent"), before.unmatched.map { it.product })
+      assertEquals(listOf("a3K3X000006MiiXUAS"), before.unmatched.map { it.product })
       assertEquals(hepBChoice, before.choice)
       assertFalse(before.canBook)
       viewModel.confirm()
@@ -803,7 +799,7 @@ class CardVerificationTest {
       assertEquals(
         listOf(
           ScanTransactions.EPI_SYSTEM to "XXU-EPI-HEPB-BD",
-          ScanTransactions.PRODUCT_SYSTEM to "vp-hepb-peds-monovalent",
+          ScanTransactions.PRODUCT_SYSTEM to "a3K3X000006MiiXUAS",
         ),
         codings(gateway.immunizations.getValue(dose.id)).take(2),
       )
@@ -990,7 +986,7 @@ class CardVerificationTest {
       put(
         "vaccineCode",
         FhirJson.instance.parseToJsonElement(
-          """{"coding":[{"system":"http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct","code":"$product"}]}"""
+          """{"coding":[{"system":"${ScanTransactions.PRODUCT_SYSTEM}","code":"$product"}]}"""
         ),
       )
       put("occurrenceDateTime", date)

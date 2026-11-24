@@ -197,7 +197,7 @@ private fun ScanErrorAlert(error: ScanError) {
 private fun DecodedCard(card: ScannedCard, number: Int, total: Int) {
   val vx = card.dvc.vx
   RecordRow(
-    label = NewbornRegistration.PRODUCTS[vx.vp] ?: vx.vp,
+    label = NewbornRegistration.productName(vx.vp) ?: vx.vp,
     icon = OnesaIcons.Syringe,
     code = stringResource(Res.string.scan_prequal_code, vx.vp),
     detail =

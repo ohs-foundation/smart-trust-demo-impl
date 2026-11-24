@@ -83,7 +83,7 @@ fun KitSheet() {
         RecordRow(
           "Hepatitis B Pediatric Dose",
           icon = OnesaIcons.Syringe,
-          code = "Code: vp-hepb-peds-monovalent • Lot: XXR-4821",
+          code = "Code: a3K3X000006MiiXUAS • Lot: XXR-4821",
           detail = "Origin: Kesaro Provincial Hospital (Taifafeki)",
           status = Status("primarySource: false", Tone.Warning),
         )

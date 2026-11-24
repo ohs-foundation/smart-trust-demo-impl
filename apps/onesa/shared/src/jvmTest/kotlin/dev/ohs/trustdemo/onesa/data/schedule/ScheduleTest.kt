@@ -64,7 +64,7 @@ class ScheduleTest {
     )
   }
 
-  private val product = ScanTransactions.PRODUCT_SYSTEM to "vp-hepb-peds-monovalent"
+  private val product = ScanTransactions.PRODUCT_SYSTEM to "a3K3X000006MiiXUAS"
   private val hepB = ScanTransactions.EPI_SYSTEM to "XXU-EPI-HEPB-BD"
   private val bcg = ScanTransactions.EPI_SYSTEM to "XXU-EPI-BCG"
 

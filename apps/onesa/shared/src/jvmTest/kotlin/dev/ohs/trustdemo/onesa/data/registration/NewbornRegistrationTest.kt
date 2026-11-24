@@ -69,7 +69,7 @@ class NewbornRegistrationTest {
     )
 
   private val cards =
-    listOf("vp-hepb-peds-monovalent" to "HC1:HEPB", "vp-bcg-freeze-dried" to "HC1:BCG").map {
+    listOf("a3K3X000006MiiXUAS" to "HC1:HEPB", "a3K3X000006MiisUAC" to "HC1:BCG").map {
       (product, hc1) ->
       ScannedCard(
         hc1,
@@ -142,7 +142,7 @@ class NewbornRegistrationTest {
       setOf(ReviewedParent("Khamla Sengmany", "MTH"), ReviewedParent("Bounmy Sengmany", "FTH")),
       review.parents.toSet(),
     )
-    assertEquals(setOf("vp-hepb-peds-monovalent", "vp-bcg-freeze-dried"), review.doses.toSet())
+    assertEquals(setOf("a3K3X000006MiiXUAS", "a3K3X000006MiisUAC"), review.doses.toSet())
     assertEquals("Organization/$organization", review.referral?.performer)
     assertEquals("routine", review.referral?.priority)
     assertEquals(entries.groupingBy { it.resource().type() }.eachCount(), review.writes)
@@ -271,7 +271,7 @@ class NewbornRegistrationTest {
           .getValue("system")
           .jsonPrimitive
           .content
-          .endsWith("TrustDemoVaccineProduct")
+          .endsWith("PreQualProductIds")
       }
     )
   }

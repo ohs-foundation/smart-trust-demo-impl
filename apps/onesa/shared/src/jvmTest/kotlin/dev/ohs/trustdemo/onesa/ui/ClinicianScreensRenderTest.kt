@@ -302,7 +302,7 @@ class ClinicianScreensRenderTest {
         "Somsak SENGMANY",
         "2025-10-28",
         childName,
-        "Hepatitis B vaccine, paediatric, monovalent, 2025-10-28",
+        "Hepatitis B Vaccine (rDNA) (Paediatric) (HepB), 2025-10-28",
         runBlocking { hcert.freshness(verified.dsc, now.epochSeconds) },
         nameDiffers,
       )
@@ -510,7 +510,7 @@ class ClinicianScreensRenderTest {
       val dualCoding =
         "Immunization.vaccineCode.coding[] = [" +
           """{"system":"${ScanTransactions.PRODUCT_SYSTEM}","code":"$HEPB",""" +
-          """"display":"Hepatitis B vaccine, paediatric, monovalent"},""" +
+          """"display":"Hepatitis B Vaccine (rDNA) (Paediatric) (HepB), Serum Institute of India, Vial, 10 doses [FVP-P-132]"},""" +
           """{"system":"${ScanTransactions.EPI_SYSTEM}","code":"XXU-EPI-HEPB-BD",""" +
           """"display":"Hepatitis B birth dose"}]"""
       onNodeWithText("CONFIRMED").assertExists()
@@ -761,7 +761,7 @@ class ClinicianScreensRenderTest {
   }
 
   private companion object {
-    const val HEPB = "vp-hepb-peds-monovalent"
+    const val HEPB = "a3K3X000006MiiXUAS"
     const val SCHEDULE = "src/commonMain/composeResources/files/schedule"
     const val BASE45 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
   }

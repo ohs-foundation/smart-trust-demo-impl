@@ -105,7 +105,7 @@ class ChwScreensRenderTest {
   private val chwTabs = listOf("Households", "Referrals", "Trust list", "Sync")
 
   private val cards =
-    listOf("vp-bcg-freeze-dried" to "XXR-9012", "vp-hepb-peds-monovalent" to "XXR-4821").map {
+    listOf("a3K3X000006MiisUAC" to "XXR-9012", "a3K3X000006MiiXUAS" to "XXR-4821").map {
       (product, lot) ->
       ScannedCard(
         "HC1:$product",
