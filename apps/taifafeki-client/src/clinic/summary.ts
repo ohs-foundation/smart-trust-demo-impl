@@ -1,4 +1,4 @@
-import type { Bundle, CodeableConcept, Composition, CompositionSection, HumanName, Immunization, Patient, Practitioner, Reference, Resource } from "@medplum/fhirtypes";
+import type { AllergyIntolerance, Bundle, CodeableConcept, Composition, CompositionSection, Condition, HumanName, Immunization, MedicationStatement, Observation, Patient, Practitioner, Reference, Resource } from "@medplum/fhirtypes";
 
 const MAX_DOCUMENT_BYTES = 64 * 1024 * 1024;
 const KEY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
@@ -8,7 +8,9 @@ const SCHEDULE_SYSTEM = "http://smart.who.int/trust-demo/CodeSystem/TrustDemoOne
 const CVX_SYSTEM = "http://hl7.org/fhir/sid/cvx";
 const LOINC = "http://loinc.org";
 const ALLERGIES_SECTION = "48765-2";
+const MEDICATIONS_SECTION = "10160-0";
 const PROBLEMS_SECTION = "11450-4";
+const VITAL_SIGNS_SECTION = "8716-3";
 
 export class Unreadable extends Error {}
 
@@ -27,7 +29,9 @@ export interface SummaryView {
     primarySource?: boolean;
   }[];
   allergies: string[];
+  medications: string[];
   problems: string[];
+  vitalSigns: string[];
   date: string;
   source: string;
 }
@@ -133,12 +137,38 @@ function performerOf(bundle: Bundle, immunization: Immunization): string {
   return (practitioner?.resourceType === "Practitioner" ? nameOf((practitioner as Practitioner).name?.[0]) : "") || actor?.display || "";
 }
 
+function lineOf(resource: Resource): string {
+  switch (resource.resourceType) {
+    case "AllergyIntolerance": {
+      const allergy = resource as AllergyIntolerance;
+      const reaction = textOf(allergy.reaction?.[0]?.manifestation?.[0]);
+      return [textOf(allergy.code), reaction].filter(Boolean).join(" — ");
+    }
+    case "MedicationStatement": {
+      const statement = resource as MedicationStatement;
+      return [textOf(statement.medicationCodeableConcept), statement.dosage?.[0]?.text].filter(Boolean).join(" ");
+    }
+    case "Condition": {
+      const condition = resource as Condition;
+      return [textOf(condition.code), condition.clinicalStatus?.coding?.[0]?.code].filter(Boolean).join(" · ");
+    }
+    case "Observation": {
+      const observation = resource as Observation;
+      const values = observation.component?.length ? observation.component.map((it) => it.valueQuantity?.value).join("/") : String(observation.valueQuantity?.value ?? "");
+      const unit = observation.component?.[0]?.valueQuantity?.unit ?? observation.valueQuantity?.unit;
+      return [textOf(observation.code), [values, unit].filter(Boolean).join(" "), observation.effectiveDateTime?.slice(0, 10)].filter(Boolean).join(" ");
+    }
+    default:
+      return textOf((resource as { code?: CodeableConcept }).code);
+  }
+}
+
 function sectionOf(bundle: Bundle, composition: Composition | undefined, code: string): string[] {
   const section: CompositionSection | undefined = composition?.section?.find((it) => it.code?.coding?.some((coding) => coding.system === LOINC && coding.code === code));
   if (!section) return [];
   const entries = (section.entry ?? []).flatMap((reference) => {
-    const resource = resolve(bundle, reference) as { code?: CodeableConcept } | undefined;
-    return resource ? [textOf(resource.code)] : [];
+    const resource = resolve(bundle, reference);
+    return resource ? [lineOf(resource)] : [];
   });
   if (entries.length > 0) return entries;
   return section.emptyReason ? [textOf(section.emptyReason)] : [];
@@ -171,7 +201,9 @@ export function readSummary(bundle: Bundle): SummaryView {
       };
     }),
     allergies: sectionOf(bundle, composition, ALLERGIES_SECTION),
+    medications: sectionOf(bundle, composition, MEDICATIONS_SECTION),
     problems: sectionOf(bundle, composition, PROBLEMS_SECTION),
+    vitalSigns: sectionOf(bundle, composition, VITAL_SIGNS_SECTION),
     date: bundle.timestamp ?? composition?.date ?? "",
     source: composition?.author?.[0]?.display ?? "",
   };

@@ -80,7 +80,9 @@ export function SummaryScreen({ header, view, receipt, passcode, onClose }: Prop
         <Facts
           items={[
             { label: "Allergies & Intolerances (IPS Section)", value: view.allergies.join(", ") || "Not in the summary" },
+            { label: "Medication Summary (IPS Section)", value: view.medications.join(", ") || "Not in the summary" },
             { label: "Problems (IPS Section)", value: view.problems.join(", ") || "Not in the summary" },
+            ...(view.vitalSigns.length > 0 ? [{ label: "Vital Signs (IPS Section)", value: view.vitalSigns.join(", ") }] : []),
           ]}
         />
       </Panel>

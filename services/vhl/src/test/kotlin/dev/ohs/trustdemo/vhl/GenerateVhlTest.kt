@@ -81,7 +81,15 @@ class GenerateVhlTest {
       patients = patients,
       immunizations = listOf(immunization("hepb", "somsak"), immunization("bcg", "somsak")),
     )
-  private val hapi = FakeHapi()
+  private val hapi =
+    FakeHapi(
+      listOf(
+        clinicalRecord("Condition", "htn", "khamla"),
+        clinicalRecord("AllergyIntolerance", "nka", "khamla"),
+        clinicalRecord("MedicationStatement", "amlodipine", "khamla", "subject"),
+        clinicalRecord("Observation", "bp", "khamla", "subject"),
+      )
+    )
   private var signer =
     LinkSigner.fromPem(
       File(TESTKIT, "XXU_LINK.key.pem").readText(),
@@ -289,6 +297,53 @@ class GenerateVhlTest {
       payload,
       (Hcert.vhl.fromVhlink(Hcert.vhl.toVhlink(payload)) as HcertResult.Ok).value,
     )
+  }
+
+  private fun sectionsByCode(ips: JsonObject): Map<String, JsonObject> =
+    ips.resources().first().getValue("section").jsonArray.objects().associateBy {
+      it.getValue("code").jsonObject.getValue("coding").jsonArray.objects().single().text("code")!!
+    }
+
+  @Test
+  fun aPersonsProblemsAllergiesMedicationsAndVitalsAreInTheirIps() = withService {
+    val link = links(generate(bounmyToken(), parameters("khamla")).bodyAsText()).single()
+    val ips = decryptedIps(link)
+    val bundled = ips.resources().map { "${it.type()}/${it.text("id")}" }.toSet()
+    val sections = sectionsByCode(ips)
+
+    assertEquals(
+      listOf("48765-2", "10160-0", "11450-4", "8716-3", "11369-6", "42348-3"),
+      sections.keys.toList(),
+    )
+    val entries =
+      mapOf(
+        "48765-2" to "AllergyIntolerance/nka",
+        "10160-0" to "MedicationStatement/amlodipine",
+        "11450-4" to "Condition/htn",
+        "8716-3" to "Observation/bp",
+      )
+    entries.forEach { (code, reference) ->
+      val referenced =
+        sections.getValue(code).getValue("entry").jsonArray.objects().map { it.text("reference") }
+      assertEquals(listOf(reference), referenced)
+      assertTrue(reference in bundled)
+      assertNull(sections.getValue(code)["emptyReason"])
+    }
+  }
+
+  @Test
+  fun aPersonWithoutThoseRecordsKeepsTheUnavailableSections() = withService {
+    val link = links(generate(bounmyToken(), parameters("bounmy")).bodyAsText()).single()
+    val sections = sectionsByCode(decryptedIps(link))
+
+    assertEquals(
+      listOf("48765-2", "10160-0", "11450-4", "11369-6", "42348-3"),
+      sections.keys.toList(),
+    )
+    listOf("48765-2", "10160-0", "11450-4").forEach {
+      assertNull(sections.getValue(it)["entry"])
+      assertTrue("unavailable" in sections.getValue(it).getValue("emptyReason").toString())
+    }
   }
 
   @Test

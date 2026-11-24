@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { ig } from "../testing/ig";
 import { Unreadable, openSummary, readSummary } from "./summary";
 
+const LOINC = "http://loinc.org";
 const IPS = ig("Bundle-TrustDemoJ4Ips.json");
 const vhl = WitVhl.getInstance();
 const base64url = (data: Uint8Array | string) => Buffer.from(data).toString("base64url");
@@ -139,5 +140,51 @@ describe("readSummary", () => {
     delete allergies.emptyReason;
     allergies.entry = [{ reference: "urn:uuid:nka" }];
     expect(readSummary(withEntry).allergies).toEqual(["No known allergy"]);
+  });
+
+  it("reads each clinical section from the records its entries resolve to", () => {
+    const sct = "http://snomed.info/sct";
+    const records = [
+      { resourceType: "Condition", id: "htn", clinicalStatus: { coding: [{ code: "active" }] }, code: { coding: [{ system: sct, code: "59621000", display: "Essential hypertension" }] } },
+      { resourceType: "MedicationStatement", id: "amlodipine", medicationCodeableConcept: { coding: [{ system: "http://www.whocc.no/atc", code: "C08CA01", display: "amlodipine" }] }, dosage: [{ text: "5 mg by mouth once daily" }] },
+      {
+        resourceType: "AllergyIntolerance",
+        id: "penicillin",
+        code: { coding: [{ system: sct, code: "91936005", display: "Allergy to penicillin" }] },
+        reaction: [{ manifestation: [{ coding: [{ system: sct, code: "271807003", display: "Eruption of skin" }] }] }],
+      },
+      {
+        resourceType: "Observation",
+        id: "bp",
+        effectiveDateTime: "2026-10-20T09:30:00+07:00",
+        code: { coding: [{ system: LOINC, code: "85354-9", display: "Blood pressure" }] },
+        component: [
+          { code: { coding: [{ system: LOINC, code: "8480-6" }] }, valueQuantity: { value: 148, unit: "mmHg", system: "http://unitsofmeasure.org", code: "mm[Hg]" } },
+          { code: { coding: [{ system: LOINC, code: "8462-4" }] }, valueQuantity: { value: 94, unit: "mmHg", system: "http://unitsofmeasure.org", code: "mm[Hg]" } },
+        ],
+      },
+    ];
+    const section = (code: string, id: string) => ({ code: { coding: [{ system: LOINC, code }] }, entry: [{ reference: `urn:uuid:${id}` }] });
+    const bundle = structuredClone(IPS);
+    bundle.entry.push(...records.map((resource) => ({ fullUrl: `urn:uuid:${resource.id}`, resource })));
+    const [allergies, medications, problems] = bundle.entry[0].resource.section;
+    Object.assign(allergies, section("48765-2", "penicillin"));
+    Object.assign(medications, section("10160-0", "amlodipine"));
+    Object.assign(problems, section("11450-4", "htn"));
+    delete allergies.emptyReason;
+    delete medications.emptyReason;
+    delete problems.emptyReason;
+    bundle.entry[0].resource.section.splice(3, 0, { title: "Vital signs", ...section("8716-3", "bp") });
+
+    expect(readSummary(bundle)).toMatchObject({
+      allergies: ["Allergy to penicillin — Eruption of skin"],
+      medications: ["amlodipine 5 mg by mouth once daily"],
+      problems: ["Essential hypertension · active"],
+      vitalSigns: ["Blood pressure 148/94 mmHg 2026-10-20"],
+    });
+  });
+
+  it("shows the unavailable sections and no vital signs for a summary without those records", () => {
+    expect(readSummary(IPS)).toMatchObject({ allergies: ["Unavailable"], medications: ["Unavailable"], problems: ["Unavailable"], vitalSigns: [] });
   });
 });

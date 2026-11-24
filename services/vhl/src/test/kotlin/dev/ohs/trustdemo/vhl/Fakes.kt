@@ -155,6 +155,29 @@ fun immunization(id: String, patientId: String): JsonObject = buildJsonObject {
   putJsonObject("patient") { put("reference", "Patient/$patientId") }
 }
 
+fun clinicalRecord(type: String, id: String, patientId: String, field: String = "patient") =
+  buildJsonObject {
+    put("resourceType", type)
+    put("id", id)
+    putJsonObject(field) { put("reference", "Patient/$patientId") }
+    if (type == "Observation") {
+      putJsonArray("category") {
+        add(
+          buildJsonObject {
+            putJsonArray("coding") {
+              add(
+                buildJsonObject {
+                  put("system", "http://terminology.hl7.org/CodeSystem/observation-category")
+                  put("code", "vital-signs")
+                }
+              )
+            }
+          }
+        )
+      }
+    }
+  }
+
 fun group(vararg memberIds: String, inactive: Set<String> = emptySet()): JsonObject =
   buildJsonObject {
     put("resourceType", "Group")
@@ -236,7 +259,7 @@ class FakeGateway(
 data class RecordedRequest(val url: String, val authorization: String?)
 
 /** HAPI as the trusted backend: accepts every transaction and keeps what it was sent. */
-class FakeHapi {
+class FakeHapi(private val clinical: List<JsonObject> = emptyList()) {
   var failWith: HttpStatusCode? = null
 
   val transactions = mutableListOf<JsonObject>()
@@ -279,11 +302,27 @@ class FakeHapi {
         respondFhir(resource)
       }
       HttpMethod.Get ->
-        stored[path]?.let { respondFhir(it) } ?: respond("", HttpStatusCode.NotFound)
+        if ("/" !in path) {
+          val patient = request.url.parameters["patient"]
+          val category = request.url.parameters["category"]
+          respondFhir(
+            searchset(
+              *clinical
+                .filter { it.type() == path && patientOf(it) == "Patient/$patient" }
+                .filter {
+                  category == null || "\"$category\"" in it.getValue("category").toString()
+                }
+                .toTypedArray()
+            )
+          )
+        } else stored[path]?.let { respondFhir(it) } ?: respond("", HttpStatusCode.NotFound)
       else -> error("unexpected ${request.method} ${request.url}")
     }
   }
 }
+
+private fun patientOf(resource: JsonObject): String? =
+  (resource["patient"] ?: resource["subject"])?.jsonObject?.text("reference")
 
 private fun MockRequestHandleScope.respondFhir(body: JsonObject) =
   respond(

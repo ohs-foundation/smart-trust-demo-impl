@@ -41,12 +41,24 @@ private const val PHW_CONSENT =
   "http://smart.who.int/trust-phw/StructureDefinition/PHWExplicitConsent"
 private const val PORTAL_ORGANIZATION = "Organization/TrustDemoOnesaPortalOrg"
 private val EMPTY_REASON_SYSTEM = "http://terminology.hl7.org/CodeSystem/list-empty-reason"
-private val EMPTY_SECTIONS =
-  listOf(
-    Triple("48765-2", "Allergies and adverse reactions Document", "Allergies and intolerances"),
-    Triple("10160-0", "History of Medication use Narrative", "Medication summary"),
-    Triple("11450-4", "Problem list - Reported", "Problems"),
-  )
+
+/** The clinical records read for one person, before they are filtered to that person. */
+class ClinicalRecords(
+  val conditions: List<JsonObject> = emptyList(),
+  val allergies: List<JsonObject> = emptyList(),
+  val medications: List<JsonObject> = emptyList(),
+  val vitalSigns: List<JsonObject> = emptyList(),
+)
+
+private class ClinicalSections(
+  val allergies: List<JsonObject>,
+  val medications: List<JsonObject>,
+  val problems: List<JsonObject>,
+  val vitalSigns: List<JsonObject>,
+) {
+  val all
+    get() = allergies + medications + problems + vitalSigns
+}
 
 /** The records of one share, before its IPS is encrypted. */
 class Share(
@@ -64,18 +76,27 @@ class Records(private val publicUrl: String, private val now: Instant) {
     caller: String,
     patient: JsonObject,
     immunizations: List<JsonObject>,
+    clinical: ClinicalRecords,
     request: ShareRequest,
   ): Share {
     val ownImmunizations =
       immunizations.filter {
         it["patient"]?.jsonObject?.text("reference") == "Patient/${patient.id()}"
       }
+    val own = "Patient/${patient.id()}"
+    val sections =
+      ClinicalSections(
+        allergies = clinical.allergies.filter { it.refers("patient", own) },
+        medications = clinical.medications.filter { it.refers("subject", own) },
+        problems = clinical.conditions.filter { it.refers("patient", own) },
+        vitalSigns = clinical.vitalSigns.filter { it.refers("subject", own) },
+      )
     val bundleId = newId()
     val consent = consent(newId(), caller, patient.id(), bundleId, request)
     return Share(
       patient = patient,
       consent = consent,
-      ips = ips(bundleId, patient, ownImmunizations, consent),
+      ips = ips(bundleId, patient, ownImmunizations, sections, consent),
       binaryId = newId(),
       documentReferenceId = newId(),
       listId = newId(),
@@ -187,9 +208,10 @@ class Records(private val publicUrl: String, private val now: Instant) {
     id: String,
     patient: JsonObject,
     immunizations: List<JsonObject>,
+    sections: ClinicalSections,
     consent: JsonObject,
   ): JsonObject {
-    val composition = composition(newId(), patient, immunizations, consent.id())
+    val composition = composition(newId(), patient, immunizations, sections, consent.id())
     return buildJsonObject {
       put("resourceType", "Bundle")
       put("id", id)
@@ -202,7 +224,8 @@ class Records(private val publicUrl: String, private val now: Instant) {
       put(
         "entry",
         buildJsonArray {
-          (listOf(composition, patient) + immunizations + consent).forEach { resource ->
+          (listOf(composition, patient) + sections.all + immunizations + consent).forEach { resource
+            ->
             add(
               buildJsonObject {
                 put("fullUrl", "$IPS_BASE/${resource.text("resourceType")}/${resource.id()}")
@@ -219,6 +242,7 @@ class Records(private val publicUrl: String, private val now: Instant) {
     id: String,
     patient: JsonObject,
     immunizations: List<JsonObject>,
+    sections: ClinicalSections,
     consentId: String,
   ) = buildJsonObject {
     put("resourceType", "Composition")
@@ -232,8 +256,35 @@ class Records(private val publicUrl: String, private val now: Instant) {
     }
     put("title", "Patient summary: ${displayName(patient)}")
     putJsonArray("section") {
-      EMPTY_SECTIONS.forEach { (code, display, title) ->
-        add(section(title, coding(LOINC, code, display), emptyReason("unavailable")))
+      add(
+        clinicalSection(
+          "Allergies and intolerances",
+          coding(LOINC, "48765-2", "Allergies and adverse reactions Document"),
+          sections.allergies,
+        )
+      )
+      add(
+        clinicalSection(
+          "Medication summary",
+          coding(LOINC, "10160-0", "History of Medication use Narrative"),
+          sections.medications,
+        )
+      )
+      add(
+        clinicalSection(
+          "Problems",
+          coding(LOINC, "11450-4", "Problem list - Reported"),
+          sections.problems,
+        )
+      )
+      if (sections.vitalSigns.isNotEmpty()) {
+        add(
+          clinicalSection(
+            "Vital signs",
+            coding(LOINC, "8716-3", "Vital signs"),
+            sections.vitalSigns,
+          )
+        )
       }
       add(
         section(
@@ -253,6 +304,14 @@ class Records(private val publicUrl: String, private val now: Instant) {
       )
     }
   }
+
+  private fun clinicalSection(title: String, code: JsonObject, found: List<JsonObject>) =
+    section(
+      title,
+      code,
+      if (found.isEmpty()) emptyReason("unavailable") else null,
+      found.map { "${it.text("resourceType")}/${it.id()}" },
+    )
 
   private fun section(
     title: String,
@@ -335,6 +394,9 @@ class Records(private val publicUrl: String, private val now: Instant) {
     return listOfNotNull(given, name?.text("family")).joinToString(" ").ifBlank { patient.id() }
   }
 }
+
+private fun JsonObject.refers(field: String, reference: String) =
+  (this[field] as? JsonObject)?.text("reference") == reference
 
 private fun newId(): String = UUID.randomUUID().toString()
 

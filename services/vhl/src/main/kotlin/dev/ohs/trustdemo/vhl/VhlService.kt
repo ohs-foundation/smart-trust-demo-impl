@@ -70,7 +70,20 @@ class VhlService(private val deps: VhlDeps) {
       request.people.map { person ->
         val patient = deps.gateway.read("Patient/$person", bearer = bearer)
         val immunizations = deps.gateway.search("Immunization", mapOf("patient" to person), bearer)
-        records.prepare(caller, patient, immunizations, request)
+        // The household check above already allows sharing this person; the family role on the
+        // gateway reads only what the wallet shows.
+        val clinical =
+          ClinicalRecords(
+            conditions = deps.hapi.search("Condition", mapOf("patient" to person)),
+            allergies = deps.hapi.search("AllergyIntolerance", mapOf("patient" to person)),
+            medications = deps.hapi.search("MedicationStatement", mapOf("patient" to person)),
+            vitalSigns =
+              deps.hapi.search(
+                "Observation",
+                mapOf("patient" to person, "category" to "vital-signs"),
+              ),
+          )
+        records.prepare(caller, patient, immunizations, clinical, request)
       }
     val issued =
       shares.map { share ->

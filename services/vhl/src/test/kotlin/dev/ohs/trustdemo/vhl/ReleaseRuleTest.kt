@@ -138,6 +138,7 @@ class ReleaseRuleTest {
         "bounmy",
         patient("somsak", "SENGMANY", "Somsak"),
         emptyList(),
+        ClinicalRecords(),
         ShareRequest(listOf("somsak"), now.minusSeconds(60).toString(), end.toString(), "unused"),
       )
     hapiBackend.transaction(records.transaction(listOf(share to JWE)))
