@@ -581,6 +581,7 @@ class CardVerificationTest {
   private fun visitBooking(
     refresh: suspend () -> Boolean,
     caughtUp: () -> Boolean = { true },
+    today: Day = Day.parse("2026-01-20"),
   ): VisitBooking =
     VisitBooking(
       schedule =
@@ -590,7 +591,7 @@ class CardVerificationTest {
             SchedulePlans.parse(protocol("TrustDemoDT03"), protocol("TrustDemoOnesaInfantSchedule"))
           },
         ) {
-          Day.parse("2026-01-20")
+          today
         },
       session = { RegistrationSession("token", "chanthason-id", "lomaru-dhc") },
       httpClient = HttpClient(gateway.engine),
@@ -676,6 +677,29 @@ class CardVerificationTest {
   }
 
   private suspend fun book() = booking.book(booking.open(referral.id), patientId)
+
+  @Test
+  fun bookingAtTenWeeksCatchesUpTheOverdueDosesAsTheIgsJ3Recommendation() = runTest {
+    withMappedDosesAndReferral()
+    val tenWeeks = visitBooking({ true }, today = Day.parse("2026-03-12"))
+
+    val outcome =
+      assertIs<BookingOutcome.Booked>(tenWeeks.book(tenWeeks.open(referral.id), patientId))
+
+    assertEquals("2026-03-12", outcome.date.toString())
+    fun forecasts(recommendation: JsonObject) =
+      recommendation.getValue("recommendation").jsonArray.map {
+        val entry = it.jsonObject
+        val code = entry.getValue("vaccineCode").jsonArray.single().jsonObject
+        val status = entry.getValue("forecastStatus").jsonObject
+        listOf(code, status).map { concept ->
+          concept.getValue("coding").jsonArray.single().jsonObject.text("code")
+        }
+      }
+    val ig = forecasts(igResource("ImmunizationRecommendation-TrustDemoJ3Recommendation.json"))
+    assertEquals(3, ig.size)
+    assertEquals(ig, forecasts(gateway.recommendations.values.single()))
+  }
 
   @Test
   fun bookingLeavesTheDisplayOnlyRowsOut() = runTest {

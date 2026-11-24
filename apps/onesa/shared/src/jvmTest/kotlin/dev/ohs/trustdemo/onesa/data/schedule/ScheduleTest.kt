@@ -189,22 +189,46 @@ class ScheduleTest {
   }
 
   @Test
-  fun aMissedDoseIsDueWithTheNextVisitsDoses() = runTest {
+  fun aMissedDoseIsCaughtUpAtThisVisit() = runTest {
     child()
     dose("hepb", true, hepB)
 
-    val items = service.evaluate("somsak").items
+    val schedule = service.evaluate("somsak")
 
+    assertEquals(LocalDate.parse("2025-11-14"), schedule.visit)
     assertEquals(
       listOf(
         Standing.Complete,
         Standing.Due(LocalDate.parse(BIRTH)),
+        Standing.NotYet(LocalDate.parse("2025-12-09")),
+        Standing.NotYet(LocalDate.parse("2025-12-09")),
+        Standing.NotYet(LocalDate.parse("2025-12-09")),
+        Standing.NotYet(LocalDate.parse("2026-07-28")),
+      ),
+      schedule.items.map { it.standing },
+    )
+  }
+
+  @Test
+  fun atTenWeeksTheSixWeekDosesAreOverdueAndDueAtThisVisit() = runTest {
+    val service = ScheduleService(repository, { plans }) { LocalDate.parse("2026-01-06") }
+    child()
+    dose("hepb", true, hepB)
+    dose("bcg", true, bcg)
+
+    val schedule = service.evaluate("somsak")
+
+    assertEquals(LocalDate.parse("2026-01-06"), schedule.visit)
+    assertEquals(
+      listOf(
+        Standing.Complete,
+        Standing.Complete,
         Standing.Due(LocalDate.parse("2025-12-09")),
         Standing.Due(LocalDate.parse("2025-12-09")),
         Standing.Due(LocalDate.parse("2025-12-09")),
         Standing.NotYet(LocalDate.parse("2026-07-28")),
       ),
-      items.map { it.standing },
+      schedule.items.map { it.standing },
     )
   }
 

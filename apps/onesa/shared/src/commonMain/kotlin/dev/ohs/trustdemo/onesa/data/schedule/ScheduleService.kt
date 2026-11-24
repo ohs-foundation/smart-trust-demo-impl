@@ -232,15 +232,16 @@ class ScheduleService(
     }
 
   /**
-   * The codes due at the next visit: the earliest uncounted age the child has not passed, or today
-   * when every uncounted action is already past, with every earlier uncounted action (catch-up).
+   * The codes due at the next visit: today when an uncounted action is already due, so overdue
+   * doses are caught up at this visit, otherwise the earliest uncounted age the child has not
+   * reached; every uncounted action due by then belongs to it.
    */
   private fun nextVisit(
     readings: List<Reading>,
     counted: List<String>,
   ): Pair<LocalDate, Set<String>> {
     val open = readings.filter { it.code !in counted }
-    val visit = open.map { it.due }.filter { it >= today() }.minOrNull() ?: today()
+    val visit = open.minOfOrNull { it.due }?.coerceAtLeast(today()) ?: today()
     return visit to open.filter { it.due <= visit }.map { it.code }.toSet()
   }
 

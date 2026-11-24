@@ -180,6 +180,8 @@ class VisitBooking(
     putJsonObject("authority") { put("reference", "Organization/${current.organizationId}") }
     putJsonArray("recommendation") {
       due.forEach { item ->
+        val date = (item.standing as Standing.Due).date
+        val (status, display) = if (date < evaluated.visit) OVERDUE else DUE
         add(
           buildJsonObject {
             putJsonArray("vaccineCode") {
@@ -192,7 +194,7 @@ class VisitBooking(
               )
             }
             putJsonObject("forecastStatus") {
-              putJsonArray("coding") { add(coding(FORECAST_STATUS, "due", "Due")) }
+              putJsonArray("coding") { add(coding(FORECAST_STATUS, status, display)) }
             }
             putJsonArray("dateCriterion") {
               add(
@@ -200,7 +202,7 @@ class VisitBooking(
                   putJsonObject("code") {
                     putJsonArray("coding") { add(coding(LOINC, "30980-7", "Date vaccine due")) }
                   }
-                  put("value", (item.standing as Standing.Due).date.toString())
+                  put("value", date.toString())
                 }
               )
             }
@@ -269,6 +271,8 @@ class VisitBooking(
     const val FORECAST_STATUS =
       "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status"
     private const val LOINC = "http://loinc.org"
+    private val DUE = "due" to "Due"
+    private val OVERDUE = "overdue" to "Overdue"
     private const val REMINDER_DAYS = 7
 
     /** The child's one recommendation: booking again replaces it. */

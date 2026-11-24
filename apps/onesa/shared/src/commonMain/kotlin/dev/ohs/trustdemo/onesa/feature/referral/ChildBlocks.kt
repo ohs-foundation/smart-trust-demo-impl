@@ -35,6 +35,7 @@ import dev.ohs.trustdemo.onesa.generated.resources.schedule_could_not
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_display_only
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_due_day
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_not_evaluated
+import dev.ohs.trustdemo.onesa.generated.resources.schedule_overdue
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_upcoming
 import dev.ohs.trustdemo.onesa.generated.resources.schedule_verified
 import dev.ohs.trustdemo.onesa.ui.NoteLine
@@ -114,7 +115,8 @@ fun ScheduleCard(schedule: Schedule, upcoming: List<DisplayOnlyRow> = emptyList(
               Status(stringResource(Res.string.schedule_verified), Tone.Success, OnesaIcons.Check)
             is Standing.Due ->
               Status(
-                stringResource(Res.string.schedule_due_day, dayMonth(standing.date)),
+                if (standing.date < schedule.visit) stringResource(Res.string.schedule_overdue)
+                else stringResource(Res.string.schedule_due_day, dayMonth(standing.date)),
                 Tone.Warning,
               )
             is Standing.NotYet -> Status(stringResource(Res.string.schedule_upcoming))
