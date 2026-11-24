@@ -292,6 +292,24 @@
         "attributes": {}
       },
       {
+        "id": "3fa32dc7-89d8-4710-92a6-e38b659a54a8",
+        "name": "GET_ALLERGYINTOLERANCE",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "onesa",
+        "attributes": {}
+      },
+      {
+        "id": "ef95f35d-0948-42f1-baee-87c64498d9b1",
+        "name": "GET_MEDICATIONSTATEMENT",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "onesa",
+        "attributes": {}
+      },
+      {
         "id": "f3c54b98-feac-4402-aec0-31bc606276b8",
         "name": "EDIT_KEYCLOAK_USERS",
         "composite": true,
@@ -2314,7 +2332,9 @@
       "subGroups": [],
       "attributes": {},
       "realmRoles": [
+        "GET_ALLERGYINTOLERANCE",
         "GET_AUDITEVENT",
+        "GET_CONDITION",
         "GET_CONSENT",
         "GET_DOCUMENTREFERENCE",
         "GET_GROUP",
@@ -2322,6 +2342,8 @@
         "GET_IMMUNIZATIONRECOMMENDATION",
         "GET_LIST",
         "GET_LOCATION",
+        "GET_MEDICATIONSTATEMENT",
+        "GET_OBSERVATION",
         "GET_ORGANIZATION",
         "GET_PATIENT",
         "GET_PRACTITIONER",
