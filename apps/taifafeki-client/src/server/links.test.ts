@@ -73,7 +73,7 @@ describe("aVerifiedLinkIsFetched", () => {
       label: "Somsak's health summary",
       exp: NOW + 86400,
       needsPasscode: true,
-      issuer: "XXK",
+      issuer: "XXU",
     });
     expect(JSON.stringify(outcome)).not.toContain(KEY);
     if (outcome.kind !== "fetch") throw new Error("not fetched");
@@ -171,7 +171,7 @@ describe("theTrustListsAreChecked", () => {
   });
 
   it("loads neither list when its proof fails, and says why", async () => {
-    const v = await viewer(async (url) => (url === LOCAL_URL ? read("local-test-list.json").replace("XXK", "XXQ") : read("who", "root-did.json")));
+    const v = await viewer(async (url) => (url === LOCAL_URL ? read("local-test-list.json").replace("XXU", "XXQ") : read("who", "root-did.json")));
     expect(await scan(v, link())).toMatchObject({ kind: "notVerified", step: "trust-lookup" });
     const [local, dev] = v.trust.statuses();
     expect(local).toMatchObject({ name: "local", fetchedAt: undefined, lastFailure: { at: NOW, reason: expect.stringContaining("proof") } });

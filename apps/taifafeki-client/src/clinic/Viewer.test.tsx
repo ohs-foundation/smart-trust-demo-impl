@@ -61,7 +61,7 @@ async function openSummary(text = LINK) {
 
 beforeEach(() => {
   vi.mocked(trustListStatuses).mockResolvedValue([]);
-  vi.mocked(scanVhl).mockResolvedValue({ kind: "fetch", url: "https://vhl.example/x", label: "Health summary", exp: 4_102_444_800, issuer: "XXK", needsPasscode: true, handle: "h1" });
+  vi.mocked(scanVhl).mockResolvedValue({ kind: "fetch", url: "https://vhl.example/x", label: "Health summary", exp: 4_102_444_800, issuer: "XXU", needsPasscode: true, handle: "h1" });
   vi.mocked(fetchSummary).mockResolvedValue({ kind: "released", documents: [{ contentType: "application/jose", jwe: JWE }] });
   vi.spyOn(Storage.prototype, "setItem");
   vi.stubGlobal("indexedDB", { open: indexedDbOpen });
@@ -145,7 +145,7 @@ describe("theSummaryScreen", () => {
     const { createResource } = mount();
     await openSummary();
     await screen.findByText(/Somsak SENGMANY/);
-    for (const text of [/2025-10-28/, /male/, /XXK-EPI-HEPB-BD/, /Lomaru District Health Center/, /Onesa national health portal/]) expect(screen.getAllByText(text).length).toBeGreaterThan(0);
+    for (const text of [/2025-10-28/, /male/, /XXU-EPI-HEPB-BD/, /Lomaru District Health Center/, /Onesa national health portal/]) expect(screen.getAllByText(text).length).toBeGreaterThan(0);
     expect(document.body.innerHTML).not.toContain("Practitioner/");
     await waitFor(() => expect(screen.getByText(/receipt recorded/i)).toBeTruthy());
     expect(createResource).toHaveBeenCalledTimes(1);
@@ -173,8 +173,8 @@ describe("theSummaryScreen", () => {
   });
 
   it.each([
-    [2, "Passcode Lock Active • Awaiting Clinician Unlock", "2 LEFT", "Invalid passcode: 2 attempt(s) remaining before link revocation. Live AuditEvent: the failed attempt is logged at the Onesan OHS Info Gateway."],
-    [1, "Passcode Lock Active • Awaiting Clinician Unlock", "1 LEFT", "Invalid passcode: 1 attempt(s) remaining before link revocation. Live AuditEvent: the failed attempt is logged at the Onesan OHS Info Gateway."],
+    [2, "Passcode Lock Active • Awaiting Clinician Unlock", "2 LEFT", "Invalid passcode: 2 attempt(s) remaining before link revocation. Live AuditEvent: the failed attempt is logged at the Onesa OHS Info Gateway."],
+    [1, "Passcode Lock Active • Awaiting Clinician Unlock", "1 LEFT", "Invalid passcode: 1 attempt(s) remaining before link revocation. Live AuditEvent: the failed attempt is logged at the Onesa OHS Info Gateway."],
   ])("shows a wrong passcode with %i left as the IG does, with the digits typed", async (attemptsLeft, title, verdict, detail) => {
     vi.mocked(fetchSummary).mockResolvedValue({ kind: "refused", message: "Wrong passcode.", status: 403, reason: "wrong-passcode", attemptsLeft });
     mount();

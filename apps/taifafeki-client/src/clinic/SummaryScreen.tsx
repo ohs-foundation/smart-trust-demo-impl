@@ -64,7 +64,7 @@ export function SummaryScreen({ header, view, receipt, passcode, onClose }: Prop
             key={index}
             icon={Syringe}
             label={dose.vaccine}
-            code={[dose.product && `PreQual: ${dose.product}`, dose.schedule && `Onesan: ${dose.schedule}`, dose.cvx && `CVX: ${dose.cvx}`].filter(Boolean).join(" • ")}
+            code={[dose.product && `PreQual: ${dose.product}`, dose.schedule && `Onesa: ${dose.schedule}`, dose.cvx && `CVX: ${dose.cvx}`].filter(Boolean).join(" • ")}
             detail={[dose.date.slice(0, 10), dose.dose && `Dose ${dose.dose}`, dose.lot && `Lot: ${dose.lot}`, dose.location, dose.performer].filter(Boolean).join(" • ")}
             status={
               dose.primarySource !== undefined && (

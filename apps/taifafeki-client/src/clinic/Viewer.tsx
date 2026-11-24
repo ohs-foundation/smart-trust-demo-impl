@@ -320,7 +320,7 @@ function refusedBadge({ reason, attemptsLeft }: Refusal) {
     return {
       title: "Passcode Lock Active • Awaiting Clinician Unlock",
       verdict: attemptsLeft === undefined ? undefined : `${attemptsLeft} LEFT`,
-      detail: `Invalid passcode: ${attemptsLeft ?? "some"} attempt(s) remaining before link revocation. Live AuditEvent: the failed attempt is logged at the Onesan OHS Info Gateway.`,
+      detail: `Invalid passcode: ${attemptsLeft ?? "some"} attempt(s) remaining before link revocation. Live AuditEvent: the failed attempt is logged at the Onesa OHS Info Gateway.`,
     };
   }
   if (reason === "withdrawn") {
