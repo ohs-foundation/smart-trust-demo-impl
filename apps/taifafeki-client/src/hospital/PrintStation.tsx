@@ -92,7 +92,7 @@ export function PrintStation({ header, patientId, onBack }: Props) {
   );
 }
 
-function RawPayloads({ cards }: { cards: Card[] }) {
+export function RawPayloads({ cards }: { cards: Card[] }) {
   return (
     <div className="flex flex-col gap-3 print:hidden">
       {cards.map((card, at) => (
@@ -145,7 +145,7 @@ export function PrintCards({ hospitalNumber, cards, warnings, doses }: Printing)
   );
 }
 
-function productName(code: string, doses: Immunization[]): string {
+export function productName(code: string, doses: Immunization[]): string {
   const coding = doses.flatMap((dose) => dose.vaccineCode?.coding ?? []).find((it) => it.system === PRODUCT_SYSTEM && it.code === code);
   return coding?.display ?? code;
 }

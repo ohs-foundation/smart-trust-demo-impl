@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { trustListStatuses } from "../server/links";
 import { addDoses, readChart, readContext, readNewborns, readProducts, registerNewborn, type Product } from "./api";
 import { WorkplaceGate } from "../Workplaces";
+import { DvcCards } from "./DvcCards";
 import { PrintCards, PrintStation, usePrintCards } from "./PrintStation";
 import { HOSPITAL_NUMBER_SYSTEM, hospitalNumberOf, type Context, type Dose, type Newborn, type TimedPatient } from "./records";
 
@@ -264,26 +265,29 @@ function PatientChart({ header, patientId, context, products, onList, onSummary 
         </ActionBar>
       }
     >
-      <SplitView
-        main={<Doses doses={doses} />}
-        side={
-          <form
-            className="flex flex-col gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              add.mutate();
-            }}
-          >
-            <DoseCards rows={rows} products={products} birth={birth} onChange={setRows} />
-            {rows.length > 0 && (
-              <Action tone="primary" type="submit" disabled={add.isPending} className="self-end">
-                Save doses
-              </Action>
-            )}
-            {add.isError && <Failure error={add.error} />}
-          </form>
-        }
-      />
+      <div className="print:hidden">
+        <SplitView
+          main={<Doses doses={doses} />}
+          side={
+            <form
+              className="flex flex-col gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                add.mutate();
+              }}
+            >
+              <DoseCards rows={rows} products={products} birth={birth} onChange={setRows} />
+              {rows.length > 0 && (
+                <Action tone="primary" type="submit" disabled={add.isPending} className="self-end">
+                  Save doses
+                </Action>
+              )}
+              {add.isError && <Failure error={add.error} />}
+            </form>
+          }
+        />
+      </div>
+      <DvcCards patient={patient} doses={doses} />
     </Page>
   );
 }

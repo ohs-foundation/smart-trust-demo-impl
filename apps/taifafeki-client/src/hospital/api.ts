@@ -117,10 +117,15 @@ function birthInstant(patient: TimedPatient): string {
   return time?.valueDateTime ?? `${patient.birthDate}T00:00`;
 }
 
-interface CardHooks {
+export interface CardHooks {
   issue: (doseId: string, token: string) => Promise<string>;
   read: (texts: CardText[]) => Promise<Card[]>;
 }
+
+const defaultHooks = (token: string, patient: Patient): CardHooks => ({
+  issue: (doseId, userToken) => issueCard({ data: { token: userToken, immunizationId: doseId } }),
+  read: (texts) => readCardTexts({ data: { token, hospitalNumber: hospitalNumberOf(patient), texts } }),
+});
 
 /** The newborn's stored cards; a completed dose without one is issued first, with the user's token. */
 export async function readCards(
@@ -128,39 +133,107 @@ export async function readCards(
   patient: Patient,
   doses: Immunization[],
   token: string,
-  hooks: CardHooks = {
-    issue: (doseId, userToken) => issueCard({ data: { token: userToken, immunizationId: doseId } }),
-    read: (texts) => readCardTexts({ data: { token, hospitalNumber: hospitalNumberOf(patient), texts } }),
-  },
+  hooks: CardHooks = defaultHooks(token, patient),
 ): Promise<Card[]> {
   const hospitalNumber = hospitalNumberOf(patient);
   if (!hospitalNumber.trim()) return [];
   const found = await medplum.searchResources("DocumentReference", {
     identifier: `${HOSPITAL_NUMBER_SYSTEM}|${hospitalNumber}`,
+    status: "current",
   });
   const texts = found.flatMap(textOf);
+  await issueMissing(medplum, patient, doses, texts, token, hooks);
+  const cards = await hooks.read(texts);
+  return cards.sort((a, b) => a.doseId.localeCompare(b.doseId));
+}
+
+async function issueMissing(
+  medplum: Pick<MedplumClient, "createResourceIfNoneExist">,
+  patient: Patient,
+  doses: Immunization[],
+  texts: CardText[],
+  token: string,
+  hooks: Pick<CardHooks, "issue">,
+) {
+  const hospitalNumber = hospitalNumberOf(patient);
   for (const dose of doses) {
     if (dose.status !== "completed" || !dose.id || texts.some((text) => text.doseId === dose.id)) continue;
     const hc1 = await hooks.issue(dose.id, token);
     await medplum.createResourceIfNoneExist(cardRecord(patient, hospitalNumber, dose.id, hc1), `identifier=${cardIdentifier(dose.id)}`);
     texts.push({ doseId: dose.id, hc1 });
   }
-  const cards = await hooks.read(texts);
-  return cards.sort((a, b) => a.doseId.localeCompare(b.doseId));
+}
+
+export interface StoredCards {
+  current: Card[];
+  superseded: Card[];
+}
+
+/** The stored cards as they are, without issuing any. */
+export async function readStoredCards(
+  medplum: Pick<MedplumClient, "searchResources">,
+  patient: Patient,
+  token: string,
+  hooks: Pick<CardHooks, "read"> = defaultHooks(token, patient),
+): Promise<StoredCards> {
+  const hospitalNumber = hospitalNumberOf(patient);
+  if (!hospitalNumber.trim()) return { current: [], superseded: [] };
+  const found = await medplum.searchResources("DocumentReference", { identifier: `${HOSPITAL_NUMBER_SYSTEM}|${hospitalNumber}` });
+  const [current, superseded] = await Promise.all(
+    (["current", "superseded"] as const).map((status) => hooks.read(found.filter((it) => it.status === status).flatMap(textOf))),
+  );
+  return { current: current ?? [], superseded: superseded ?? [] };
+}
+
+/** Issues a card for every completed dose that has none. */
+export async function issueCards(
+  medplum: Pick<MedplumClient, "searchResources" | "createResourceIfNoneExist">,
+  patient: Patient,
+  doses: Immunization[],
+  token: string,
+  hooks: Pick<CardHooks, "issue"> = defaultHooks(token, patient),
+): Promise<void> {
+  const found = await medplum.searchResources("DocumentReference", {
+    identifier: `${HOSPITAL_NUMBER_SYSTEM}|${hospitalNumberOf(patient)}`,
+    status: "current",
+  });
+  await issueMissing(medplum, patient, doses, found.flatMap(textOf), token, hooks);
+}
+
+/** Signs a new card for the dose; the earlier one stays, marked superseded and replaced by the new one. */
+export async function reissueCard(
+  medplum: Pick<MedplumClient, "searchResources" | "createResourceIfNoneExist" | "updateResource">,
+  patient: Patient,
+  doseId: string,
+  token: string,
+  hooks: Pick<CardHooks, "issue"> = defaultHooks(token, patient),
+): Promise<void> {
+  const hospitalNumber = hospitalNumberOf(patient);
+  const found = await medplum.searchResources("DocumentReference", {
+    identifier: `${HOSPITAL_NUMBER_SYSTEM}|${hospitalNumber}`,
+    status: "current",
+  });
+  const earlier = found.find((it) => textOf(it)[0]?.doseId === doseId);
+  if (!earlier?.id) throw new Error("This dose has no card to re-issue.");
+  const hc1 = await hooks.issue(doseId, token);
+  const record = cardRecord(patient, hospitalNumber, doseId, hc1, `${doseId}-card-${earlier.id}`);
+  record.relatesTo = [{ code: "replaces", target: { reference: `DocumentReference/${earlier.id}` } }];
+  await medplum.createResourceIfNoneExist(record, `identifier=${IG_ID_SYSTEM}|${doseId}-card-${earlier.id}`);
+  await medplum.updateResource({ ...earlier, status: "superseded" });
 }
 
 function cardIdentifier(doseId: string): string {
   return `${IG_ID_SYSTEM}|${doseId}-card`;
 }
 
-function cardRecord(patient: Patient, hospitalNumber: string, doseId: string, hc1: string): DocumentReference {
+function cardRecord(patient: Patient, hospitalNumber: string, doseId: string, hc1: string, id = `${doseId}-card`): DocumentReference {
   return {
     resourceType: "DocumentReference",
     meta: { accounts: patient.meta?.accounts },
     status: "current",
     identifier: [
       { system: HOSPITAL_NUMBER_SYSTEM, value: hospitalNumber },
-      { system: IG_ID_SYSTEM, value: `${doseId}-card` },
+      { system: IG_ID_SYSTEM, value: id },
     ],
     content: [{ attachment: { contentType: "text/plain", title: `${doseId}.hc1`, data: btoa(hc1) } }],
   };
