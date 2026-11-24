@@ -164,8 +164,8 @@ private const val REGISTRATION =
 private const val PRODUCT_MAP =
   "http://smart.who.int/trust-demo/ConceptMap/TrustDemoProductToOnesaEpi"
 private const val REFERRAL_CODE = "http://snomed.info/sct|3457005"
-private const val HEPB_PRODUCT = "vp-hepb-peds-monovalent"
-private const val BCG_PRODUCT = "vp-bcg-freeze-dried"
+private const val HEPB_PRODUCT = "a3K3X000006MiiXUAS"
+private const val BCG_PRODUCT = "a3K3X000006MiisUAC"
 private val ONESAN_DOSES =
   listOf("XXU-EPI-PENTA-1", "XXU-EPI-OPV-1", "XXU-EPI-PCV-1", "XXU-EPI-MR-1")
 

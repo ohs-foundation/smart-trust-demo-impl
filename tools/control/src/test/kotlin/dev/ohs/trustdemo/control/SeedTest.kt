@@ -53,7 +53,7 @@ class SeedTest {
     assertNull(
       Seed.onesaBase(ig)
         .resource<ConceptMap>("TrustDemoProductToOnesaEpi")
-        .targetFor("vp-hepb-peds-monovalent")
+        .targetFor("a3K3X000006MiiXUAS")
     )
 
   @Test

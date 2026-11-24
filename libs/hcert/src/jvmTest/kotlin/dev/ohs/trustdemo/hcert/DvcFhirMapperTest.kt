@@ -26,6 +26,10 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** The one DVCMin to FHIR mapping, pinned on the worked example. */
 class DvcFhirMapperTest {
@@ -77,7 +81,11 @@ class DvcFhirMapperTest {
     val coding = immunization.vaccineCode.coding.single()
     assertEquals(PreQualTerminology.PRODUCT_IDS, coding.system?.value)
     assertEquals("a3K3X000006MiiXUAS", coding.code?.value)
-    assertEquals("Hepatitis B Vaccine (rDNA) (Paediatric)", coding.display?.value)
+    assertEquals(
+      "Hepatitis B Vaccine (rDNA) (Paediatric) (HepB), Serum Institute of India, Vial, 10 doses " +
+        "[FVP-P-132]",
+      coding.display?.value,
+    )
     assertEquals("Patient/child-1", immunization.patient.reference?.value)
     assertEquals(
       "2026-10-21",
@@ -155,6 +163,31 @@ class DvcFhirMapperTest {
     assertNotNull(resources.provenance)
     assertNotNull(resources.patient.id)
     assertEquals("Patient/${resources.patient.id}", resources.immunization.patient.reference?.value)
+  }
+
+  @Test
+  fun `the journeys' products are named as the IG's value set names them`() {
+    val include =
+      Json.parseToJsonElement(Vectors.resource("/ValueSet-TrustDemoVaccineProducts.json"))
+        .jsonObject
+        .getValue("compose")
+        .jsonObject
+        .getValue("include")
+        .jsonArray
+        .single()
+        .jsonObject
+    assertEquals(PreQualTerminology.PRODUCT_IDS, include.getValue("system").jsonPrimitive.content)
+    val concepts = include.getValue("concept").jsonArray.map { it.jsonObject }
+    assertEquals(6, concepts.size)
+    concepts.forEach {
+      val code = it.getValue("code").jsonPrimitive.content
+      val display = it.getValue("display").jsonPrimitive.content
+      assertEquals(display, PreQualProducts.DEMO.find(code)?.display, code)
+      assertEquals(
+        display.substringAfterLast('[').removeSuffix("]"),
+        PreQualProducts.DEMO.find(code)?.productCode,
+      )
+    }
   }
 
   @Test

@@ -37,7 +37,7 @@ import kotlinx.serialization.json.Json
 object Seed {
   private const val LOMARU = "TrustDemoLomaruDhc"
   private const val PARENT_PATIENTS = "TrustDemoBounmyPatient,TrustDemoKhamlaPatient"
-  private const val HEPB_PRODUCT = "vp-hepb-peds-monovalent"
+  private const val HEPB_PRODUCT = "a3K3X000006MiiXUAS"
   private const val KEYCLOAK_USER_ID = "http://ohs.dev/identifiers/keycloak-user-id"
 
   private val keycloakUserIds =

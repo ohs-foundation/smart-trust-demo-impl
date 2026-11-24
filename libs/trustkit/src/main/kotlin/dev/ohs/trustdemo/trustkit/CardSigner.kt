@@ -58,7 +58,7 @@ class CardKey(val privateKey: PrivateKey, val certificate: X509Certificate) {
 /** Signs WHO DVC cards (HC1 text) through hcert-core's issuer. */
 object CardSigner {
   private const val PRODUCT_SYSTEM =
-    "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct"
+    "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds"
   private const val NATIONALITY = "XXR"
   private const val PARTICIPANT = "XXR"
   private const val ISSUING_COUNTRY = "XR"

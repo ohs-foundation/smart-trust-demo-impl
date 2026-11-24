@@ -117,4 +117,12 @@ class CardSignerTest {
     val dvc = assertIs<Payload.DvcMin>(verified.value.entries.single().payload).value
     assertEquals("XXR", dvc.vx.`is`)
   }
+
+  @Test
+  fun cardCarriesThePreQualProductNotTheCvxCode() {
+    val dose = igImmunization("TrustDemoJ1HepB")
+    val hc1 = CardSigner.sign(dose, igPatient("TrustDemoTaifafekiSomsak"), clock13Nov)
+    assertEquals(2, dose.vaccineCode.coding.size)
+    assertEquals("a3K3X000006MiiXUAS", CardSigner.product(hc1))
+  }
 }

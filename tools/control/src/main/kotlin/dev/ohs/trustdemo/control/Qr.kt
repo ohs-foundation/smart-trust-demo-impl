@@ -50,7 +50,7 @@ private const val MANIFEST =
 
 private val WHO_CARDS = mapOf("who-hepb" to "hepb1", "who-bcg" to "bcg")
 private val SOMSAK_CARDS =
-  mapOf("somsak-hepb" to "vp-hepb-peds-monovalent", "somsak-bcg" to "vp-bcg-freeze-dried")
+  mapOf("somsak-hepb" to "a3K3X000006MiiXUAS", "somsak-bcg" to "a3K3X000006MiisUAC")
 internal val CARDS = SOMSAK_CARDS.keys + WHO_CARDS.keys + "unknown-key-link"
 
 class QrCommand : CliktCommand(name = "qr") {

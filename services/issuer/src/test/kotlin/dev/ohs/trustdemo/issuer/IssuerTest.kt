@@ -51,7 +51,7 @@ private val immunization =
   """{"resourceType":"Immunization","id":"dose-9","status":"completed",
     "patient":{"reference":"$BABY"},"occurrenceDateTime":"2026-11-10T08:30:00+03:00",
     "lotNumber":"LOT-77",
-    "vaccineCode":{"coding":[{"system":"http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct","code":"vp-bcg-freeze-dried"}]}}"""
+    "vaccineCode":{"coding":[{"system":"http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds","code":"a3K3X000006MiisUAC"}]}}"""
 
 /** A Medplum that serves the two records to the token [accepts] and refuses every other. */
 private class FakeMedplum(private val accepts: String = "good") {
@@ -125,7 +125,7 @@ class IssuerTest {
         listOf(dvc.n, dvc.dob, dvc.s, dvc.nt),
       )
       assertEquals(
-        listOf("vp-bcg-freeze-dried", "2026-11-10", "XXR", "LOT-77"),
+        listOf("a3K3X000006MiisUAC", "2026-11-10", "XXR", "LOT-77"),
         listOf(dvc.vx.vp, dvc.vx.dv, dvc.vx.`is`, dvc.vx.bo),
       )
     }

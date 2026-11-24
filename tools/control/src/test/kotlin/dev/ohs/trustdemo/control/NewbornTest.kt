@@ -118,10 +118,7 @@ class NewbornTest {
     put(
       "vaccineCode",
       buildJsonObject {
-        put(
-          "coding",
-          buildJsonArray { add(buildJsonObject { put("code", "vp-bcg-freeze-dried") }) },
-        )
+        put("coding", buildJsonArray { add(buildJsonObject { put("code", "a3K3X000006MiisUAC") }) })
       },
     )
     put("patient", buildJsonObject { put("reference", "Patient/$patient") })

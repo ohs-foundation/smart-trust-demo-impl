@@ -58,8 +58,8 @@
       "vaccineCode": {
         "coding": [
           {
-            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-            "code": "vp-hepb-peds-monovalent"
+            "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+            "code": "a3K3X000006MiiXUAS"
           }
         ]
       },
@@ -76,8 +76,8 @@
       "vaccineCode": {
         "coding": [
           {
-            "system": "http://smart.who.int/trust-demo/CodeSystem/TrustDemoVaccineProduct",
-            "code": "vp-bcg-freeze-dried"
+            "system": "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds",
+            "code": "a3K3X000006MiisUAC"
           }
         ]
       },

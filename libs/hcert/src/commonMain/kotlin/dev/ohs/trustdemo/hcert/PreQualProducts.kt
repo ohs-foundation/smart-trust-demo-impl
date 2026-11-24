@@ -47,15 +47,54 @@ class PreQualProducts(private val products: Map<String, PreQualProduct>) {
   fun plus(other: PreQualProducts): PreQualProducts = PreQualProducts(products + other.products)
 
   companion object {
-    /** The two products of the WHO worked example, named from the PreQual vaccine database. */
+    /**
+     * The journeys' products, named as the IG's TrustDemoVaccineProducts value set names them, and
+     * the WHO worked example's BCG.
+     */
     val DEMO: PreQualProducts =
       PreQualProducts(
         listOf(
             PreQualProduct(
               id = "a3K3X000006MiiXUAS",
-              display = "Hepatitis B Vaccine (rDNA) (Paediatric)",
+              display =
+                "Hepatitis B Vaccine (rDNA) (Paediatric) (HepB), Serum Institute of India, " +
+                  "Vial, 10 doses [FVP-P-132]",
               productCode = "FVP-P-132",
               vaccineType = "HepB",
+            ),
+            PreQualProduct(
+              id = "a3K3X000006MiisUAC",
+              display = "BCG Vaccine (BCG), Serum Institute of India, Vial, 20 doses [FVP-P-117]",
+              productCode = "FVP-P-117",
+              vaccineType = "BCG",
+            ),
+            PreQualProduct(
+              id = "a3K3X000006MijGUAS",
+              display = "Eupenta (DTwP-HepB-Hib), LG Chem Ltd (LGC), Vial, 10 doses [FVP-P-305]",
+              productCode = "FVP-P-305",
+              vaccineType = "DTwP-HepB-Hib",
+            ),
+            PreQualProduct(
+              id = "a3K3X000006MijBUAS",
+              display =
+                "Poliomyelitis Vaccine (Oral) Bivalent types 1 and 3 (bOPV), Serum Institute of " +
+                  "India, Vial, 10 doses [FVP-P-281]",
+              productCode = "FVP-P-281",
+              vaccineType = "bOPV",
+            ),
+            PreQualProduct(
+              id = "a3K3X000006MijJUAS",
+              display = "PNEUMOSIL® (PCV), Serum Institute of India, Vial, 5 doses [FVP-P-385]",
+              productCode = "FVP-P-385",
+              vaccineType = "PCV",
+            ),
+            PreQualProduct(
+              id = "a3K3X000006MiimUAC",
+              display =
+                "Measles and Rubella Vaccine Live Attenuated (MR), Serum Institute of India, " +
+                  "Vial, 10 doses [FVP-P-140]",
+              productCode = "FVP-P-140",
+              vaccineType = "MR",
             ),
             PreQualProduct(
               id = "a3K3X000006MiiCUAS",
