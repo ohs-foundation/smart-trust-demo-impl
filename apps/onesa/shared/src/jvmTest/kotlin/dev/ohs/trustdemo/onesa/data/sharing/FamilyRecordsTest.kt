@@ -93,8 +93,8 @@ class FamilyRecordsTest {
 
     assertEquals(
       listOf(
-        listOf("Hepatitis B birth dose", "XXK-EPI-HEPB-BD", "XXR-4821", true, true),
-        listOf("Pentavalent (DTP-HepB-Hib), dose 1", "XXK-EPI-PENTA-1", "XXK-2201", true, false),
+        listOf("Hepatitis B birth dose", "XXU-EPI-HEPB-BD", "XXR-4821", true, true),
+        listOf("Pentavalent (DTP-HepB-Hib), dose 1", "XXU-EPI-PENTA-1", "XXU-2201", true, false),
       ),
       doses.map { listOf(it.name, it.scheduleCode, it.lot, it.primarySource, it.fromCard) },
     )

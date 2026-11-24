@@ -70,7 +70,7 @@ class HouseholdsTest {
     val groups = GroupRepository(repository)
 
     val row = groups.getGroups().single()
-    assertEquals("HH-XXK-204", row.householdId)
+    assertEquals("HH-XXU-204", row.householdId)
     assertEquals(listOf("TrustDemoOnesaHousehold"), groups.householdProfiles())
     assertEquals("Bounmy Sengmany", personName(row.headGivenName, row.headFamilyName))
 

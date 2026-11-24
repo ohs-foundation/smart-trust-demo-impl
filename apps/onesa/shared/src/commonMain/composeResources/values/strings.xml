@@ -12,7 +12,7 @@
 
     <!-- Login screen -->
     <string name="login_brand">OHS Player · Onesa</string>
-    <string name="login_ministry">Ministry of Health, Onesa (XXK)</string>
+    <string name="login_ministry">Ministry of Health, Onesa (XXU)</string>
     <string name="login_audience">For health workers, clinic staff and families.</string>
     <string name="login_card_title">Sign in</string>
     <string name="login_redirect_hint">Enter your username and password on the Ministry of Health sign-in page, which opens next.</string>

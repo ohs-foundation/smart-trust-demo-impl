@@ -48,7 +48,7 @@ class NewbornRegistrationTest {
   private val household =
     decode<Group>(
       """{"resourceType":"Group","id":"TrustDemoHousehold","type":"person","actual":true,
-        "identifier":[{"system":"http://smart.who.int/trust-demo/sid/onesa-household-id","value":"HH-XXK-204"}],
+        "identifier":[{"system":"http://smart.who.int/trust-demo/sid/onesa-household-id","value":"HH-XXU-204"}],
         "name":"Sengmany household","quantity":2,
         "member":[{"entity":{"reference":"Patient/TrustDemoBounmyPatient"}},
                   {"entity":{"reference":"Patient/TrustDemoKhamlaPatient"}}]}"""
@@ -93,7 +93,7 @@ class NewbornRegistrationTest {
   private val response =
     decode<QuestionnaireResponse>(
       """{"resourceType":"QuestionnaireResponse","status":"completed","item":[
-        {"linkId":"household","answer":[{"valueString":"HH-XXK-204"}]},
+        {"linkId":"household","answer":[{"valueString":"HH-XXU-204"}]},
         {"linkId":"given","answer":[{"valueString":"Somsak"}]},
         {"linkId":"family","answer":[{"valueString":"Sengmany"}]},
         {"linkId":"sex","answer":[{"valueCoding":{"system":"http://hl7.org/fhir/administrative-gender","code":"male"}}]},

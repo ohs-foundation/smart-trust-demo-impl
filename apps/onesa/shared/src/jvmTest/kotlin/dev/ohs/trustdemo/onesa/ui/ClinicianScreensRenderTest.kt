@@ -175,7 +175,7 @@ class ClinicianScreensRenderTest {
       dose.copy(
         vaccineCode =
           dose.vaccineCode.copy(
-            coding = dose.vaccineCode.coding.filterNot { it.code?.value == "XXK-EPI-HEPB-BD" }
+            coding = dose.vaccineCode.coding.filterNot { it.code?.value == "XXU-EPI-HEPB-BD" }
           )
       )
     }
@@ -511,7 +511,7 @@ class ClinicianScreensRenderTest {
         "Immunization.vaccineCode.coding[] = [" +
           """{"system":"${ScanTransactions.PRODUCT_SYSTEM}","code":"$HEPB",""" +
           """"display":"Hepatitis B vaccine, paediatric, monovalent"},""" +
-          """{"system":"${ScanTransactions.EPI_SYSTEM}","code":"XXK-EPI-HEPB-BD",""" +
+          """{"system":"${ScanTransactions.EPI_SYSTEM}","code":"XXU-EPI-HEPB-BD",""" +
           """"display":"Hepatitis B birth dose"}]"""
       onNodeWithText("CONFIRMED").assertExists()
       onNodeWithText(dualCoding).assertDoesNotExist()
@@ -644,7 +644,7 @@ class ClinicianScreensRenderTest {
         { true },
       )
     val doses = runBlocking { recording.doses() }
-    val penta = doses.first { it.code == "XXK-EPI-PENTA-1" }
+    val penta = doses.first { it.code == "XXU-EPI-PENTA-1" }
     val products = runBlocking { recording.products(penta) }
     val day = LocalDate.parse("2025-12-10")
     clinic("1-16-record-dose", 1024.dp to 600.dp) {
@@ -655,7 +655,7 @@ class ClinicianScreensRenderTest {
             dose = penta,
             products = products,
             product = products.single(),
-            lotNumber = "XXK-2201",
+            lotNumber = "XXU-2201",
             date = day.toString(),
             recordingId = "TrustDemoOnesaPenta1",
           ),

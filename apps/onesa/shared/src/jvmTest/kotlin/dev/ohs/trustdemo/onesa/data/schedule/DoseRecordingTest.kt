@@ -110,7 +110,7 @@ class DoseRecordingTest {
       .forEach { repository.upsert(decode(it)) }
   }
 
-  private suspend fun entry(code: String, date: String, lot: String = "XXK-2201"): DoseEntry {
+  private suspend fun entry(code: String, date: String, lot: String = "XXU-2201"): DoseEntry {
     val dose = recording.doses().single { it.code == code }
     return DoseEntry(
       "somsak",
@@ -130,7 +130,7 @@ class DoseRecordingTest {
     )
     repository.upsert(decode(FhirJson.instance.parseToJsonElement(bookedVisitReminder).jsonObject))
 
-    recording.record(entry("XXK-EPI-PENTA-1", "2025-12-31"))
+    recording.record(entry("XXU-EPI-PENTA-1", "2025-12-31"))
     assertEquals(listOf("Immunization/dose-1", "ImmunizationRecommendation/visit"), urls)
     assertEquals(
       listOf("complete", "due", "due"),
@@ -148,15 +148,15 @@ class DoseRecordingTest {
       },
     )
 
-    recording.record(entry("XXK-EPI-OPV-1", "2025-12-31"))
-    recording.record(entry("XXK-EPI-PCV-1", "2025-12-31"))
+    recording.record(entry("XXU-EPI-OPV-1", "2025-12-31"))
+    recording.record(entry("XXU-EPI-PCV-1", "2025-12-31"))
     assertEquals("Task/reminder", urls.last())
     assertEquals("completed", written.last().getValue("status").jsonPrimitive.content)
     assertEquals(null, BookedVisits(repository).of("somsak"))
     assertEquals(emptyList(), BookedVisits(repository).all())
 
     urls.clear()
-    recording.record(entry("XXK-EPI-MR-1", "2026-07-28"))
+    recording.record(entry("XXU-EPI-MR-1", "2026-07-28"))
     assertEquals(listOf("Immunization/dose-4"), urls)
   }
 
@@ -164,10 +164,10 @@ class DoseRecordingTest {
   fun fourRecordedDosesSatisfyTheYearContract() = runTest {
     withSyncedReferenceData()
     listOf(
-        "XXK-EPI-PENTA-1" to "2025-12-10",
-        "XXK-EPI-OPV-1" to "2025-12-10",
-        "XXK-EPI-PCV-1" to "2025-12-10",
-        "XXK-EPI-MR-1" to "2026-07-28",
+        "XXU-EPI-PENTA-1" to "2025-12-10",
+        "XXU-EPI-OPV-1" to "2025-12-10",
+        "XXU-EPI-PCV-1" to "2025-12-10",
+        "XXU-EPI-MR-1" to "2026-07-28",
       )
       .forEach { (code, date) ->
         assertIs<RecordOutcome.Recorded>(recording.record(entry(code, date)))
@@ -177,7 +177,7 @@ class DoseRecordingTest {
     assertEquals(listOf("Immunization/dose-1"), urls.take(1))
     assertTrue(urls.none { it.startsWith("urn:uuid") })
     assertEquals(
-      listOf("XXK-EPI-PENTA-1", "vp-pentavalent-liquid"),
+      listOf("XXU-EPI-PENTA-1", "vp-pentavalent-liquid"),
       penta.getValue("vaccineCode").jsonObject.getValue("coding").jsonArray.map {
         it.jsonObject.getValue("code").jsonPrimitive.content
       },
@@ -249,7 +249,7 @@ class DoseRecordingTest {
         caughtUp = { true },
         today = { LocalDate.parse("2026-08-01") },
       )
-    val entry = entry("XXK-EPI-PENTA-1", "2025-12-10")
+    val entry = entry("XXU-EPI-PENTA-1", "2025-12-10")
 
     assertFailsWith<IOException> { lossy.record(entry) }
     assertIs<RecordOutcome.Recorded>(lossy.record(entry))
@@ -273,7 +273,7 @@ class DoseRecordingTest {
         caughtUp = { caughtUp },
         today = { LocalDate.parse("2026-08-01") },
       )
-    val entry = entry("XXK-EPI-PENTA-1", "2025-12-10")
+    val entry = entry("XXU-EPI-PENTA-1", "2025-12-10")
 
     assertEquals(RecordOutcome.Recorded(listStale = true), lagging.record(entry))
     caughtUp = false
@@ -289,30 +289,30 @@ class DoseRecordingTest {
 
     val refusals =
       listOf(
-        entry("XXK-EPI-PENTA-1", "2025-12-10", lot = " ") to DoseProblem.LotNumberMissing,
-        entry("XXK-EPI-PENTA-1", "2026-08-02") to DoseProblem.DateInTheFuture,
-        entry("XXK-EPI-PENTA-1", "2025-10-27") to DoseProblem.DateBeforeBirth,
+        entry("XXU-EPI-PENTA-1", "2025-12-10", lot = " ") to DoseProblem.LotNumberMissing,
+        entry("XXU-EPI-PENTA-1", "2026-08-02") to DoseProblem.DateInTheFuture,
+        entry("XXU-EPI-PENTA-1", "2025-10-27") to DoseProblem.DateBeforeBirth,
       )
 
     refusals.forEach { (entry, problem) ->
       assertEquals(RecordOutcome.Refused(problem), recording.record(entry))
     }
     assertEquals(emptyList(), written)
-    assertIs<RecordOutcome.Recorded>(recording.record(entry("XXK-EPI-PENTA-1", "2026-08-01")))
+    assertIs<RecordOutcome.Recorded>(recording.record(entry("XXU-EPI-PENTA-1", "2026-08-01")))
   }
 
   @Test
   fun aSecondDoseOfTheSameCodeNeedsConfirmation() = runTest {
     withSyncedReferenceData()
-    val first = entry("XXK-EPI-PENTA-1", "2025-12-10")
+    val first = entry("XXU-EPI-PENTA-1", "2025-12-10")
     recording.record(first)
 
-    val again = recording.record(entry("XXK-EPI-PENTA-1", "2026-01-20"))
+    val again = recording.record(entry("XXU-EPI-PENTA-1", "2026-01-20"))
 
     assertEquals(RecordOutcome.AlreadyRecorded(LocalDate.parse("2025-12-10")), again)
     assertEquals(1, written.size)
     assertIs<RecordOutcome.Recorded>(
-      recording.record(entry("XXK-EPI-PENTA-1", "2026-01-20"), confirmed = true)
+      recording.record(entry("XXU-EPI-PENTA-1", "2026-01-20"), confirmed = true)
     )
     assertEquals(2, written.size)
     assertNotEquals(urls[0], urls[1])

@@ -71,7 +71,7 @@ class HcertServiceTest {
   @Test
   fun `a card signed with a DEMO-VHL key fails the DEMO-DVC store`() = runTest {
     val now = 1_800_000_000L
-    val hc1 = SignedCards.dvc(StandIn.XXK_LINK, now)
+    val hc1 = SignedCards.dvc(StandIn.XXU_LINK, now)
     val failure = assertIs<VerificationResult.Failed>(service.verifyCard(hc1, now)).failure
     assertEquals(
       VerifyStep.TRUST_LOOKUP to FailureReason.KID_NOT_FOUND,

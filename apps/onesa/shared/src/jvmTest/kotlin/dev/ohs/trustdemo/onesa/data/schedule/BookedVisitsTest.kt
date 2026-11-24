@@ -58,7 +58,7 @@ class BookedVisitsTest {
     bookedFor(yearOfDoses().single { it.first == "penta" })
 
     assertEquals(
-      listOf("XXK-EPI-OPV-1", "XXK-EPI-PCV-1"),
+      listOf("XXU-EPI-OPV-1", "XXU-EPI-PCV-1"),
       visits.of("somsak")?.doses?.map { it.code },
     )
     assertEquals("reminder", visits.all().single().visit.reminderId)

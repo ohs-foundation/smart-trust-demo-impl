@@ -191,7 +191,7 @@ class CardVerificationTest {
   @Test
   fun aCardThatFailsVerificationImportsNothingAndAuditsTheReason() = runTest {
     withReportedDoses()
-    val linkCard = SignedCards.dvc(StandIn.XXK_LINK, nowSeconds, "vp-hepb-peds-monovalent")
+    val linkCard = SignedCards.dvc(StandIn.XXU_LINK, nowSeconds, "vp-hepb-peds-monovalent")
 
     val outcome = assertIs<ScanOutcome.Failed>(scan(linkCard))
 
@@ -201,7 +201,7 @@ class CardVerificationTest {
     )
     val kid =
       MessageDigest.getInstance("SHA-256")
-        .digest(TestKeys.certificate(StandIn.XXK_LINK).encoded)
+        .digest(TestKeys.certificate(StandIn.XXU_LINK).encoded)
         .take(8)
         .joinToString("") { "%02x".format(it) }
     assertEquals(kid, outcome.kid, "the failure names the key the card's header gives")
@@ -383,7 +383,7 @@ class CardVerificationTest {
           """{"resourceType":"ConceptMap","id":"$MAP_ID","status":"draft","url":"${ScanTransactions.EPI_MAP}",
           "group":[{"source":"${ScanTransactions.PRODUCT_SYSTEM}",
           "target":"${ScanTransactions.EPI_SYSTEM}","element":[{"code":"vp-bcg-freeze-dried",
-          "target":[{"code":"XXK-EPI-BCG","equivalence":"equivalent"}]}]}]}"""
+          "target":[{"code":"XXU-EPI-BCG","equivalence":"equivalent"}]}]}]}"""
         )
         .jsonObject
     gateway.conceptMaps[MAP_ID] = map
@@ -398,7 +398,7 @@ class CardVerificationTest {
     repository.upsert(decode(gateway.immunizations.getValue(ScanTransactions.immunizationId(hepB))))
   }
 
-  private val hepBChoice = EpiDose("XXK-EPI-HEPB-BD", "Hepatitis B birth dose")
+  private val hepBChoice = EpiDose("XXU-EPI-HEPB-BD", "Hepatitis B birth dose")
 
   @Test
   fun thePickerOffersTheSyncedNationalSchedule() = runTest {
@@ -514,7 +514,7 @@ class CardVerificationTest {
     val after = codings(gateway.immunizations.getValue(dose.id))
     assertTrue(before.all { it in after }, "$before is kept in $after")
     assertEquals(
-      listOf(ScanTransactions.EPI_SYSTEM to "XXK-EPI-HEPB-BD"),
+      listOf(ScanTransactions.EPI_SYSTEM to "XXU-EPI-HEPB-BD"),
       after.filter { it.first == ScanTransactions.EPI_SYSTEM },
     )
     assertEquals(1, after.count { it.first == ScanTransactions.PRODUCT_SYSTEM })
@@ -552,7 +552,7 @@ class CardVerificationTest {
             .toString()
             .replace(
               "\"element\":[",
-              "\"element\":[{\"code\":\"vp-hepb-peds-monovalent\",\"target\":[{\"code\":\"XXK-EPI-HEPB-BD\"}]},",
+              "\"element\":[{\"code\":\"vp-hepb-peds-monovalent\",\"target\":[{\"code\":\"XXU-EPI-HEPB-BD\"}]},",
             )
         )
         .jsonObject
@@ -637,7 +637,7 @@ class CardVerificationTest {
     assertEquals("2026-02-12", outcome.date.toString())
     val recommendation = gateway.recommendations.values.single()
     assertEquals(
-      listOf("XXK-EPI-PENTA-1", "XXK-EPI-OPV-1", "XXK-EPI-PCV-1"),
+      listOf("XXU-EPI-PENTA-1", "XXU-EPI-OPV-1", "XXU-EPI-PCV-1"),
       recommendation.getValue("recommendation").jsonArray.map {
         it.jsonObject
           .getValue("vaccineCode")
@@ -802,7 +802,7 @@ class CardVerificationTest {
       )
       assertEquals(
         listOf(
-          ScanTransactions.EPI_SYSTEM to "XXK-EPI-HEPB-BD",
+          ScanTransactions.EPI_SYSTEM to "XXU-EPI-HEPB-BD",
           ScanTransactions.PRODUCT_SYSTEM to "vp-hepb-peds-monovalent",
         ),
         codings(gateway.immunizations.getValue(dose.id)).take(2),

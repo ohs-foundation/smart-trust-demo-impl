@@ -78,7 +78,7 @@ fun KitSheet() {
         title = "Unverified Records Under Review",
         icon = OnesaIcons.Qr,
         summary = Status("2 Pending DVC Doses", Tone.Warning),
-        footnote = "#HH-XXK-204 • FHIR Group",
+        footnote = "#HH-XXU-204 • FHIR Group",
       ) {
         RecordRow(
           "Hepatitis B Pediatric Dose",
@@ -182,9 +182,9 @@ fun KitSheet() {
           "Hep B birth dose (monovalent)",
           selected = true,
           onClick = {},
-          code = "XXK-EPI-HEPB-BD",
+          code = "XXU-EPI-HEPB-BD",
         )
-        OptionRow("Pentavalent 1", selected = false, onClick = {}, code = "XXK-EPI-PENTA-1")
+        OptionRow("Pentavalent 1", selected = false, onClick = {}, code = "XXU-EPI-PENTA-1")
       }
     }
     PrimaryActionBar(

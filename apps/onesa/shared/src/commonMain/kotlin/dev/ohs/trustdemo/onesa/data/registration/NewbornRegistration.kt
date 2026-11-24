@@ -157,7 +157,7 @@ object NewbornRegistration {
     )
 
   /** The demo's fictional countries, as a card or a form names them by code. */
-  private val COUNTRIES = mapOf("XXR" to "Taifafeki", "XXK" to "Onesa")
+  private val COUNTRIES = mapOf("XXR" to "Taifafeki", "XXU" to "Onesa")
 
   /** A country code with its name when it is one of the demo's countries: `Taifafeki (XXR)`. */
   fun countryName(code: String): String = COUNTRIES[code]?.let { "$it ($code)" } ?: code

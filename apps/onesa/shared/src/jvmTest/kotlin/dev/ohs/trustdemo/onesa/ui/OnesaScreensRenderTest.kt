@@ -145,7 +145,7 @@ class OnesaScreensRenderTest {
         ) {
           RecordRow(
             "Sengmany household",
-            code = "#HH-XXK-204",
+            code = "#HH-XXU-204",
             detail = "Head: Bounmy Sengmany • 2 members",
           )
         }

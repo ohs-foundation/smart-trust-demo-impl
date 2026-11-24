@@ -256,7 +256,7 @@ class ChwScreensRenderTest {
       FhirJson.instance.decodeFromString(
         QuestionnaireResponse.serializer(),
         """{"resourceType":"QuestionnaireResponse","status":"completed","item":[
-        {"linkId":"household","answer":[{"valueString":"HH-XXK-204"}]},
+        {"linkId":"household","answer":[{"valueString":"HH-XXU-204"}]},
         {"linkId":"given","answer":[{"valueString":"Somsak"}]},
         {"linkId":"family","answer":[{"valueString":"Sengmany"}]},
         {"linkId":"sex","answer":[{"valueCoding":{"code":"male"}}]},

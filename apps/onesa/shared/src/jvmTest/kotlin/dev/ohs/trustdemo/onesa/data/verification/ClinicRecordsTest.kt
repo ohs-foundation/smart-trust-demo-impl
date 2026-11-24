@@ -128,7 +128,7 @@ class ClinicRecordsTest {
       doses.keys,
     )
     val hepB = doses.getValue("vp-hepb-peds-monovalent")
-    assertEquals(EpiDose("XXK-EPI-HEPB-BD", "Hepatitis B birth dose"), hepB.schedule)
+    assertEquals(EpiDose("XXU-EPI-HEPB-BD", "Hepatitis B birth dose"), hepB.schedule)
     assertTrue(hepB.mapped && hepB.verified)
     assertEquals(Adjudication("Nurse Chanthason", "2025-11-25T10:21:00+07:00"), hepB.adjudication)
     assertEquals("Kesaro Provincial Hospital, Taifafeki" to "XXR-4821", hepB.origin to hepB.lot)
@@ -143,7 +143,7 @@ class ClinicRecordsTest {
       hepBRecord.copy(
         vaccineCode =
           hepBRecord.vaccineCode.copy(
-            coding = hepBRecord.vaccineCode.coding.filterNot { it.code?.value == "XXK-EPI-HEPB-BD" }
+            coding = hepBRecord.vaccineCode.coding.filterNot { it.code?.value == "XXU-EPI-HEPB-BD" }
           )
       )
     )
@@ -187,9 +187,9 @@ class ClinicRecordsTest {
     val child = PatientContexts(repository).of("TrustDemoSomsak")!!
 
     assertEquals("Somsak Sengmany", child.name)
-    assertEquals("XXK-TMP-2025-00918", child.temporaryId)
+    assertEquals("XXU-TMP-2025-00918", child.temporaryId)
     assertEquals(
-      Triple("TrustDemoHousehold", "Sengmany household", "HH-XXK-204"),
+      Triple("TrustDemoHousehold", "Sengmany household", "HH-XXU-204"),
       Triple(child.groupId, child.household, child.householdId),
     )
     assertEquals("active", child.referralStatus)
@@ -212,7 +212,7 @@ class ClinicRecordsTest {
     assertEquals("TrustDemoJ3Reminder", visit.visit.reminderId)
     assertEquals("2025-12-09" to "2025-12-16", visit.visit.reminderFrom to visit.visit.reminderTo)
     assertEquals(
-      listOf("XXK-EPI-PENTA-1", "XXK-EPI-OPV-1", "XXK-EPI-PCV-1"),
+      listOf("XXU-EPI-PENTA-1", "XXU-EPI-OPV-1", "XXU-EPI-PCV-1"),
       visit.visit.doses.map { it.code },
     )
   }
@@ -233,7 +233,7 @@ class ClinicRecordsTest {
     assertEquals(
       listOf(
         Triple("DEMO-DVC", "XXR", "DSC"),
-        Triple("DEMO-VHL", "XXK", "DSC"),
+        Triple("DEMO-VHL", "XXU", "DSC"),
         Triple("DEMO-VHL", "XXR", "CSCA"),
       ),
       local.map { Triple(it.domain, it.participant, it.usage) },

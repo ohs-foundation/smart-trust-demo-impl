@@ -65,8 +65,8 @@ class ScheduleTest {
   }
 
   private val product = ScanTransactions.PRODUCT_SYSTEM to "vp-hepb-peds-monovalent"
-  private val hepB = ScanTransactions.EPI_SYSTEM to "XXK-EPI-HEPB-BD"
-  private val bcg = ScanTransactions.EPI_SYSTEM to "XXK-EPI-BCG"
+  private val hepB = ScanTransactions.EPI_SYSTEM to "XXU-EPI-HEPB-BD"
+  private val bcg = ScanTransactions.EPI_SYSTEM to "XXU-EPI-BCG"
 
   private suspend fun standing(id: String) =
     service.evaluate("somsak").items.single { it.id == id }.standing

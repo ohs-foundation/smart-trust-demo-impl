@@ -10,11 +10,11 @@
     "vp-mr-freeze-dried": ["Measles", "Rubella"]
   },
   "doses": {
-    "XXK-EPI-HEPB-BD": { "antigens": ["Hepatitis B"], "latestAgeDays": 1 },
-    "XXK-EPI-BCG": { "antigens": ["Tuberculosis"] },
-    "XXK-EPI-PENTA-1": { "antigens": ["Diphtheria", "Tetanus", "Pertussis", "Hepatitis B", "Hib"] },
-    "XXK-EPI-OPV-1": { "antigens": ["Poliomyelitis"] },
-    "XXK-EPI-PCV-1": { "antigens": ["Streptococcus pneumoniae"] },
-    "XXK-EPI-MR-1": { "antigens": ["Measles", "Rubella"] }
+    "XXU-EPI-HEPB-BD": { "antigens": ["Hepatitis B"], "latestAgeDays": 1 },
+    "XXU-EPI-BCG": { "antigens": ["Tuberculosis"] },
+    "XXU-EPI-PENTA-1": { "antigens": ["Diphtheria", "Tetanus", "Pertussis", "Hepatitis B", "Hib"] },
+    "XXU-EPI-OPV-1": { "antigens": ["Poliomyelitis"] },
+    "XXU-EPI-PCV-1": { "antigens": ["Streptococcus pneumoniae"] },
+    "XXU-EPI-MR-1": { "antigens": ["Measles", "Rubella"] }
   }
 }
