@@ -61,6 +61,9 @@ private const val HOSPITAL_LOCATION_ID = "TrustDemoKesaroHospitalLoc"
 private const val J1_PATIENT = "TrustDemoTaifafekiSomsak"
 private val J1_DOSES = listOf("TrustDemoJ1HepB", "TrustDemoJ1Bcg")
 private const val PROFILE_PREFIX = "TrustDemoTaifafeki"
+private const val PRODUCTS_VALUE_SET = "TrustDemoVaccineProducts"
+private const val PREQUAL_SYSTEM =
+  "http://smart.who.int/pcmt-vaxprequal/CodeSystem/PreQualProductIds"
 private const val PROJECT_NAME = "Taifafeki Ministry of Public Health"
 private const val POLICY_NAME = "Taifafeki clinician"
 private const val CLIENT_NAME = "taifafeki-facility-client"
@@ -227,7 +230,8 @@ class MedplumAdmin(
         .filter { it.id?.startsWith(PROFILE_PREFIX) == true }
         .map { snapshots.withSnapshot(encode(it)) }
     val base =
-      ig.filterIsInstance<CodeSystem>().map(::encode) +
+      listOf(preQualFragment(ig)) +
+        ig.filterIsInstance<CodeSystem>().map(::encode) +
         ig.filterIsInstance<ValueSet>().map(::encode) +
         profiles +
         ig
@@ -533,6 +537,41 @@ class MedplumAdmin(
       .getValue("access_token")
       .jsonPrimitive
       .content
+  }
+
+  /**
+   * WHO's PreQual product ids as a fragment of their code system: only the products the IG's
+   * ValueSet lists, so Medplum can expand that ValueSet and validate the doses that use them.
+   */
+  private fun preQualFragment(ig: List<Resource>): JsonObject {
+    val include =
+      encode(ig.filterIsInstance<ValueSet>().first { it.id == PRODUCTS_VALUE_SET })
+        .getValue("compose")
+        .jsonObject
+        .getValue("include")
+        .jsonArray
+        .map { it.jsonObject }
+        .first { it.text("system") == PREQUAL_SYSTEM }
+    return buildJsonObject {
+      put("resourceType", "CodeSystem")
+      put("id", "PreQualProductIds")
+      put("url", PREQUAL_SYSTEM)
+      put("name", "PreQualProductIds")
+      put("title", "WHO PreQual product ids (the products this demonstrator uses)")
+      put("status", "active")
+      put("content", "fragment")
+      put(
+        "concept",
+        JsonArray(
+          include.getValue("concept").jsonArray.map { concept ->
+            buildJsonObject {
+              put("code", concept.jsonObject.getValue("code"))
+              put("display", concept.jsonObject.getValue("display"))
+            }
+          }
+        ),
+      )
+    }
   }
 
   private fun encode(resource: Resource): JsonObject =
